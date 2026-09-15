@@ -50,6 +50,7 @@ from tests.onnx.common import ModelBuilder
 from tests.onnx.conftest import ONNX_TEST_ROOT
 
 REFERENCE_SCALES_DIR = ONNX_TEST_ROOT / "data" / "reference_scales"
+CUSTOM_ANNOTATION_REFERENCES_DIR = ONNX_TEST_ROOT / "data" / "references_custom_annotation"
 
 UNSUPPORTED_MODES = (
     CompressWeightsMode.NF4,
@@ -728,7 +729,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_custom_annotation_ref_path(ref_name: str) -> Path:
-        return REFERENCE_SCALES_DIR / f"{ref_name}.json"
+        return CUSTOM_ANNOTATION_REFERENCES_DIR / f"{ref_name}.json"
 
     @staticmethod
     def get_transform_func() -> Callable[..., Any] | None:

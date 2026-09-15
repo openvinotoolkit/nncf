@@ -88,6 +88,8 @@ from tests.openvino.native.models import SimpleMoEModel
 from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.quantization.test_fq_params_calculation import REFERENCE_SCALES_DIR
 
+CUSTOM_ANNOTATION_REFERENCES_DIR = Path("references_custom_annotation")
+
 TEST_MODELS = {
     IntegerModel: ["matmul_2_data", "gather_2_data", "matmul_1_data"],
     WeightsModel: ["weights_0", "weights_1"],
@@ -2547,7 +2549,7 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_custom_annotation_ref_path(ref_name: str) -> Path:
-        return get_actual_reference_for_current_openvino(REFERENCE_SCALES_DIR / f"{ref_name}.json")
+        return get_actual_reference_for_current_openvino(CUSTOM_ANNOTATION_REFERENCES_DIR / f"{ref_name}.json")
 
     @pytest.fixture
     def transpose_a_supported(self) -> bool:

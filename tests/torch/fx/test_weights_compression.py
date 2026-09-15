@@ -60,6 +60,7 @@ from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
 
 REFERENCE_SCALES_DIR = TEST_ROOT / "torch" / "data" / "fx" / "reference_scales"
+CUSTOM_ANNOTATION_REFERENCES_DIR = TEST_ROOT / "torch" / "data" / "fx" / "references_custom_annotation"
 
 DATA_BASED_SENSITIVITY_METRICS = (
     SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
@@ -515,7 +516,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
 
     @staticmethod
     def get_custom_annotation_ref_path(ref_name: str) -> Path:
-        return REFERENCE_SCALES_DIR / f"{ref_name}.json"
+        return CUSTOM_ANNOTATION_REFERENCES_DIR / f"{ref_name}.json"
 
     @staticmethod
     def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, input_shape=None, is_3d_weights: bool = False):
