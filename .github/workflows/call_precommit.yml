@@ -82,6 +82,8 @@ jobs:
   openvino:
     timeout-minutes: 40
     runs-on: aks-linux-4-cores-32gb
+    container:
+      image: openvinogithubactions.azurecr.io/dockerhub/ubuntu:24.04
     defaults:
       run:
         shell: bash
