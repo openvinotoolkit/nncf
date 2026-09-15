@@ -14,7 +14,6 @@
   - (ONNX) Fixed a `KeyError` in bias attribute resolution when a tensor is a model input and therefore has no parent node (https://github.com/openvinotoolkit/nncf/pull/4169).
   - (ONNX) Fixed squeeze axis determination for `ONNXEmbeddingMetatype` nodes (https://github.com/openvinotoolkit/nncf/pull/4144).
 - Improvements:
-  - Improved the tensor function dispatcher to handle `TypeAliasType` annotations in function signatures, adding support for `numpy` 2.5 (https://github.com/openvinotoolkit/nncf/pull/4157).
   - (PyTorch) Replaced the deprecated `export_for_training` with `export` in TorchFX examples, documentation, and tests (https://github.com/openvinotoolkit/nncf/pull/4191).
 - Tutorials:
   - ...
@@ -23,7 +22,6 @@
 - Deprecations/Removals:
   - ...
 - Requirements:
-  - Updated `openvino` to 2026.4.0 (https://github.com/openvinotoolkit/nncf/pull/4178) (https://github.com/openvinotoolkit/nncf/pull/4211).
   - Updated `torch` to 2.13.0 (https://github.com/openvinotoolkit/nncf/pull/4197).
   - Updated `torchao` to 0.18.0 (https://github.com/openvinotoolkit/nncf/pull/4196).
   - Updated `transformers` to 5.5.0, `optimum` to 2.3.0, and `optimum-intel` to 2.1.0 (https://github.com/openvinotoolkit/nncf/pull/4200).
