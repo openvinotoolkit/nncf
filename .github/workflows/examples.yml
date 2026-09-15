@@ -37,6 +37,7 @@ on:
         description: 'Skip tests on GPU'
         type: boolean
         default: false
+  pull_request:
 
 defaults:
   run:
@@ -51,13 +52,24 @@ env:
 jobs:
   examples-cpu:
     name: Test examples CPU [${{ matrix.group }}/6]
-    runs-on: ubuntu-latest-16-cores
     timeout-minutes: 80
+    runs-on: aks-linux-16-cores-32gb
+    container:
+      image: openvinogithubactions.azurecr.io/dockerhub/ubuntu:24.04
     strategy:
       fail-fast: false
       matrix:
         group: [1, 2, 3, 4, 5, 6]
+    defaults:
+      run:
+        shell: bash
     steps:
+      - name: cpuinfo
+        run: cat /proc/cpuinfo
+      - name: Install build tools
+        run: |
+          apt update
+          apt install -y build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make git git-lfs
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}

@@ -23,6 +23,7 @@ on:
         description: 'Pytest arguments'
         type: string
         default: ''
+  pull_request:
 
 defaults:
   run:
@@ -37,25 +38,30 @@ env:
 
 jobs:
   weight-compression-cpu:
-    name: Weight compression [${{ matrix.group }}/6]
-    runs-on: ubuntu-latest-16-cores
+    name: Weight compression [${{ matrix.group }}/6]\
     timeout-minutes: 60
+    runs-on: aks-linux-16-cores-32gb
+    container:
+      image: openvinogithubactions.azurecr.io/dockerhub/ubuntu:24.04
     strategy:
       fail-fast: false
       matrix:
         group: [1, 2, 3, 4, 5, 6]
     steps:
+      - name: cpuinfo
+        run: cat /proc/cpuinfo
+      - name: Install build tools
+        run: |
+          apt update
+          apt install -y build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make git git-lfs
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
-
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install uv
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
-      - name: cpuinfo
-        run: cat /proc/cpuinfo
       - name: Install NNCF and test requirements
         run: uv pip install --system . -r tests/post_training/requirements.txt
       - name: Print installed modules

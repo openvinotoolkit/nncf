@@ -7,3 +7,4 @@ self-hosted-runner:
     - aks-linux-4-cores-32gb
     - aks-linux-8-cores-16gb
     - aks-linux-8-cores-32gb
+    - aks-linux-16-cores-32gb
