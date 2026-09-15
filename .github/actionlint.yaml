@@ -1,11 +1,12 @@
 self-hosted-runner:
   labels:
-    - windows-2025-8-core
-    - windows-2025-16-core
-    - aks-linux-6-cores-55gb-gpu-a10
+    - aks-linux-16-cores-32gb
+    - aks-linux-16-cores-64gb
     - aks-linux-4-cores-16gb
     - aks-linux-4-cores-32gb
+    - aks-linux-6-cores-55gb-gpu-a10
     - aks-linux-8-cores-16gb
     - aks-linux-8-cores-32gb
-    - aks-linux-16-cores-32gb
     - aks-win-16-cores-32gb
+    - windows-2025-16-core
+    - windows-2025-8-core
