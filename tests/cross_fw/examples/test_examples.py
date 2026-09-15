@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import os
-import shutil
 import subprocess
 import sys
 import time
@@ -71,34 +70,15 @@ def _is_connection_error(txt: str) -> bool:
     return False
 
 
-@pytest.fixture
-def example_test_path(tmp_path: Path, request: pytest.FixtureRequest, reuse_venv: bool):
-    example_params = request.node.callspec.params.get("example_params")
-    example_dir = (PROJECT_ROOT / example_params["requirements"]).parent
-    cleanup_path = example_dir if reuse_venv else tmp_path
-
-    yield cleanup_path
-
-    if not reuse_venv and tmp_path.exists():
-        shutil.rmtree(tmp_path)
-
-    # Recursively remove all files under the example directory that are not tracked in the git repository.
-    subprocess.run(
-        f"git clean -fdx {example_dir}",
-        check=True,
-        shell=True,
-        cwd=PROJECT_ROOT,
-    )
-
-
 @pytest.mark.parametrize("example_name, example_params", example_test_cases())
 def test_examples(
+    tmp_path: Path,
     example_name: str,
     example_params: dict[str, Any],
     backends_list: list[str],
     is_check_performance: bool,
     ov_version_override: str,
-    example_test_path: Path,
+    reuse_venv: bool,
 ):
     print("\n" + "-" * 64)
     print(f"Example name: {example_name}")
@@ -109,7 +89,10 @@ def test_examples(
     backend = example_params["backend"]
     device = example_params.get("device")
     skip_if_backend_not_selected(backend, backends_list)
-    venv_path = create_venv_with_nncf(example_test_path, "pip_e_local", "venv", {})
+    if reuse_venv:
+        # Use example directory as tmp_path
+        tmp_path = (PROJECT_ROOT / example_params["requirements"]).parent
+    venv_path = create_venv_with_nncf(tmp_path, "pip_e_local", "venv", {})
     pip_with_venv = get_pip_executable_with_venv(venv_path)
     install_wwb = False
     if "requirements" in example_params:
@@ -165,7 +148,7 @@ def test_examples(
     elif "CUDA_VISIBLE_DEVICES" in example_params:
         env["CUDA_VISIBLE_DEVICES"] = example_params["CUDA_VISIBLE_DEVICES"]
 
-    metrics_file_path = example_test_path / "metrics.json"
+    metrics_file_path = tmp_path / "metrics.json"
     python_executable_with_venv = get_python_executable_with_venv(venv_path)
     run_example_py = EXAMPLE_TEST_ROOT / "run_example.py"
     run_cmd_line = f"{python_executable_with_venv} {run_example_py} --name {example_name} --output {metrics_file_path}"
