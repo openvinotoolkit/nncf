@@ -32,6 +32,8 @@ jobs:
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
+      - name: cpuinfo
+        run: cat /proc/cpuinfo
       - name: Install NNCF and test requirements
         run: pip install . -r tests/common/requirements.txt
       - name: Print installed modules
@@ -54,6 +56,8 @@ jobs:
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
+      - name: cpuinfo
+        run: cat /proc/cpuinfo
       - name: Install NNCF and test requirements
         run: pip install . -r tests/onnx/requirements.txt
       - name: Print installed modules
@@ -76,6 +80,8 @@ jobs:
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
+      - name: cpuinfo
+        run: cat /proc/cpuinfo
       - name: Install NNCF and test requirements
         run: pip install . -r tests/openvino/requirements.txt
       - name: Print installed modules
@@ -101,6 +107,8 @@ jobs:
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
+      - name: cpuinfo
+        run: cat /proc/cpuinfo
       - name: Install NNCF and test requirements
         run: |
           pip install . -r tests/torch/requirements.txt
