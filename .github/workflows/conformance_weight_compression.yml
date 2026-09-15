@@ -40,7 +40,7 @@ jobs:
   weight-compression-cpu:
     name: Weight compression [${{ matrix.group }}/6]
     timeout-minutes: 60
-    runs-on: aks-linux-16-cores-32gb
+    runs-on: aks-linux-16-cores-64gb
     container:
       image: openvinogithubactions.azurecr.io/dockerhub/ubuntu:24.04
     strategy:
