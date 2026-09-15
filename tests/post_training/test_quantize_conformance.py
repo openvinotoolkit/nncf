@@ -297,7 +297,6 @@ def test_weight_compression(
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
     memory_monitor: bool,
-    use_avx2: None,
 ):
     run_pipeline(
         test_case_name,
