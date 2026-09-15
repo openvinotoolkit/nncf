@@ -56,6 +56,7 @@ jobs:
     runs-on: aks-linux-16-cores-64gb
     container:
       image: openvinogithubactions.azurecr.io/dockerhub/ubuntu:24.04
+      options: --shm-size=2g
     strategy:
       fail-fast: false
       matrix:
