@@ -1,0 +1,22 @@
+{
+    "MatMul_0": {
+        "mode": "int4_sym",
+        "group_size": -1
+    },
+    "MatMul_1": {
+        "mode": "int8_sym",
+        "group_size": -1
+    },
+    "MatMul_2": {
+        "mode": "int4_asym",
+        "group_size": 4
+    },
+    "MatMul_3": {
+        "mode": "int4_sym",
+        "group_size": -1
+    },
+    "MatMul_4": {
+        "mode": "int4_sym",
+        "group_size": -1
+    }
+}

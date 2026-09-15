@@ -1,0 +1,22 @@
+{
+    "linear": {
+        "mode": "int4_sym",
+        "group_size": -1
+    },
+    "linear_1": {
+        "mode": "int4_asym",
+        "group_size": -1
+    },
+    "linear_2": {
+        "mode": "int8_asym",
+        "group_size": -1
+    },
+    "linear_3": {
+        "mode": "int8_asym",
+        "group_size": -1
+    },
+    "linear_4": {
+        "mode": "int8_asym",
+        "group_size": -1
+    }
+}

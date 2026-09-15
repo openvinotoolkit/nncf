@@ -970,9 +970,9 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_custom_annotation_ref_path() -> Path:
+    def get_custom_annotation_ref_path(ref_name: str) -> Path:
         """
-        Returns the path to the reference compression configs of the custom annotation test.
+        Returns the path to the reference compression configs of the given custom annotation test case.
         """
 
     def _get_sequential_matmul_model(self):
@@ -1089,14 +1089,11 @@ class TemplateWeightCompression(ABC):
             node_name: {"mode": config.mode, "group_size": config.group_size} for node_name, config in configs.items()
         }
 
-        ref_key = request.node.callspec.id
-        ref_path = self.get_custom_annotation_ref_path()
+        ref_path = self.get_custom_annotation_ref_path(request.node.callspec.id)
         if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
-            ref_configs = load_json(ref_path)
-            ref_configs[ref_key] = actual_configs
-            dump_to_json(ref_path, ref_configs)
+            dump_to_json(ref_path, actual_configs)
 
-        assert actual_configs == load_json(ref_path)[ref_key]
+        assert actual_configs == load_json(ref_path)
 
     @pytest.mark.parametrize(
         ("custom_annotation", "error"),
