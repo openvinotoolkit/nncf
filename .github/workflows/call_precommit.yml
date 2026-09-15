@@ -92,8 +92,8 @@ jobs:
         run: cat /proc/cpuinfo
       - name: Install build tools
         run: |
-          sudo apt update
-          sudo apt install -y build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
+          apt update
+          apt install -y build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: true
