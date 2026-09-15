@@ -3,19 +3,19 @@ tinyllama_data_free_backend_OV:
   num_int4: 114
   num_int8: 84
 tinyllama_data_free_backend_ONNX:
-  metric_value: 0.73779
+  metric_value: 0.72172
   num_int4: 228
   num_int8: 84
 tinyllama_data_free_opset19_backend_ONNX:
-  metric_value: 0.73779
+  metric_value: 0.72172
   num_int4: 228
   num_int8: 84
 tinyllama_data_aware_backend_OV:
-  metric_value: 0.85767
+  metric_value: 0.85923
   num_int4: 94
   num_int8: 124
 tinyllama_data_aware_backend_TORCH:
-  metric_value: 0.85767
+  metric_value: 0.85923
   num_int4: 94
   num_int8: 124
 tinyllama_data_aware_awq_stateful_backend_OV:
@@ -31,7 +31,7 @@ tinyllama_data_aware_awq_scale_estimation_backend_TORCH:
   num_int4: 94
   num_int8: 124
 tinyllama_data_aware_awq_scale_estimation_stateful_backend_OV:
-  metric_value: 0.83415
+  metric_value: 0.83182
   num_int4: 94
   num_int8: 124
 tinyllama_data_aware_awq_scale_estimation_backend_ONNX:
@@ -39,7 +39,7 @@ tinyllama_data_aware_awq_scale_estimation_backend_ONNX:
   num_int4: 188
   num_int8: 124
 tinyllama_int8_data_free_backend_TORCH:
-  metric_value: 0.95624
+  metric_value: 0.94969
   num_int4: 0
   num_int8: 312
 tinyllama_data_aware_gptq_scale_estimation_stateful_backend_OV:
@@ -58,23 +58,23 @@ tinyllama_scale_estimation_per_channel_backend_TORCH:
   num_int8: 124
   atol: 0.2 # difference across devices: 0.80829 vs 0.81745
 tinyllama_data_aware_lora_stateful_backend_OV:
-  metric_value: 0.85051
+  metric_value: 0.84153
   num_int4: 94
   num_int8: 500
 tinyllama_NF4_scale_estimation_stateful_per_channel_backend_OV:
-  metric_value: 0.91044
+  metric_value: 0.88929
   num_int4: 10
   num_int8: 292
 tinyllama_awq_backup_mode_none_backend_OV:
-  metric_value: 0.85117
+  metric_value: 0.85062
   num_int4: 208
   num_int8: 0
 tinyllama_int4_data_free_backend_TORCH:
-  metric_value: 0.73873
+  metric_value: 0.71595
   num_int4: 114
   num_int8: 84
 tinyllama_int8_data_free_backend_FX_TORCH:
-  metric_value: 0.95624
+  metric_value: 0.92570
   num_int4: 0
   num_int8: 312
 tinyllama_int4_data_free_backend_FX_TORCH:
@@ -95,19 +95,19 @@ tinyllama_scale_estimation_per_channel_backend_ONNX:
   num_int4: 188
   num_int8: 124
 tinyllama_data_aware_awq_scale_estimation_backend_FX_TORCH:
-  metric_value: 0.82814
+  metric_value: 0.83279
   num_int4: 94
   num_int8: 124
 tinyllama_data_free_awq_backend_OV:
-  metric_value: 0.85466
+  metric_value: 0.85921
   num_int4: 94
   num_int8: 124
 tinyllama_data_free_awq_backend_TORCH:
-  metric_value: 0.85466
+  metric_value: 0.85720
   num_int4: 94
   num_int8: 124
 tinyllama_data_free_awq_backend_FX_TORCH:
-  metric_value: 0.85466
+  metric_value: 0.85951
   num_int4: 94
   num_int8: 124
 tinyllama_data_free_awq_backend_ONNX:
