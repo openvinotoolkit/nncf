@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import re
 import time
 import traceback
@@ -33,24 +32,6 @@ from tests.post_training.pipelines.base import ErrorReport
 from tests.post_training.pipelines.base import RunInfo
 
 DATA_ROOT = Path(__file__).parent / "data"
-
-
-@pytest.fixture(scope="function", name="use_avx2")
-def fixture_use_avx2():
-    env_vars = ("OV_CPU_MAX_ISA", "ONEDNN_MAX_CPU_ISA")
-    old_values = {name: os.environ.get(name) for name in env_vars}
-    for name in env_vars:
-        old_value = old_values[name]
-        os.environ[name] = "AVX2"
-        if old_value is not None and old_value != "AVX2":
-            print(f"Warning: {name} is overriding to AVX2, was {old_value}")
-    yield
-    for name in env_vars:
-        old_value = old_values[name]
-        if old_value is None:
-            del os.environ[name]
-        else:
-            os.environ[name] = old_value
 
 
 def _parse_version(s: Path):

@@ -141,8 +141,6 @@ def test_examples(
     env["PYTHONPATH"] = (
         f"{PROJECT_ROOT}{os.pathsep}{example_dir}"  # need this to be able to import from tests.* in run_example.py
     )
-    env["OV_CPU_MAX_ISA"] = "AVX2"  # Set ISA to AVX2 to get CPU independent results
-    env["ONEDNN_MAX_CPU_ISA"] = "AVX2"  # Set ISA to AVX2 to get CPU independent results
     env["YOLO_VERBOSE"] = "False"  # Set ultralytics to quiet mode
 
     if device != "cuda":
