@@ -994,6 +994,25 @@ class TemplateWeightCompression(ABC):
         all_weight_params = captured_weight_params[-1]
         return {wp.node_with_weight.node_name: wp.compression_config for wp in all_weight_params}
 
+    def _compress_and_get_dumped_parameters(self, **kwargs) -> dict[str, Any]:
+        """
+        Compresses a model and returns the parameters dumped into the meta information of the compressed model.
+
+        :param kwargs: Arguments for the `compress_weights` function.
+        :return: The dumped parameters.
+        """
+        dumped_parameters = {}
+        original_fn = WeightCompression.apply_with_parameters
+
+        def apply_with_parameters(self, *args):
+            self._backend_entity.dump_parameters = lambda model, parameters, **_: dumped_parameters.update(parameters)
+            return original_fn(self, *args)
+
+        with patch.object(WeightCompression, "apply_with_parameters", apply_with_parameters):
+            compress_weights(**kwargs)
+
+        return dumped_parameters
+
     def test_custom_annotation(self):
         """
         Checks that the config given by the custom annotation is assigned to the matched nodes, overriding both
@@ -1114,72 +1133,32 @@ class TemplateWeightCompression(ABC):
         warn_msg = "Several custom annotations match the same nodes"
         assert any(warn_msg in msg for msg in warning_messages)
 
-    def test_custom_annotation_without_weights(self):
-        """
-        Checks that a warning is logged when the custom annotation matches only the nodes that have no weight.
-        """
-        model = self._get_sequential_matmul_model()
-        input_node_name = nncf.build_graph(model).get_input_nodes()[0].node_name
-
-        with patch.object(nncf_logger, "warning") as mock_warning:
-            self._compress_and_get_configs(
-                model=self._get_sequential_matmul_model(),
-                mode=CompressWeightsMode.INT4_SYM,
-                ratio=1.0,
-                group_size=-1,
-                custom_annotation=[
-                    nncf.CustomAnnotation(
-                        scope=nncf.CustomAnnotationScope(names=[input_node_name]),
-                        config=WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
-                    )
-                ],
-            )
-
-        warning_messages = [args[0] for args, _ in mock_warning.call_args_list]
-        warn_msg = "are matched by the custom annotation, but have no weight to compress"
-        assert any(warn_msg in msg for msg in warning_messages)
-
-    def test_custom_annotation_with_invalid_group_size(self):
-        """
-        Checks that an error is raised when the group size given by the custom annotation is not divisible by the
-        channel size.
-        """
-        common_kwargs = dict(mode=CompressWeightsMode.INT4_SYM, ratio=1.0, group_size=-1, all_layers=True)
-        node_names = list(self._compress_and_get_configs(model=self._get_sequential_matmul_model(), **common_kwargs))
-
-        with pytest.raises(InvalidGroupSizeError) as exc_info:
-            compress_weights(
-                model=self._get_sequential_matmul_model(),
-                **common_kwargs,
-                custom_annotation=[
-                    nncf.CustomAnnotation(
-                        scope=nncf.CustomAnnotationScope(names=[node_names[1]]),
-                        config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=3),
-                    )
-                ],
-            )
-        assert "Failed to apply group-wise quantization with group size value" in str(exc_info.value)
-        assert f'"{node_names[1]}" (channel size: 4, group size: 3)' in str(exc_info.value)
-
     @pytest.mark.parametrize(
-        "fallback_mode, ref_mode, ref_group_size",
+        "fallback_mode, expected_outcome, ref_config",
         [
-            (nncf.GroupSizeFallbackMode.ADJUST, CompressWeightsMode.INT4_ASYM, 4),
-            (nncf.GroupSizeFallbackMode.IGNORE, None, None),
+            (None, "exception", None),
+            (nncf.GroupSizeFallbackMode.ERROR, "exception", None),
+            (nncf.GroupSizeFallbackMode.IGNORE, "ignored", None),
+            (
+                nncf.GroupSizeFallbackMode.ADJUST,
+                "adjusted",
+                WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=4),
+            ),
         ],
+        ids=["default", "error", "ignore", "adjust"],
     )
-    def test_custom_annotation_group_size_fallback(self, fallback_mode, ref_group_size, ref_mode):
+    def test_custom_annotation_with_invalid_group_size(self, fallback_mode, expected_outcome, ref_config):
         """
-        Checks that the group size fallback mode is applied to the group size defined by the custom annotation:
-        ADJUST replaces it with a valid value, IGNORE keeps the node in the original precision.
+        Checks how a group size given by the custom annotation which is not divisible by the channel size is
+        handled depending on the group size fallback mode: an error is raised by default and with the ERROR mode,
+        IGNORE keeps the node in the original precision, ADJUST replaces the group size with a valid value.
         """
         common_kwargs = dict(mode=CompressWeightsMode.INT4_SYM, ratio=1.0, group_size=-1, all_layers=True)
         node_names = list(self._compress_and_get_configs(model=self._get_sequential_matmul_model(), **common_kwargs))
 
-        configs = self._compress_and_get_configs(
+        kwargs = dict(
             model=self._get_sequential_matmul_model(),
             **common_kwargs,
-            advanced_parameters=CompressionParams(group_size_fallback_mode=fallback_mode, min_adjusted_group_size=4),
             custom_annotation=[
                 nncf.CustomAnnotation(
                     scope=nncf.CustomAnnotationScope(names=[node_names[1]]),
@@ -1188,11 +1167,86 @@ class TemplateWeightCompression(ABC):
                 )
             ],
         )
+        if fallback_mode is not None:
+            kwargs["advanced_parameters"] = CompressionParams(
+                group_size_fallback_mode=fallback_mode, min_adjusted_group_size=4
+            )
 
-        if ref_mode is None:
+        if expected_outcome == "exception":
+            with pytest.raises(InvalidGroupSizeError) as exc_info:
+                compress_weights(**kwargs)
+            assert "Failed to apply group-wise quantization with group size value" in str(exc_info.value)
+            assert f'"{node_names[1]}" (channel size: 4, group size: 3)' in str(exc_info.value)
+            return
+
+        configs = self._compress_and_get_configs(**kwargs)
+        if expected_outcome == "ignored":
             assert node_names[1] not in configs
         else:
-            assert configs[node_names[1]] == WeightCompressionConfig(mode=ref_mode, group_size=ref_group_size)
+            assert configs[node_names[1]] == ref_config
+
+    @pytest.mark.parametrize(
+        "custom_annotation, error",
+        [
+            (nncf.CustomAnnotation(), nncf.ValidationError),
+            (["anything"], nncf.ValidationError),
+            ([nncf.CustomAnnotation(scope=nncf.IgnoredScope())], nncf.ValidationError),
+            ([nncf.CustomAnnotation(config="anything")], nncf.ValidationError),
+            (
+                [
+                    nncf.CustomAnnotation(
+                        config=WeightCompressionConfig(mode=CompressWeightsMode.CODEBOOK, codebook_values=None)
+                    )
+                ],
+                nncf.ValidationError,
+            ),
+            (
+                [
+                    nncf.CustomAnnotation(
+                        config=WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=4)
+                    )
+                ],
+                nncf.ParameterNotSupportedError,
+            ),
+        ],
+        ids=[
+            "not_a_list",
+            "not_an_annotation",
+            "wrong_scope",
+            "wrong_config",
+            "codebook_without_values",
+            "int8_with_group_size",
+        ],
+    )
+    def test_invalid_custom_annotation(self, custom_annotation, error):
+        """
+        Checks that an error is raised for an invalid custom annotation.
+        """
+        with pytest.raises(error):
+            compress_weights(
+                model=self._get_sequential_matmul_model(),
+                mode=CompressWeightsMode.INT4_SYM,
+                custom_annotation=custom_annotation,
+            )
+
+    def test_dump_custom_annotation(self):
+        """
+        Checks that the custom annotation is dumped into the meta information of the compressed model.
+        """
+        common_kwargs = dict(mode=CompressWeightsMode.INT8_ASYM)
+        node_names = list(self._compress_and_get_configs(model=self._get_sequential_matmul_model(), **common_kwargs))
+        annotation = nncf.CustomAnnotation(
+            scope=nncf.CustomAnnotationScope(names=[node_names[1]]),
+            config=WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+        )
+
+        for custom_annotation, ref_dump in [(None, []), ([annotation], [annotation])]:
+            dumped_parameters = self._compress_and_get_dumped_parameters(
+                model=self._get_sequential_matmul_model(),
+                **common_kwargs,
+                custom_annotation=custom_annotation,
+            )
+            assert dumped_parameters["custom_annotation"] == ref_dump
 
     @pytest.mark.parametrize("is_3d_weights", [True, False])
     @pytest.mark.parametrize("dataset", [None, np.ones([2, 8, 8], dtype=np.float32)])
