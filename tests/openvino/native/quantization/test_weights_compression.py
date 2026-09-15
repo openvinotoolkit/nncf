@@ -2545,6 +2545,10 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     def get_awq_scale_ref_path() -> Path:
         return get_actual_reference_for_current_openvino(REFERENCE_SCALES_DIR / "awq_scale_ref.json")
 
+    @staticmethod
+    def get_custom_annotation_ref_path() -> Path:
+        return get_actual_reference_for_current_openvino(REFERENCE_SCALES_DIR / "custom_annotation_ref.json")
+
     @pytest.fixture
     def transpose_a_supported(self) -> bool:
         return True

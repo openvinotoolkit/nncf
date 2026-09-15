@@ -727,6 +727,10 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return REFERENCE_SCALES_DIR / "awq_scale_ref.json"
 
     @staticmethod
+    def get_custom_annotation_ref_path() -> Path:
+        return REFERENCE_SCALES_DIR / "custom_annotation_ref.json"
+
+    @staticmethod
     def get_transform_func() -> Callable[..., Any] | None:
         def transform_func(x):
             return {"input": x}
