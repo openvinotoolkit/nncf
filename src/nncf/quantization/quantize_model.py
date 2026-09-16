@@ -499,7 +499,10 @@ def compress_weights(
         algorithm, which makes it possible to compress certain layers, e.g. attention or MoE router layers, to a
         precision different from the one defined by `mode`, `ratio` and `backup_mode`. The custom annotation
         takes precedence over the mixed precision assignment, the `ignored_scope` and the `all_layers` options.
-        If several annotations match the same node, the last one takes precedence.
+        If several annotations match the same node, the last one in the list takes precedence. For example, an
+        annotation of a whole block followed by an annotation of a single layer of this block compresses the block
+        with the first configuration, except for this layer, while the opposite order compresses the whole block
+        with the second configuration.
     :type custom_annotation: list[nncf.CustomAnnotation]
     :return: The non-trainable model with compressed weights.
     """

@@ -463,6 +463,8 @@ class CustomAnnotation:
     matched nodes, including the assignment made by the mixed precision algorithm and the `ignored_scope`,
     `all_layers` and `backup_mode` options.
 
+    If several annotations match the same node, the last one in the `custom_annotation` list takes precedence.
+
     Example:
 
     ..  code-block:: python

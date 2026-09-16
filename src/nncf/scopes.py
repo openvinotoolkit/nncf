@@ -17,6 +17,7 @@ import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
+from nncf.parameters import StrEnum
 
 
 @api(canonical_alias="nncf.Subgraph")
@@ -256,24 +257,35 @@ def get_matched_scope_info(scope: BaseScope, nncf_graphs: list[NNCFGraph]) -> tu
     return matched_scope, matches
 
 
-def _info_matched_scope(matches: dict[str, set[str]], scope_kind: str = "Ignored") -> None:
+class ScopeType(StrEnum):
+    """
+    Type of a scope, used in the messages about the matched and unmatched nodes.
+    """
+
+    IGNORED = "Ignored"
+    ANNOTATED = "Annotated"
+
+
+def _info_matched_scope(matches: dict[str, set[str]], scope_type: ScopeType = ScopeType.IGNORED) -> None:
     """
     Log matches.
 
     :param matches: Matches.
-    :param scope_kind: Human-readable kind of the scope to mention in the message.
+    :param scope_type: Type of the scope to mention in the message.
     """
     for rule_type, rules in matches.items():
         if rules:
-            nncf_logger.info(f"{len(rules)} {scope_kind.lower()} nodes were found by {rule_type} in the NNCFGraph")
+            nncf_logger.info(
+                f"{len(rules)} {scope_type.value.lower()} nodes were found by {rule_type} in the NNCFGraph"
+            )
 
 
-def _error_unmatched_scope(unmatched_scope: BaseScope, scope_kind: str = "Ignored") -> str:
+def _error_unmatched_scope(unmatched_scope: BaseScope, scope_type: ScopeType = ScopeType.IGNORED) -> str:
     """
     Returns an error message for unmatched scope.
 
     :param unmatched_scope: Unmatched scope.
-    :param scope_kind: Human-readable kind of the scope to mention in the message.
+    :param scope_type: Type of the scope to mention in the message.
     :return str: Error message.
     """
     err_msg = "\n"
@@ -281,31 +293,34 @@ def _error_unmatched_scope(unmatched_scope: BaseScope, scope_kind: str = "Ignore
         unmatched_rules = getattr(unmatched_scope, rule_type)
         if unmatched_rules:
             err_msg += (
-                f"{scope_kind} nodes that matches {rule_type} {unmatched_rules} were not found in the NNCFGraph.\n"
+                f"{scope_type.value} nodes that matches {rule_type} {unmatched_rules} "
+                "were not found in the NNCFGraph.\n"
             )
     for subgraph in unmatched_scope.subgraphs:
         err_msg += (
-            f"{scope_kind} nodes that matches subgraph with input names {subgraph.inputs} "
+            f"{scope_type.value} nodes that matches subgraph with input names {subgraph.inputs} "
             f"and output names {subgraph.outputs} were not found in the NNCFGraph.\n"
         )
     return err_msg
 
 
-def _check_scope_strictly_matched(scope: BaseScope, matched_scope: BaseScope, scope_kind: str = "Ignored") -> None:
+def _check_scope_strictly_matched(
+    scope: BaseScope, matched_scope: BaseScope, scope_type: ScopeType = ScopeType.IGNORED
+) -> None:
     """
     Passes when scope and matched_scope are equal, otherwise - raises ValidationError.
 
     :param scope: Scope.
     :param matched_scope: Matched scope.
-    :param scope_kind: Human-readable kind of the scope to mention in the error message.
+    :param scope_type: Type of the scope to mention in the error message.
     """
     unmatched_scope = get_difference_scope(scope, matched_scope)
     if unmatched_scope.names or unmatched_scope.types or unmatched_scope.patterns or unmatched_scope.subgraphs:
-        raise nncf.ValidationError(_error_unmatched_scope(unmatched_scope, scope_kind))
+        raise nncf.ValidationError(_error_unmatched_scope(unmatched_scope, scope_type))
 
 
 def get_node_names_from_scope(
-    scope: BaseScope, nncf_graph: NNCFGraph, strict: bool = True, scope_kind: str = "Ignored"
+    scope: BaseScope, nncf_graph: NNCFGraph, strict: bool = True, scope_type: ScopeType = ScopeType.IGNORED
 ) -> set[str]:
     """
     Returns matched names according to the scope and NNCFGraph.
@@ -315,13 +330,13 @@ def get_node_names_from_scope(
     :param scope: Scope.
     :param nncf_graph: Graph.
     :param strict: Whether all scope rules must match at least one node or not.
-    :param scope_kind: Human-readable kind of the scope to mention in the error message.
+    :param scope_type: Type of the scope to mention in the error message.
     :return: NNCF node names from given NNCFGraph specified in given scope.
     """
     matched_scope, matches = get_matched_scope_info(scope, [nncf_graph])
     if strict:
-        _check_scope_strictly_matched(scope, matched_scope, scope_kind)
-    _info_matched_scope(matches, scope_kind)
+        _check_scope_strictly_matched(scope, matched_scope, scope_type)
+    _info_matched_scope(matches, scope_type)
     return {name for match in matches.values() for name in match}
 
 
