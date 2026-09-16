@@ -440,7 +440,14 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model = model.model
 
         transformation_layout = TransformationLayout()
-        is_all_8bit = all(wc_params.compression_config.num_bits == 8 for wc_params in weight_compression_parameters)
+
+        if hasattr(weight_compression_parameters, "sequence"):
+            # avoid track
+            is_all_8bit = all(
+                wc_params.compression_config.num_bits == 8 for wc_params in weight_compression_parameters.sequence
+            )
+        else:
+            is_all_8bit = all(wc_params.compression_config.num_bits == 8 for wc_params in weight_compression_parameters)
         for wc_params in weight_compression_parameters:
             compression_config = wc_params.compression_config
             if compression_config.mode in [

@@ -17,9 +17,6 @@ from pathlib import Path
 from pprint import pprint
 from typing import Any
 
-import faulthandler, signal
-faulthandler.register(signal.SIGUSR1, all_threads=True)
-
 import torch
 import torch.nn.functional as F
 import transformers
@@ -45,11 +42,11 @@ from nncf.parameters import StripFormat
 from nncf.quantization.advanced_parameters import AdvancedAWQParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.quantize_model import compress_weights
+from nncf.quantization.quantize_model import repack_weights
 from nncf.torch import load_from_config
 from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.quantization.layers import AsymmetricLoraQuantizer
 from nncf.torch.quantization.layers import SymmetricLoraQuantizer
-from nncf.quantization.quantize_model import repack_weights
 
 warnings.filterwarnings("ignore", category=TracerWarning)
 
@@ -111,7 +108,7 @@ def calc_hiddens(model: nn.Module, dataloader: list[Tensor]) -> list[Tensor]:
     orig_hiddens = []
     for data in track(dataloader, description="Calculating original hiddens"):
         model_input = get_model_input(data)
-        orig_hiddens.append(model.model(**model_input).last_hidden_state)
+        orig_hiddens.append(model.model(**model_input).last_hidden_state.cpu())
     torch.cuda.empty_cache()
     return orig_hiddens
 
@@ -147,9 +144,7 @@ def kl_div(student_hiddens: torch.Tensor, teacher_hiddens: torch.Tensor) -> torc
     )
 
 
-def set_trainable(
-    model: nn.Module, lora_lr: float, fq_lr: float, scales_only: bool = False
-) -> list[dict[str, Any]]:
+def set_trainable(model: nn.Module, lora_lr: float, fq_lr: float, scales_only: bool = False) -> list[dict[str, Any]]:
     """
     Sets the trainable parameters of the model for quantization-aware training with LoRA (Low-Rank Adaptation).
 
@@ -246,11 +241,10 @@ def export_to_openvino(pretrained: str, ckpt_file: Path, ir_dir: Path) -> OVMode
 
     model_to_eval = OVModelForCausalLM.from_pretrained(ir_dir)
     model_to_eval.model = repack_weights(model_to_eval.model)
-    model_to_eval.save_pretrained(ir_dir/"repacked")
-
+    model_to_eval.save_pretrained(ir_dir / "repacked")
 
     return OVModelForCausalLM.from_pretrained(
-        model_id=ir_dir/"repacked",
+        model_id=ir_dir / "repacked",
         trust_remote_code=True,
         load_in_8bit=False,
         compile=True,
@@ -272,7 +266,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--pretrained",
         type=str,
-        #default="Qwen/Qwen3-8B",
+        # default="Qwen/Qwen3-8B",
         default="meta-llama/Llama-3.2-1B-Instruct",
         help="The model id or path of a pretrained HF model configuration.",
     )
@@ -280,8 +274,9 @@ def get_argument_parser() -> argparse.ArgumentParser:
         "--bits",
         type=int,
         default=3,
-        help="Number of bits for weight compression (e.g., 2, 3, 4, 8).",
-    )    
+        choices=[2, 3],
+        help="Number of bits for weight compression (2 or 3).",
+    )
     parser.add_argument(
         "--output_dir",
         type=Path,
@@ -340,6 +335,91 @@ def get_argument_parser() -> argparse.ArgumentParser:
         help="Size of each training microbatch. Gradients will be accumulated until the batch size is reached.",
     )
     return parser
+
+
+def run_training(
+    model: nn.Module,
+    train_loader: list[Tensor],
+    orig_hiddens: list[Tensor],
+    optimizer: torch.optim.Optimizer,
+    ckpt_file: Path,
+    tb: SummaryWriter,
+    num_epochs: int,
+    phase_desc: str,
+    start_total_steps: int,
+    *,
+    device: torch.device | str,
+    torch_dtype: torch.dtype,
+    grad_accumulation_steps: int,
+    num_samples: int,
+    epoch_samples: int,
+    microbatches_per_epoch: int,
+    model_state: bool,
+) -> int:
+    """
+    Run the distillation-based training loop for the compressed model.
+
+    :param model: The model being tuned.
+    :param train_loader: Training samples used for distillation.
+    :param orig_hiddens: Teacher hidden states computed from the original model.
+    :param optimizer: Optimizer used for updates.
+    :param ckpt_file: Path to save the checkpoint after each epoch.
+    :param tb: TensorBoard writer for loss metrics.
+    :param num_epochs: Number of epochs to run.
+    :param phase_desc: Human-readable description of the current epoch phase.
+    :param start_total_steps: The initial global optimizer step count.
+    :param device: Device to place batch tensors on.
+    :param torch_dtype: The dtype used for the computation.
+    :param grad_accumulation_steps: Number of microbatches before an optimizer step.
+    :param num_samples: Number of training samples.
+    :param epoch_samples: The available number of samples in the epoch after rounding.
+    :param microbatches_per_epoch: Number of microbatch chunks in the epoch.
+    :param model_state: Whether to save full model weights in the checkpoint.
+    :return: The total number of optimizer steps performed.
+    """
+    loss_numerator = grad_steps = 0
+    total_steps = start_total_steps
+    for epoch in range(num_epochs):
+        batch_indices_epoch = torch.randperm(num_samples)[:epoch_samples].chunk(microbatches_per_epoch)
+        epoch_tracker = track(batch_indices_epoch, description=f"{phase_desc} {epoch}")
+        for indices in epoch_tracker:
+            indices = indices.tolist()
+
+            def form_batch(inputs: list[Tensor], model_input: bool):
+                batch = torch.cat([inputs[i] for i in indices], dim=0)
+                return get_model_input(batch) if model_input else batch.to(device=device, dtype=torch_dtype)
+
+            # Compute distillation loss between logits of the original model and the model with FQ + LoRA.
+            inputs = form_batch(train_loader, model_input=True)
+            with torch.no_grad():
+                targets = model.lm_head(form_batch(orig_hiddens, model_input=False))
+                if hasattr(model.config, "final_logit_softcapping"):  # Gemma has post-processing after lm_head
+                    fls = model.config.final_logit_softcapping
+                    if fls is not None:
+                        targets = targets / fls
+                        targets = torch.tanh(targets)
+                        targets = targets * fls
+            outputs = model(**inputs).logits
+            loss = kl_div(outputs, targets.to(dtype=torch_dtype, device=device))
+
+            # Perform an optimization step after accumulating gradients over multiple minibatches.
+            loss_numerator += loss.item()
+            grad_steps += 1
+            if not torch.isfinite(loss).item():
+                err = f"Fine-tuning loss is {loss}"
+                raise ValueError(err)
+            (loss / grad_accumulation_steps).backward()
+            if grad_steps == grad_accumulation_steps:
+                optimizer.step()
+                optimizer.zero_grad()
+                aggregated_loss = loss_numerator / grad_steps
+                loss_numerator = grad_steps = 0
+                total_steps += 1
+                tb.add_scalar("loss", aggregated_loss, total_steps)
+                epoch_tracker.update(advance=0, description=f"{phase_desc} {epoch} | loss={aggregated_loss:.4f}")
+
+        save_checkpoint(model, ckpt_file, model_state=model_state)
+    return total_steps
 
 
 def main(argv) -> float:
@@ -412,63 +492,46 @@ def main(argv) -> float:
     epoch_samples = num_samples - num_samples % args.microbatch_size
     microbatches_per_epoch = epoch_samples // args.microbatch_size
 
-    def run_training(
-        num_epochs: int, optimizer: torch.optim.Optimizer, phase_desc: str, start_total_steps: int
-    ) -> int:
-        loss_numerator = grad_steps = 0
-        total_steps = start_total_steps
-        for epoch in range(num_epochs):
-            batch_indices_epoch = torch.randperm(num_samples)[:epoch_samples].chunk(microbatches_per_epoch)
-            epoch_tracker = track(batch_indices_epoch, description=f"{phase_desc} {epoch}")
-            for indices in epoch_tracker:
-                indices = indices.tolist()
-
-                def form_batch(inputs: list[Tensor], model_input: bool):
-                    batch = torch.cat([inputs[i] for i in indices], dim=0)
-                    return get_model_input(batch) if model_input else batch.to(device=device, dtype=torch_dtype)
-
-                # Compute distillation loss between logits of the original model and the model with FQ + LoRA.
-                inputs = form_batch(train_loader, model_input=True)
-                with torch.no_grad():
-                    targets = model.lm_head(form_batch(orig_hiddens, model_input=False))
-                    if hasattr(model.config, "final_logit_softcapping"):  # Gemma has post-processing after lm_head
-                        fls = model.config.final_logit_softcapping
-                        if fls is not None:
-                            targets = targets / fls
-                            targets = torch.tanh(targets)
-                            targets = targets * fls
-                outputs = model(**inputs).logits
-                loss = kl_div(outputs, targets.to(dtype=torch_dtype, device=device))
-
-                # Perform an optimization step after accumulating gradients over multiple minibatches.
-                loss_numerator += loss.item()
-                grad_steps += 1
-                if not torch.isfinite(loss).item():
-                    err = f"Fine-tuning loss is {loss}"
-                    raise ValueError(err)
-                (loss / grad_accumulation_steps).backward()
-                if grad_steps == grad_accumulation_steps:
-                    optimizer.step()
-                    optimizer.zero_grad()
-                    aggregated_loss = loss_numerator / grad_steps
-                    loss_numerator = grad_steps = 0
-                    total_steps += 1
-                    tb.add_scalar("loss", aggregated_loss, total_steps)
-                    epoch_tracker.update(
-                        advance=0, description=f"{phase_desc} {epoch} | loss={aggregated_loss:.4f}"
-                    )
-
-            save_checkpoint(model, ckpt_file, model_state=not args.basic_init)
-        return total_steps
-
-    total_steps = run_training(args.epochs, opt, phase_desc="Train epoch", start_total_steps=0)
+    total_steps = run_training(
+        model=model,
+        train_loader=train_loader,
+        orig_hiddens=orig_hiddens,
+        optimizer=opt,
+        ckpt_file=ckpt_file,
+        tb=tb,
+        num_epochs=args.epochs,
+        phase_desc="Train epoch",
+        start_total_steps=0,
+        device=device,
+        torch_dtype=torch_dtype,
+        grad_accumulation_steps=grad_accumulation_steps,
+        num_samples=num_samples,
+        epoch_samples=epoch_samples,
+        microbatches_per_epoch=microbatches_per_epoch,
+        model_state=not args.basic_init,
+    )
 
     # Optional scales-only finetuning phase: LoRA adapters are frozen, only quantizer scales are trained.
     if args.scale_finetune_epochs > 0:
         scale_params = set_trainable(model, lora_lr=args.lr, fq_lr=fq_lr, scales_only=True)
         opt = torch.optim.AdamW(scale_params, weight_decay=weight_decay)
         run_training(
-            args.scale_finetune_epochs, opt, phase_desc="Scales-only epoch", start_total_steps=total_steps
+            model=model,
+            train_loader=train_loader,
+            orig_hiddens=orig_hiddens,
+            optimizer=opt,
+            ckpt_file=ckpt_file,
+            tb=tb,
+            num_epochs=args.scale_finetune_epochs,
+            phase_desc="Scales-only epoch",
+            start_total_steps=total_steps,
+            device=device,
+            torch_dtype=torch_dtype,
+            grad_accumulation_steps=grad_accumulation_steps,
+            num_samples=num_samples,
+            epoch_samples=epoch_samples,
+            microbatches_per_epoch=microbatches_per_epoch,
+            model_state=not args.basic_init,
         )
 
     del model
