@@ -55,7 +55,7 @@ def test_generate_text_data_usage(with_model: bool, with_tokenizer: bool, usage_
             OVModelForCausalLM,
             marks=pytest.mark.xfail(
                 sys.version_info >= (3, 14),
-                reason="OVModelForCausalLM is not supported on Python 3.14 and above",
+                reason="https://github.com/huggingface/optimum/pull/2496",
             ),
         ),
     ],
