@@ -200,7 +200,7 @@
         "requirements": "examples/llm_compression/openvino/tiny_llama/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
-            "word_count": 74
+            "word_count": 80
         }
     },
     "llm_compression_fx": {
@@ -225,7 +225,7 @@
         "requirements": "examples/llm_compression/onnx/tiny_llama_scale_estimation/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
-            "word_count": 81
+            "word_count": 83
         }
     },
     "llm_tune_params": {

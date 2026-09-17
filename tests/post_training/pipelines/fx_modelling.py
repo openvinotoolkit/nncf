@@ -38,12 +38,10 @@ class FXAutoModelForCausalLM(OptimizedModel, GenerationMixin):
         self.main_input_name = "input_ids"
         self.device = torch.device(device)
 
-    def prepare_inputs_for_generation(self, input_ids, **kwargs):
-        cache_position = kwargs["cache_position"]
-        past_len = cache_position[0]
-        if past_len < input_ids.shape[1]:
-            input_ids = input_ids[:, past_len:]
-        return {"input_ids": input_ids, "cache_position": cache_position}
+    def prepare_inputs_for_generation(self, input_ids, next_sequence_length=None, **kwargs):
+        start_position = input_ids.shape[1] - (next_sequence_length or input_ids.shape[1])
+        cache_position = torch.arange(start_position, input_ids.shape[1])
+        return {"input_ids": input_ids[:, start_position:], "cache_position": cache_position}
 
     def forward(
         self,
@@ -52,7 +50,7 @@ class FXAutoModelForCausalLM(OptimizedModel, GenerationMixin):
         attention_mask: torch.Tensor = None,
         **kwargs,
     ) -> CausalLMOutputWithPast:
-        logits = self.model(input_ids, cache_position)
+        logits = self.model(input_ids=input_ids, cache_position=cache_position)
         return CausalLMOutputWithPast(logits=logits)
 
     def _save_pretrained(self, save_directory):
@@ -63,19 +61,6 @@ class FXAutoModelForCausalLM(OptimizedModel, GenerationMixin):
 
     def _supports_default_dynamic_cache(self) -> bool:
         return False
-
-
-class TorchExportableModuleWithStaticCacheDynamicShape(TorchExportableModuleWithStaticCache):
-    def forward(self, input_ids: torch.Tensor, cache_position: torch.Tensor):
-        abc = cache_position.unsqueeze(0)
-        outs = self.model(
-            input_ids=input_ids,
-            position_ids=abc,
-            cache_position=cache_position,
-            past_key_values=self.static_cache,
-            use_cache=True,
-        )
-        return outs.logits
 
 
 @torch.no_grad()
@@ -93,16 +78,14 @@ def convert_and_export_with_cache(model: PreTrainedModel):
     model.generation_config.max_new_tokens = 100
     gen_config = model.generation_config
     model_config = model.config
-    model = TorchExportableModuleWithStaticCacheDynamicShape(model)
+    model = TorchExportableModuleWithStaticCache(model)
 
     dynamic_shapes = {"input_ids": {1: torch.export.Dim.DYNAMIC}, "cache_position": {0: torch.export.Dim.DYNAMIC}}
 
     exported_program = torch.export.export(
         model,
-        args=(
-            example_input_ids,
-            example_cache_position,
-        ),
+        args=(),
+        kwargs={"input_ids": example_input_ids, "cache_position": example_cache_position},
         dynamic_shapes=dynamic_shapes,
         strict=True,
     ).run_decompositions(decomp_table={})
