@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
+
 import pytest
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoModelForCausalLM
@@ -45,7 +47,19 @@ def test_generate_text_data_usage(with_model: bool, with_tokenizer: bool, usage_
         generate_text_data(model, tokenizer, seq_len=32, dataset_size=1)
 
 
-@pytest.mark.parametrize("model_cls", [AutoModelForCausalLM, OVModelForCausalLM])
+@pytest.mark.parametrize(
+    "model_cls",
+    [
+        AutoModelForCausalLM,
+        pytest.param(
+            OVModelForCausalLM,
+            marks=pytest.mark.xfail(
+                sys.version_info >= (3, 14),
+                reason="OVModelForCausalLM is not supported on Python 3.14 and above",
+            ),
+        ),
+    ],
+)
 def test_generate_text_data_functional(model_cls):
     seq_len = 12
     max_seq_len = seq_len + seq_len // 2
