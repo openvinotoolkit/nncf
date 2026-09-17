@@ -75,6 +75,30 @@ def get_wikitext2(num_samples: int, seqlen: int, tokenizer: Any, device: torch.d
     return trainloader
 
 
+def get_pile_10k(num_samples: int, seqlen: int, tokenizer: Any, device: torch.device):
+    ds = load_dataset("NeelNanda/pile-10k", split="train")
+
+    trainloader = []
+    text = ""
+    for example in ds:
+        text += " \n" + example["text"]
+        trainenc = tokenizer(text, return_tensors="pt")
+        if trainenc.input_ids.shape[1] < seqlen:
+            continue
+        text = ""
+        if trainenc.input_ids.shape[1] > seqlen + 1:
+            i = torch.randint(0, trainenc.input_ids.shape[1] - seqlen - 1, (1,)).item()
+        else:
+            i = 0
+        j = i + seqlen
+        inp = trainenc.input_ids[:, i:j].to(device)
+        trainloader.append(inp)
+        if len(trainloader) >= num_samples:
+            break
+
+    return trainloader
+
+
 def measure_perplexity(
     optimum_model: OptimizedModel,
     max_length: int | None = None,
@@ -326,6 +350,13 @@ def get_argument_parser() -> argparse.ArgumentParser:
         "--save_pt",
         action="store_true",
         help="Whether to save the model with dequantization after training. It is useful for fast evaluation.",
+    )
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        default="pile-10k",
+        choices=["pile-10k", "wikitext-2"],
+        help="The dataset to use for training and evaluation.",
     )
 
     # Data params
@@ -723,14 +754,19 @@ def main(argv) -> float:
     tokenizer = AutoTokenizer.from_pretrained(args.pretrained)
 
     # Prepare training and calibration data
-    train_loader = get_wikitext2(
+    dataset_map = {
+        "pile-10k": get_pile_10k,
+        "wikitext-2": get_wikitext2,
+    }
+    load_fn = dataset_map[args.dataset]
+    train_loader = load_fn(
         num_samples=args.num_train_samples, seqlen=args.train_seqlen, tokenizer=tokenizer, device=device
     )
     if args.basic_init:
         example_input = {k: v.to(device) for k, v in model.dummy_inputs.items()}
         dataset = Dataset([example_input])
     else:
-        calib_loader = get_wikitext2(num_samples=128, seqlen=128, tokenizer=tokenizer, device=device)
+        calib_loader = load_fn(num_samples=128, seqlen=128, tokenizer=tokenizer, device=device)
         dataset = Dataset(map(get_model_input, calib_loader))
 
     # Pre-compute hiddens of teacher model for distillation loss.
