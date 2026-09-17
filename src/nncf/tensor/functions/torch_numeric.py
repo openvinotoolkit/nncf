@@ -13,7 +13,6 @@ from typing import Any, Callable, Literal, Sequence
 
 import numpy as np
 import torch
-from numpy.typing import NDArray
 
 from nncf.tensor import TensorDataType
 from nncf.tensor import TensorDeviceType
@@ -536,7 +535,7 @@ def arange(
     return torch.arange(start, end, step, dtype=pt_dtype, device=pt_device)
 
 
-def from_numpy(ndarray: NDArray[Any]) -> torch.Tensor:
+def from_numpy(ndarray: np.ndarray[Any, np.dtype[Any]]) -> torch.Tensor:
     return torch.from_numpy(ndarray)
 
 
@@ -562,7 +561,7 @@ def tensor(
 
 
 @numeric.as_numpy_tensor.register
-def _(a: torch.Tensor) -> NDArray[Any]:
+def _(a: torch.Tensor) -> np.ndarray[Any, np.dtype[Any]]:
     return a.cpu().detach().numpy()
 
 

@@ -12,7 +12,6 @@
 from typing import Any, Callable, Literal, Sequence
 
 import numpy as np
-from numpy.typing import NDArray
 
 from nncf.tensor.definitions import T_AXIS
 from nncf.tensor.definitions import T_NUMBER
@@ -25,7 +24,7 @@ from nncf.tensor.definitions import TypeInfo
 from nncf.tensor.functions import numeric as numeric
 from nncf.tensor.tensor import TTensor
 
-T_NUMPY_ARRAY = NDArray[Any]
+T_NUMPY_ARRAY = np.ndarray[Any, np.dtype[Any]]
 T_NUMPY = T_NUMPY_ARRAY | np.generic  # type: ignore[type-arg]
 
 DTYPE_MAP: dict[TensorDataType, np.dtype] = {  # type: ignore[type-arg]
