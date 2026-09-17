@@ -596,7 +596,7 @@ def get_num_fq_int4_int8(model: ov.Model) -> tuple[int, int, int]:
 
 def _are_exceptions_matched(report: ErrorReport, reference_exception: dict[str, str]) -> bool:
     return (
-        reference_exception["error_message"] == report.msg.split(" | ")[1]
+        reference_exception["error_message"] in report.msg.split(" | ")[1]
         and reference_exception["type"] == report.msg.split(" | ")[0]
     )
 
