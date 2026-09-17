@@ -28,11 +28,10 @@ jobs:
         run: |
           wget -q https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run
           sudo sh cuda_12.6.3_560.35.05_linux.run --toolkit --silent
-      - name: Runner info
-        continue-on-error: true
-        run: |
-          nvidia-smi
-          cat /proc/cpuinfo
+      - name: CPU Info
+        run: awk 'BEGIN{RS=""} END{print}' /proc/cpuinfo
+      - name: GPU Info
+        run: nvidia-smi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: true
