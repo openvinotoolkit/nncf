@@ -2,10 +2,6 @@
 
 ## New in Release 3.4.0
 
-- Breaking changes:
-  - ...
-- General:
-  - ...
 - Features:
   - (OpenVINO) Added `GroupedMatMul` support to the AWQ and Scale Estimation algorithms, enabling data-aware weight compression of `grouped_mm`-based MoE models (https://github.com/openvinotoolkit/nncf/pull/4176).
 - Fixes:
@@ -16,11 +12,8 @@
 - Improvements:
   - (PyTorch) Replaced the deprecated `export_for_training` with `export` in TorchFX examples, documentation, and tests (https://github.com/openvinotoolkit/nncf/pull/4191).
 - Tutorials:
-  - ...
-- Known issues:
-  - ...
-- Deprecations/Removals:
-  - ...
+  - [Post-Training Optimization of Ministral-3 Models](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/ministral-3)
+  - [Post-Training Optimization of Muse Glimmer-30B Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/muse-glimmer)
 - Requirements:
   - Updated `torch` to 2.13.0 (https://github.com/openvinotoolkit/nncf/pull/4197).
   - Updated `torchao` to 0.18.0 (https://github.com/openvinotoolkit/nncf/pull/4196).
