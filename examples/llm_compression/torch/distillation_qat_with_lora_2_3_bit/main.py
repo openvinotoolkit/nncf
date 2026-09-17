@@ -251,6 +251,24 @@ def export_to_openvino(pretrained: str, ckpt_file: Path, ir_dir: Path) -> OVMode
     )
 
 
+@torch.no_grad()
+def export_to_dequantized_torch(pretrained: str, ckpt_file: Path, pt_dir: Path):
+    """
+    Replace the quantized weights of the model with dequantized weights and save it to the specified directory.
+
+    :param pretrained: The name or path of the pretrained model.
+    :param ckpt_file: The path to the checkpoint file to load the model weights and NNCF configurations.
+    :param pt_dir: The directory where the dequantized PyTorch model will be saved.
+    :return: None. The dequantized model is saved to the specified directory.
+    """
+    tokenizer = AutoTokenizer.from_pretrained(pretrained)
+    model_to_eval = AutoModelForCausalLM.from_pretrained(pretrained, torch_dtype=torch.float32, device_map="cpu")
+    model_to_eval = load_checkpoint(model_to_eval, ckpt_file)
+    model_to_eval = nncf.strip(model_to_eval, do_copy=False, strip_format=StripFormat.IN_PLACE)
+    model_to_eval.save_pretrained(pt_dir)
+    tokenizer.save_pretrained(pt_dir)
+
+
 def limit_type(astr: str):
     value = float(astr)
     if value < 0 or value > 1:
@@ -298,6 +316,17 @@ def get_argument_parser() -> argparse.ArgumentParser:
         "accuracy, but require a calibration dataset and additional initialization time "
         "(~20 sec for 1B and ~80 sec for 8B models).",
     )
+    parser.add_argument(
+        "--equalize_mlp",
+        action="store_true",
+        help="Whether to equalize the scales of MLP layers (down_proj and up_proj/gate_proj with preceding LayerNorm) "
+        "before quantization. This can improve the accuracy of low-bit quantization.",
+    )
+    parser.add_argument(
+        "--save_pt",
+        action="store_true",
+        help="Whether to save the model with dequantization after training. It is useful for fast evaluation.",
+    )
 
     # Data params
     parser.add_argument("--num_train_samples", type=int, default=2048, help="Number of training samples")
@@ -335,6 +364,238 @@ def get_argument_parser() -> argparse.ArgumentParser:
         help="Size of each training microbatch. Gradients will be accumulated until the batch size is reached.",
     )
     return parser
+
+
+# ---------------------------------------------------------------------- #
+# MLP equalization (average up_proj/gate_proj input scale absorbed into layer norm weights)
+# ---------------------------------------------------------------------- #
+def _find_mlp_groups(model: nn.Module) -> list[tuple[nn.Module, nn.Linear, list[nn.Linear]]]:
+    """
+    Collect ``(parent, down_proj, [producers])`` triples where ``producers``
+    are the sibling linears whose outputs are consumed by ``down_proj`` along
+    its input-channel dimension.
+
+    Recognized layouts:
+      * Llama-style: ``down_proj`` consumes ``up_proj`` * SiLU(``gate_proj``);
+        producers = ``[up_proj, gate_proj]``.
+      * Generic: only ``up_proj`` present -> producers = ``[up_proj]``.
+    """
+    groups: list[tuple[nn.Module, nn.Linear, list[nn.Linear]]] = []
+    for parent in model.modules():
+        down = getattr(parent, "down_proj", None)
+        if not isinstance(down, nn.Linear):
+            continue
+        producers: list[nn.Linear] = []
+        for attr in ("up_proj",):
+            sib = getattr(parent, attr, None)
+            if isinstance(sib, nn.Linear) and sib.out_features == down.in_features:
+                producers.append(sib)
+        if producers:
+            groups.append((parent, down, producers))
+    return groups
+
+
+def _find_up_gate_groups(model: nn.Module) -> list[tuple[nn.Module, nn.Linear, list[nn.Linear]]]:
+    """
+    Collect ``(parent, down_proj, [producers])`` triples where ``producers``
+    are the sibling linears whose outputs are consumed by ``down_proj`` along
+    its input-channel dimension.
+
+    Recognized layouts:
+      * Llama-style: ``down_proj`` consumes ``up_proj`` * SiLU(``gate_proj``);
+        producers = ``[up_proj, gate_proj]``.
+      * Generic: only ``up_proj`` present -> producers = ``[up_proj]``.
+    """
+    groups: list[tuple[nn.Module, nn.Linear, list[nn.Linear]]] = []
+    for parent in model.modules():
+        if not hasattr(parent, "mlp"):
+            continue
+        mlp = getattr(parent, "mlp")
+        gate = getattr(mlp, "gate_proj", None)
+        if not isinstance(gate, nn.Linear):
+            continue
+
+        up = getattr(mlp, "up_proj", None)
+        if not isinstance(up, nn.Linear):
+            continue
+
+        # Identify the LayerNorm whose output is the direct input to gate_proj / up_proj.
+        # Check Gemma3-style first (pre_feedforward_layernorm), then fall back to
+        # Llama/Qwen-style (post_attention_layernorm).
+        producer = None
+        for attr in ("pre_feedforward_layernorm", "post_attention_layernorm"):
+            sib = getattr(parent, attr, None)
+            if sib is not None:
+                producer = sib
+                break
+
+        if producer:
+            groups.append((up, gate, producer))
+    return groups
+
+
+def _get_weight_data(module: nn.Module) -> torch.Tensor | None:
+    """Return the actual weight tensor for *module*, even when the parameter is on
+    the meta device (i.e. CPU-offloaded by accelerate's device_map='auto').
+
+    For meta parameters, the real data lives in the AlignDevicesHook's
+    ``weights_map`` dict-like object; we return a copy on CPU so arithmetic works.
+    Returns ``None`` if the actual data cannot be found.
+    """
+    w = module.weight
+    if w.device.type != "meta":
+        return w.data
+    hook = getattr(module, "_hf_hook", None)
+    if hook is not None:
+        wm = getattr(hook, "weights_map", None)
+        if wm is not None:
+            try:
+                return wm["weight"].cpu()
+            except Exception:
+                pass
+    return None
+
+
+def _set_weight_data(module: nn.Module, data: torch.Tensor) -> None:
+    """Write *data* back into *module*'s weight, even when it is on meta device.
+
+    For non-meta parameters: in-place copy to the parameter's device.
+    For meta (offloaded) parameters: replace the entry in the hook's weights_map.
+    """
+    w = module.weight
+    if w.device.type != "meta":
+        w.data.copy_(data.to(device=w.device, dtype=w.dtype))
+        return
+    hook = getattr(module, "_hf_hook", None)
+    if hook is not None:
+        wm = getattr(hook, "weights_map", None)
+        if wm is not None:
+            try:
+                original = wm["weight"]
+                wm["weight"] = data.to(device=original.device, dtype=original.dtype)
+            except Exception:
+                pass
+
+
+# rescale scale to [min, max] to avoid extreme values that cause instability during training or quantization
+def align_scale(s: Tensor, min=0.1, max=1.0) -> Tensor:
+    min_s = s.min()
+    max_s = s.max()
+    if max_s - min_s < 1e-5:
+        return torch.clamp(s, min=min, max=max)
+    s = (s - min_s) / (max_s - min_s) * (max - min) + min
+    return s
+
+
+@torch.no_grad()
+def equalize_up_gate_with_layernorm(model: nn.Module, eps: float = 1e-5, use_align_scale: bool = True) -> int:
+    groups = _find_up_gate_groups(model)
+    if not groups:
+        return 0
+
+    n_done = 0
+    for up, gate, producer in groups:
+        w_gate = _get_weight_data(gate)
+        w_up = _get_weight_data(up)
+        w_prod = _get_weight_data(producer)
+        if w_gate is None or w_up is None or w_prod is None:
+            continue
+
+        s_gate = w_gate.abs().mean(dim=0).clamp_min(eps).to(dtype=w_gate.dtype)
+        s_up = w_up.abs().mean(dim=0).clamp_min(eps).to(dtype=w_up.dtype)
+
+        s_gate = s_gate / s_gate.norm(p=2, dim=0, keepdim=True)
+        s_up = s_up / s_up.norm(p=2, dim=0, keepdim=True)
+
+        # up_proj theoretically more sensitive to quantization
+        s = 0.1 * s_gate + 0.9 * s_up
+        if use_align_scale:
+            s = align_scale(s, min=0.1, max=1.0)
+        # Divide gate/up input columns by s.
+        print("Max val before equalization gate:", w_gate.abs().max().item())
+        print("Max val before equalization up:", w_up.abs().max().item())
+        _set_weight_data(gate, w_gate * (1.0 / s.unsqueeze(0)))
+        _set_weight_data(up, w_up * (1.0 / s.unsqueeze(0)))
+        print("Max val after equalization gate:", _get_weight_data(gate).abs().max().item())
+        print("Max val after equalization up:", _get_weight_data(up).abs().max().item())
+
+        # Scale producer (LayerNorm/RMSNorm) so its output is multiplied by s.
+        s_dev = s.to(dtype=w_prod.dtype)
+        # Gemma3 uses (1 + weight) RMSNorm (weight initialized to zeros):
+        #   effective multiplier = (1 + weight)
+        #   to scale output by s: (1 + w_new) = s*(1 + w_old)  →  w_new = s*(1+w_old) - 1
+        # Standard RMSNorm (e.g. Llama) uses weight*x (weight initialized to ones):
+        #   effective multiplier = weight
+        #   to scale output by s: w_new = s * w_old
+        if "gemma" in type(producer).__name__.lower():
+            _set_weight_data(producer, s_dev * (1.0 + w_prod) - 1.0)
+        else:
+            _set_weight_data(producer, w_prod * s_dev)
+        if hasattr(producer, "bias") and producer.bias is not None and producer.bias.device.type != "meta":
+            producer.bias.data.mul_(s_dev.to(producer.bias.device, producer.bias.dtype))
+        n_done += 1
+    return n_done
+
+
+@torch.no_grad()
+def equalize_down_proj(
+    model: nn.Module,
+    eps: float = 1e-5,
+    use_align_scale: bool = True,
+) -> int:
+    """
+    Equalize each ``down_proj`` layer by absorbing the per-input-channel
+    activation magnitude into its producers (``up_proj`` and, when present,
+    ``gate_proj``).
+
+    For every MLP block let ``s = mean(|x|, dim=batch_seq)`` measured at the
+    input of ``down_proj`` over the calibration set. Then:
+
+    * ``down_proj.weight  /= s[None, :]`` (divide along input channels)
+    * For each producer ``L`` (e.g. ``up_proj``, ``gate_proj``):
+      ``L.weight *= s[:, None]``  (scale output channels)
+      ``L.bias   *= s``           (if a bias exists)
+
+    Mathematically, ``down(up(x) * silu(gate(x))) = down((up(x)*s) * (silu(gate(x)*s)/s))``
+    is *not* exact for the SiLU branch in general, but in practice this
+    pre-quantization equalization (cf. SmoothQuant / AWQ) significantly
+    flattens the weight magnitudes seen by the per-group quantizer. The
+    transformation is exact when no SiLU is present (``producers == [up_proj]``).
+
+    :param model: Model whose MLP blocks expose ``down_proj`` (and optional
+        ``up_proj``/``gate_proj`` siblings) as direct attributes. Must be
+        called on plain ``nn.Linear`` layers (i.e. **before** wrapping them
+        with :class:`QuantizedLoraLinear`).
+    :param eps: Lower bound for ``s`` to avoid division by zero.
+    :return: Number of equalized MLP groups.
+    """
+    groups = _find_mlp_groups(model)
+    if not groups:
+        return 0
+
+    n_done = 0
+    for _, down, producers in groups:
+        w_down = _get_weight_data(down)
+        if w_down is None:
+            continue
+        s = w_down.abs().mean(dim=0).clamp_min(eps).to(dtype=w_down.dtype)
+        if use_align_scale:
+            s = align_scale(s, min=0.1, max=1.0)
+        print("Max val before equalization:", w_down.abs().max().item())
+        _set_weight_data(down, w_down * (1.0 / s.unsqueeze(0)))
+        print("Max val after equalization:", _get_weight_data(down).abs().max().item())
+
+        # Scale producer output rows by s.
+        for prod in producers:
+            w_prod = _get_weight_data(prod)
+            if w_prod is None:
+                continue
+            s_dev = s.to(dtype=w_prod.dtype)
+            _set_weight_data(prod, w_prod * s_dev.unsqueeze(1))
+            if prod.bias is not None and prod.bias.device.type != "meta":
+                prod.bias.data.mul_(s_dev.to(prod.bias.device, prod.bias.dtype))
+        n_done += 1
+    return n_done
 
 
 def run_training(
@@ -479,6 +740,11 @@ def main(argv) -> float:
     if args.resume and ckpt_file.exists():
         model = load_checkpoint(model, ckpt_file)
     else:
+        if args.equalize_mlp:
+            n_eq = equalize_down_proj(model, use_align_scale=True)
+            print(f"Equalized {n_eq} down_proj layers.")
+            n_eq = equalize_up_gate_with_layernorm(model, use_align_scale=True)
+            print(f"Equalized {n_eq} up_proj/gate_proj layers with preceding LayerNorm.")
         model = compress_weights(model, dataset=dataset, **compression_config)
         save_checkpoint(model, ckpt_file, model_state=not args.basic_init)
     fq_lr = args.lr / 10
@@ -508,7 +774,7 @@ def main(argv) -> float:
         num_samples=num_samples,
         epoch_samples=epoch_samples,
         microbatches_per_epoch=microbatches_per_epoch,
-        model_state=not args.basic_init,
+        model_state=not args.basic_init or args.equalize_mlp,
     )
 
     # Optional scales-only finetuning phase: LoRA adapters are frozen, only quantizer scales are trained.
@@ -531,16 +797,21 @@ def main(argv) -> float:
             num_samples=num_samples,
             epoch_samples=epoch_samples,
             microbatches_per_epoch=microbatches_per_epoch,
-            model_state=not args.basic_init,
+            model_state=not args.basic_init or args.equalize_mlp,
         )
 
     del model
+
+    if args.save_pt:
+        export_to_dequantized_torch(args.pretrained, ckpt_file, ckpt_file.parent / "dequantized")
+        print(f"The finetuned model has been exported to OpenVINO and saved to: {ckpt_file.parent / 'dequantized'}\n")
+
     # Export the best tuned model to OpenVINO and evaluate it using LM-Evaluation-Harness.
     model_for_eval = export_to_openvino(args.pretrained, ckpt_file, ckpt_file.parent)
     ov_perplexity = measure_perplexity(model_for_eval, args.eval_seqlen, args.limit)
     tb.add_scalar("ov_perplexity", ov_perplexity, 0)
     print(
-        f"The finetuned model has been exported to OpenVINO and saved to: {last_dir}\n"
+        f"The finetuned model has been exported to OpenVINO and saved to: {ckpt_file.parent}\n"
         f"The word perplexity on wikitext (test) = {ov_perplexity:.4f}"
     )
     return ov_perplexity
