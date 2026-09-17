@@ -62,7 +62,7 @@ def get_wikitext2(num_samples: int, seqlen: int, tokenizer: Any, device: torch.d
     :return: A list of tensors containing the tokenized text samples.
     """
     traindata = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split="train")
-    limit = num_samples * seqlen // 4  # ~1k for 128 samples with seqlen=32 to be aligned with optimum
+    limit = num_samples * seqlen  # ~1k for 128 samples with seqlen=32 to be aligned with optimum
     text = "".join([" \n" if s == "" else s for s in traindata["text"][:limit]])
     trainenc = tokenizer(text, return_tensors="pt")
     trainloader = []
@@ -697,7 +697,7 @@ def main(argv) -> float:
     compression_config = dict(
         mode=CompressWeightsMode.INT3_SYM if args.bits == 3 else CompressWeightsMode.INT2_SYM,
         group_size=64,
-        awq=not args.basic_init,
+        awq=not (args.basic_init or args.equalize_mlp),
         scale_estimation=not args.basic_init,
         compression_format=CompressionFormat.FQ_LORA,
     )
@@ -758,6 +758,7 @@ def main(argv) -> float:
     epoch_samples = num_samples - num_samples % args.microbatch_size
     microbatches_per_epoch = epoch_samples // args.microbatch_size
 
+    save_model_state = not args.basic_init or args.equalize_mlp
     total_steps = run_training(
         model=model,
         train_loader=train_loader,
@@ -774,7 +775,7 @@ def main(argv) -> float:
         num_samples=num_samples,
         epoch_samples=epoch_samples,
         microbatches_per_epoch=microbatches_per_epoch,
-        model_state=not args.basic_init or args.equalize_mlp,
+        model_state=save_model_state,
     )
 
     # Optional scales-only finetuning phase: LoRA adapters are frozen, only quantizer scales are trained.
@@ -797,14 +798,17 @@ def main(argv) -> float:
             num_samples=num_samples,
             epoch_samples=epoch_samples,
             microbatches_per_epoch=microbatches_per_epoch,
-            model_state=not args.basic_init or args.equalize_mlp,
+            model_state=save_model_state,
         )
+
+    if args.scale_finetune_epochs == 0 and args.epochs == 0:
+        save_checkpoint(model, ckpt_file, model_state=save_model_state)
 
     del model
 
     if args.save_pt:
         export_to_dequantized_torch(args.pretrained, ckpt_file, ckpt_file.parent / "dequantized")
-        print(f"The finetuned model has been exported to OpenVINO and saved to: {ckpt_file.parent / 'dequantized'}\n")
+        print(f"The finetuned model has been exported to torch and saved to: {ckpt_file.parent / 'dequantized'}\n")
 
     # Export the best tuned model to OpenVINO and evaluate it using LM-Evaluation-Harness.
     model_for_eval = export_to_openvino(args.pretrained, ckpt_file, ckpt_file.parent)
