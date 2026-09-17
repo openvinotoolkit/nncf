@@ -19,7 +19,7 @@ If you do not have access to the export function, you can use the converter func
 import onnx
 from onnx.version_converter import convert_version
 
-model = onnx.load_model('/path_to_model')
+model = onnx.load_model("/path_to_model")
 converted_model = convert_version(model, target_version=13)
 ```
 

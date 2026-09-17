@@ -185,7 +185,10 @@ ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 120
-exclude = ["src/nncf/torch/function_hook/handle_inner_functions.py"]
+exclude = [
+    "src/nncf/torch/function_hook/handle_inner_functions.py",
+    "docs/styleguide/PyGuide.md",
+]
 
 [tool.ruff.lint]
 preview = true
