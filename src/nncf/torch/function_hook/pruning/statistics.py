@@ -17,6 +17,7 @@ from nncf.pruning.prune_model import ModelPruningStatistic
 from nncf.pruning.prune_model import TensorPruningStatistic
 from nncf.torch.function_hook.hook_storage import decode_hook_name
 from nncf.torch.function_hook.pruning.magnitude.modules import UnstructuredPruningMask
+from nncf.torch.function_hook.pruning.magnitude.structured_modules import StructuredPruningMask
 from nncf.torch.function_hook.pruning.rb.modules import RBPruningMask
 from nncf.torch.function_hook.pruning.rb.modules import binary_mask
 from nncf.torch.function_hook.wrapper import get_hook_storage
@@ -37,7 +38,7 @@ def pruning_statistic(model: nn.Module) -> ModelPruningStatistic:
 
     hook_storage = get_hook_storage(model)
     for hook_name, hook_module in hook_storage.named_hooks():
-        if isinstance(hook_module, UnstructuredPruningMask):
+        if isinstance(hook_module, (UnstructuredPruningMask, StructuredPruningMask)):
             mask = hook_module.binary_mask
         elif isinstance(hook_module, RBPruningMask):
             mask = binary_mask(hook_module.mask)

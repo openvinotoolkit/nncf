@@ -90,6 +90,7 @@ def get_config(model: nn.Module) -> dict[str, Any]:
 # TODO(AlexanderDokuchaev): Remove after several release (expected: 3.4.0)
 MODULE_NAME_MAP = {
     "UnstructuredPruningMask": "nncf.torch.function_hook.pruning.magnitude.modules",
+    "StructuredPruningMask": "nncf.torch.function_hook.pruning.magnitude.structured_modules",
     "RBPruningMask": "nncf.torch.function_hook.pruning.rb.modules",
     "SymmetricQuantizer": "nncf.torch.quantization.layers",
     "AsymmetricQuantizer": "nncf.torch.quantization.layers",
