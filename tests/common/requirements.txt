@@ -3,3 +3,4 @@ pytest
 pytest-cov
 pytest-mock
 pytest-xdist
+typing_extensions; python_version < '3.12'

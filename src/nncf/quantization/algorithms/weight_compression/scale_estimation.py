@@ -202,6 +202,11 @@ class ScaleEstimation:
         eps = fns.finfo(weight).eps
         is_3d_weight = len(weight.shape) == 3
 
+        if is_3d_weight and len(X.shape) == 2:
+            # For cases such as grouped matmul, where the activation can be 2D or 3D but weights are 3D
+            s = fns.unsqueeze(s, 0)
+            X = fns.unsqueeze(X, 0)
+
         was_transposed = False
         if reduction_axis == 0 or (reduction_axis == 1 and is_3d_weight):
             # Weights

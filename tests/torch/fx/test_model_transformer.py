@@ -22,6 +22,7 @@ from torchao.quantization.pt2e.observer import PerChannelMinMaxObserver
 from torchao.quantization.pt2e.utils import create_getattr_from_value
 
 import nncf
+import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
@@ -40,6 +41,7 @@ from nncf.experimental.torch.fx.transformations import module_insertion_transfor
 from nncf.experimental.torch.fx.transformations import node_removal_transformation_builder
 from nncf.experimental.torch.fx.transformations import output_insertion_transformation_builder
 from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder
+from nncf.experimental.torch.fx.transformations import remove_split_getitem_nodes
 from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.utils import get_model_device
@@ -55,6 +57,8 @@ from tests.torch.test_models.synthetic import ConvolutionWithSeveralOutputs
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModelWithConcat
 from tests.torch.test_models.synthetic import ScalarCloneTestModel
+from tests.torch.test_models.synthetic import SplitBlockModel
+from tests.torch.test_models.synthetic import TopKModel
 
 REF_DIR = TEST_ROOT / "torch" / "data" / "fx"
 
@@ -624,3 +628,38 @@ def test_constant_folding_with_constraints(is_per_channel):
     path_to_dot = TRANSFORMED_GRAPH_DIR_NAME / dot_file_name
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
     compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
+
+
+def test_remove_split_getitem_nodes():
+    ex_inputs = torch.ones(SplitBlockModel.INPUT_SHAPE)
+    captured_model = get_torch_fx_model(SplitBlockModel(), ex_inputs)
+    nncf_graph = GraphConverter.create_nncf_graph(captured_model)
+
+    split_nodes = nncf_graph.get_nodes_by_metatypes([om.PTSplitMetatype])
+    getitem_nodes = [node for node in nncf_graph.get_all_nodes() if node.node_type == "__getitem__"]
+
+    getitem_consumers = {n.node_name for getitem_node in getitem_nodes for n in nncf_graph.get_next_nodes(getitem_node)}
+
+    remove_split_getitem_nodes(nncf_graph)
+
+    # All getitem nodes are removed
+    assert [node for node in nncf_graph.get_all_nodes() if node.node_type == "__getitem__"] == []
+    # The split node now connects exactly to the consumers of the getitem nodes.
+    split_next = {node.node_name for node in nncf_graph.get_next_nodes(split_nodes[0])}
+    assert split_next == getitem_consumers
+
+
+def test_remove_split_getitem_nodes_keeps_non_split_getitems():
+    model = TopKModel()
+    ex_inputs = torch.ones(TopKModel.INPUT_SHAPE)
+    captured_model = get_torch_fx_model(model, ex_inputs)
+    nncf_graph = GraphConverter.create_nncf_graph(captured_model)
+    getitem_nodes_before = {node.node_name for node in nncf_graph.get_all_nodes() if node.node_type == "__getitem__"}
+    nodes_before = len(nncf_graph.get_all_nodes())
+
+    remove_split_getitem_nodes(nncf_graph)
+
+    # getitem nodes that are not after a split are not removed.
+    getitem_nodes_after = {node.node_name for node in nncf_graph.get_all_nodes() if node.node_type == "__getitem__"}
+    assert getitem_nodes_after == getitem_nodes_before
+    assert len(nncf_graph.get_all_nodes()) == nodes_before
