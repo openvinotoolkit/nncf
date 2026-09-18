@@ -37,6 +37,22 @@ If the workflow is PR-targeted, add a dynamic `run-name` that includes the PR nu
 run-name: "<Workflow Name>${{ inputs.pr_num != '' && format(' PR#{0}', inputs.pr_num) || '' }}"
 ```
 
+## Runner info
+
+Every Linux or Windows job that runs tests must print runner hardware info. Skip macOS jobs.
+Place these steps before the checkout step.
+
+```yaml
+- name: CPU Info
+  run: awk 'BEGIN{RS=""} END{print}' /proc/cpuinfo
+- name: GPU Info
+  run: nvidia-smi
+```
+
+- Use `shell: bash` on the `CPU Info` step so the same command works on both Linux and Windows (git-bash exposes `/proc/cpuinfo`).
+- Add the `GPU Info` step only for GPU runners (runner name or label contains `gpu`).
+- Checklist: a job counts as a test job if any step runs `pytest`, `make test-*`, or an equivalent test command. Confirm each Linux/Windows test job has a `CPU Info` step before wrapping up.
+
 ## PR-aware checkout
 
 ```yaml
