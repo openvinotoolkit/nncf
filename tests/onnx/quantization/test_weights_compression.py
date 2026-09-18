@@ -728,6 +728,28 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return REFERENCE_SCALES_DIR / "awq_scale_ref.json"
 
     @staticmethod
+    def get_shared_weight_model() -> onnx.ModelProto:
+        """
+        Builds a model with two MatMul nodes that share the same weight.
+        """
+        weight = np.arange(0, 16).reshape(4, 4).astype(np.float32)
+        initializer = onnx.numpy_helper.from_array(weight, name="shared_weight")
+        nodes = [
+            onnx.helper.make_node("MatMul", ["input", "shared_weight"], ["MatMul_0_output"], name="MatMul_0"),
+            onnx.helper.make_node("MatMul", ["MatMul_0_output", "shared_weight"], ["output"], name="MatMul_1"),
+        ]
+        graph = onnx.helper.make_graph(
+            nodes,
+            "shared-weight-graph",
+            inputs=[onnx.helper.make_tensor_value_info("input", onnx.TensorProto.FLOAT, (1, 4, 4))],
+            outputs=[onnx.helper.make_tensor_value_info("output", onnx.TensorProto.FLOAT, (1, 4, 4))],
+            initializer=[initializer],
+        )
+        model = onnx.helper.make_model(graph, opset_imports=[onnx.helper.make_operatorsetid("", 21)])
+        onnx.checker.check_model(model)
+        return model
+
+    @staticmethod
     def get_custom_annotation_ref_path(ref_name: str) -> Path:
         return CUSTOM_ANNOTATION_REFERENCES_DIR / f"{ref_name}.json"
 

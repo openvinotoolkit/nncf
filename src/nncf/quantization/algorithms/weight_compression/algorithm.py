@@ -53,7 +53,6 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import Weig
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_reduction_channel_size
 from nncf.scopes import CustomAnnotationScope
 from nncf.scopes import IgnoredScope
-from nncf.scopes import ScopeType
 from nncf.scopes import get_node_names_from_scope
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
@@ -1195,9 +1194,7 @@ class WeightCompression(Algorithm):
         """
         node_name_to_config: dict[str, WeightCompressionConfig] = {}
         for index, annotation in enumerate(custom_annotation):
-            annotated_names = get_node_names_from_scope(
-                annotation.scope, graph, strict=annotation.scope.validate, scope_type=ScopeType.ANNOTATED
-            )
+            annotated_names = get_node_names_from_scope(annotation.scope, graph, strict=annotation.scope.validate)
             overlapped_names = sorted(annotated_names & node_name_to_config.keys())
             if overlapped_names:
                 config = annotation.config
@@ -1306,14 +1303,13 @@ class WeightCompression(Algorithm):
         Moves the annotated weight parameters that are not compressed, e.g. the ignored ones, from the skipped
         parameters to the compressed ones, so that the annotation takes precedence over the ignored scope.
         """
-        compressed_weight_names = set(w_params.weight_name for w_params in all_weight_params)
+        restored_weight_names = set()
         restored_weight_params = []
         for w_params in skipped_weight_params:
-            # A weight that is already compressed under another node, e.g. a shared weight, must not be restored
-            # to avoid processing the same weight more than once.
+            # A weight is compressed under a single node, so a shared weight is restored only once
             is_annotated = w_params.node_with_weight.node_name in node_name_to_config
-            if is_annotated and w_params.weight_name not in compressed_weight_names:
-                compressed_weight_names.add(w_params.weight_name)
+            if is_annotated and w_params.weight_name not in restored_weight_names:
+                restored_weight_names.add(w_params.weight_name)
                 restored_weight_params.append(w_params)
 
         if not restored_weight_params:
@@ -1324,7 +1320,6 @@ class WeightCompression(Algorithm):
             "by the custom annotation. They will be compressed with the user-defined configuration:\n\t"
             + "\n\t".join(sorted(w_params.node_with_weight.node_name for w_params in restored_weight_params))
         )
-        restored_weight_names = set(w_params.weight_name for w_params in restored_weight_params)
         skipped_weight_params = [
             w_params for w_params in skipped_weight_params if w_params.weight_name not in restored_weight_names
         ]

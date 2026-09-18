@@ -727,6 +727,11 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return REFERENCE_SCALES_DIR / "awq_scale_ref.json"
 
     @staticmethod
+    def get_shared_weight_model() -> GraphModelWrapper:
+        model = wrap_model(ShortTransformer(8, 16, share_weights=True))
+        return GraphModelWrapper(model, example_input=torch.randint(0, 10, (8,)))
+
+    @staticmethod
     def get_custom_annotation_ref_path(ref_name: str) -> Path:
         return CUSTOM_ANNOTATION_REFERENCES_DIR / f"{ref_name}.json"
 

@@ -515,6 +515,11 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return REFERENCE_SCALES_DIR / "awq_scale_ref.json"
 
     @staticmethod
+    def get_shared_weight_model() -> torch.fx.GraphModule:
+        model = ShortTransformer(8, 16, share_weights=True)
+        return get_torch_fx_model(model, torch.randint(0, 10, (8,)))
+
+    @staticmethod
     def get_custom_annotation_ref_path(ref_name: str) -> Path:
         return CUSTOM_ANNOTATION_REFERENCES_DIR / f"{ref_name}.json"
 

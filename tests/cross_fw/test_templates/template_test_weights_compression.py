@@ -976,6 +976,12 @@ class TemplateWeightCompression(ABC):
         Returns the path to the reference compression configs of the given custom annotation test case.
         """
 
+    @abstractmethod
+    def get_shared_weight_model(self) -> TModel:
+        """
+        Returns a backend model where two nodes share the same weight, ready to be compressed.
+        """
+
     def _get_sequential_matmul_model(self):
         """Returns a backend model with a sequence of MatMul layers, ready to be compressed."""
         return self.wrap_model(
@@ -1005,9 +1011,10 @@ class TemplateWeightCompression(ABC):
     # The weight nodes of the sequential MatMul model are named "MatMul_<i>" / "linear_<i>" / "/linear/<i>"
     # depending on the backend, so they are referred to by a pattern that matches the node index.
     @pytest.mark.parametrize(
-        ("kwargs", "annotations", "ignored_scope"),
+        ("model_name", "kwargs", "annotations", "ignored_scope"),
         [
             pytest.param(
+                "sequential_matmul",
                 dict(ratio=1.0, all_layers=False),
                 [
                     (
@@ -1023,6 +1030,7 @@ class TemplateWeightCompression(ABC):
                 id="primary_and_backup_precision",
             ),
             pytest.param(
+                "sequential_matmul",
                 dict(ratio=0.5, all_layers=True),
                 [
                     (
@@ -1034,6 +1042,7 @@ class TemplateWeightCompression(ABC):
                 id="mixed_precision",
             ),
             pytest.param(
+                "sequential_matmul",
                 dict(ratio=1.0, all_layers=True),
                 [
                     (
@@ -1045,6 +1054,7 @@ class TemplateWeightCompression(ABC):
                 id="ignored_scope",
             ),
             pytest.param(
+                "sequential_matmul",
                 dict(ratio=1.0, all_layers=True),
                 [
                     (
@@ -1060,6 +1070,7 @@ class TemplateWeightCompression(ABC):
                 id="overlapping_annotations",
             ),
             pytest.param(
+                "sequential_matmul",
                 dict(
                     ratio=1.0,
                     all_layers=True,
@@ -1078,6 +1089,7 @@ class TemplateWeightCompression(ABC):
                 id="group_size_fallback_adjust",
             ),
             pytest.param(
+                "sequential_matmul",
                 dict(
                     ratio=1.0,
                     all_layers=True,
@@ -1094,17 +1106,45 @@ class TemplateWeightCompression(ABC):
                 None,
                 id="group_size_fallback_ignore",
             ),
+            pytest.param(
+                "shared_weight",
+                dict(ratio=1.0, all_layers=True),
+                [
+                    (
+                        nncf.CustomAnnotationScope(patterns=[".*"]),
+                        WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                    )
+                ],
+                None,
+                id="shared_weight",
+            ),
+            pytest.param(
+                "shared_weight",
+                dict(ratio=1.0, all_layers=True),
+                [
+                    (
+                        nncf.CustomAnnotationScope(patterns=[".*"]),
+                        WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                    )
+                ],
+                IgnoredScope(patterns=[".*"]),
+                id="shared_weight_with_ignored_scope",
+            ),
         ],
     )
-    def test_custom_annotation(self, kwargs, annotations, ignored_scope, request):
+    def test_custom_annotation(self, model_name, kwargs, annotations, ignored_scope, request):
         """
         Compares the compression config assigned to each weight node with the reference one when the given custom
         annotation is applied. A node that is not compressed has no config in the reference file.
 
         Set the NNCF_TEST_REGEN_DOT environment variable to regenerate the reference file.
         """
+        models = {
+            "sequential_matmul": self._get_sequential_matmul_model,
+            "shared_weight": self.get_shared_weight_model,
+        }
         configs = self._compress_and_get_configs(
-            model=self._get_sequential_matmul_model(),
+            model=models[model_name](),
             mode=CompressWeightsMode.INT4_SYM,
             group_size=-1,
             ignored_scope=ignored_scope,

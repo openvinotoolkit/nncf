@@ -2548,6 +2548,10 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return get_actual_reference_for_current_openvino(REFERENCE_SCALES_DIR / "awq_scale_ref.json")
 
     @staticmethod
+    def get_shared_weight_model() -> ov.Model:
+        return GatherAndMatmulShareData().ov_model
+
+    @staticmethod
     def get_custom_annotation_ref_path(ref_name: str) -> Path:
         return get_actual_reference_for_current_openvino(CUSTOM_ANNOTATION_REFERENCES_DIR / f"{ref_name}.json")
 
