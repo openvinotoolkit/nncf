@@ -13,7 +13,6 @@ import shutil
 import sys
 import warnings
 from datetime import datetime
-import os
 from pathlib import Path
 from pprint import pprint
 from typing import Any
@@ -22,7 +21,6 @@ import torch
 import torch.nn.functional as F
 import transformers
 from datasets import load_dataset
-import json
 from lm_eval import simple_evaluate
 from lm_eval.models.optimum_lm import OptimumLM
 from optimum.exporters.openvino.convert import export_from_model
@@ -31,6 +29,8 @@ from optimum.modeling_base import OptimizedModel
 from torch import Tensor
 from torch import nn
 from torch.jit import TracerWarning
+from torch.optim.lr_scheduler import LinearLR
+from torch.optim.lr_scheduler import LRScheduler
 from torch.utils.tensorboard import SummaryWriter
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
@@ -88,12 +88,13 @@ def warmup_triton():
 
 def get_ultrachat_200k(num_samples: int, seqlen: int, tokenizer: Any, device: torch.device) -> list[Tensor]:
     if not hasattr(tokenizer, "apply_chat_template") or tokenizer.apply_chat_template is None:
-        raise ValueError("Tokenizer must have an 'apply_chat_template' attribute for ultra chat dataset.")
-    
+        msg = "Tokenizer must have an 'apply_chat_template' attribute for ultra chat dataset."
+        raise ValueError(msg)
+
     trainloader = []
     text = ""
-    
-    dataset = load_dataset('HuggingFaceH4/ultrachat_200k', split='train_sft', streaming=True)
+
+    dataset = load_dataset("HuggingFaceH4/ultrachat_200k", split="train_sft", streaming=True)
 
     for example in dataset:
         text = tokenizer.apply_chat_template(example["messages"], tokenize=False, add_generation_prompt=True)
@@ -113,9 +114,7 @@ def get_ultrachat_200k(num_samples: int, seqlen: int, tokenizer: Any, device: to
     del dataset
 
     return trainloader
-    
-       
-    
+
 
 def get_pile_10k(num_samples: int, seqlen: int, tokenizer: Any, device: torch.device):
     ds = load_dataset("NeelNanda/pile-10k", split="train")
@@ -254,6 +253,31 @@ def set_trainable(model: nn.Module, lora_lr: float, fq_lr: float, scales_only: b
     if scales_only:
         return [{"params": scales_to_train, "lr": fq_lr}]
     return [{"params": adapters_to_train, "lr": lora_lr}, {"params": scales_to_train, "lr": fq_lr}]
+
+
+def get_linear_lr_scheduler(
+    optimizer: torch.optim.Optimizer,
+    enabled: bool,
+    num_epochs: int,
+    microbatches_per_epoch: int,
+    grad_accumulation_steps: int,
+) -> LinearLR | None:
+    """
+    Creates a linear learning rate scheduler for the requested training phase.
+
+    :param optimizer: Optimizer to schedule.
+    :param enabled: Whether to create the scheduler.
+    :param num_epochs: Number of epochs in the phase.
+    :param microbatches_per_epoch: Number of microbatch chunks in one epoch.
+    :param grad_accumulation_steps: Number of microbatches before an optimizer step.
+    :return: A linear learning rate scheduler or None.
+    """
+    if not enabled:
+        return None
+    total_steps = num_epochs * (microbatches_per_epoch // grad_accumulation_steps)
+    if total_steps == 0:
+        return None
+    return LinearLR(optimizer, start_factor=1.0, end_factor=0.0, total_iters=total_steps)
 
 
 def save_checkpoint(model: nn.Module, ckpt_file: Path, model_state: bool = True) -> None:
@@ -429,6 +453,11 @@ def get_argument_parser() -> argparse.ArgumentParser:
         default=0,
         help="Number of additional epochs after the main training loop during which only the quantizer scales are "
         "finetuned (LoRA adapters are frozen). Set to 0 to skip this phase.",
+    )
+    parser.add_argument(
+        "--linear_lr_scheduler",
+        action="store_true",
+        help="Use a linear learning rate scheduler that decays the learning rate to zero during each training phase.",
     )
     parser.add_argument("--batch_size", type=int, default=32, help="Size of training batch.")
     parser.add_argument(
@@ -677,6 +706,7 @@ def run_training(
     train_loader: list[Tensor],
     orig_hiddens: list[Tensor],
     optimizer: torch.optim.Optimizer,
+    scheduler: LRScheduler | None,
     ckpt_file: Path,
     tb: SummaryWriter,
     num_epochs: int,
@@ -698,6 +728,7 @@ def run_training(
     :param train_loader: Training samples used for distillation.
     :param orig_hiddens: Teacher hidden states computed from the original model.
     :param optimizer: Optimizer used for updates.
+    :param scheduler: Optional learning rate scheduler stepped after optimizer updates.
     :param ckpt_file: Path to save the checkpoint after each epoch.
     :param tb: TensorBoard writer for loss metrics.
     :param num_epochs: Number of epochs to run.
@@ -746,11 +777,15 @@ def run_training(
             (loss / grad_accumulation_steps).backward()
             if grad_steps == grad_accumulation_steps:
                 optimizer.step()
+                if scheduler is not None:
+                    scheduler.step()
                 optimizer.zero_grad()
                 aggregated_loss = loss_numerator / grad_steps
                 loss_numerator = grad_steps = 0
                 total_steps += 1
                 tb.add_scalar("loss", aggregated_loss, total_steps)
+                current_lr = scheduler.get_last_lr()[0] if scheduler is not None else optimizer.param_groups[0]["lr"]
+                tb.add_scalar("lr", current_lr, total_steps)
                 epoch_tracker.update(advance=0, description=f"{phase_desc} {epoch} | loss={aggregated_loss:.4f}")
 
         save_checkpoint(model, ckpt_file, model_state=model_state)
@@ -850,6 +885,9 @@ def main(argv) -> float:
         train_loader=train_loader,
         orig_hiddens=orig_hiddens,
         optimizer=opt,
+        scheduler=get_linear_lr_scheduler(
+            opt, args.linear_lr_scheduler, args.epochs, microbatches_per_epoch, grad_accumulation_steps
+        ),
         ckpt_file=ckpt_file,
         tb=tb,
         num_epochs=args.epochs,
@@ -873,6 +911,13 @@ def main(argv) -> float:
             train_loader=train_loader,
             orig_hiddens=orig_hiddens,
             optimizer=opt,
+            scheduler=get_linear_lr_scheduler(
+                opt,
+                args.linear_lr_scheduler,
+                args.scale_finetune_epochs,
+                microbatches_per_epoch,
+                grad_accumulation_steps,
+            ),
             ckpt_file=ckpt_file,
             tb=tb,
             num_epochs=args.scale_finetune_epochs,
