@@ -108,6 +108,40 @@ from nncf import compress_weights, CompressWeightsMode
 compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_ASYM, group_size=64, ratio=0.9) # model is openvino.Model object
 ```
 
+#### Custom precision for specific layers
+
+- The `mode`, `ratio` and `backup_mode` parameters define the precision of a layer indirectly: the mixed-precision
+  algorithm decides which layers are compressed to the primary precision, and the rest is compressed to the backup one.
+  The `custom_annotation` parameter makes it possible to assign a compression configuration to certain layers
+  explicitly. A typical use case is a Mixture-of-Experts model, where the experts are compressed to 4 bits, while the
+  attention and the router layers are kept in 8 bits to preserve accuracy.
+
+```python
+import nncf
+from nncf import compress_weights, CompressWeightsMode
+
+compressed_model = compress_weights(
+    model, # model is openvino.Model object
+    mode=CompressWeightsMode.INT4_SYM,
+    group_size=64,
+    ratio=1.0,
+    custom_annotation=[
+        nncf.CustomAnnotation(
+            scope=nncf.CustomAnnotationScope(patterns=[".*self_attn.*", ".*router.*"]),
+            config=nncf.WeightCompressionConfig(mode=CompressWeightsMode.INT8_ASYM, group_size=-1),
+        ),
+    ],
+)
+```
+
+- The scope of an annotation is defined by the same rules as [the ignored scope](/docs/usage/IgnoredScope.md): node names,
+  regular expressions, operation types and subgraphs.
+  The configuration given by an annotation takes precedence over the decision made by the algorithm, namely over the
+  mixed-precision assignment, the `all_layers` option and the backup precision of the embeddings and the last linear
+  layer. A layer that is matched by both the `ignored_scope` and a custom annotation is compressed with the
+  user-defined configuration and a warning is logged. If several annotations match the same layer, the last one takes
+  precedence.
+
 #### Data-aware methods
 
 - Accuracy of the 4-bit compressed models can be improved by using data-aware mixed-precision algorithm. It is capable to find outliers in the input activations and assign different quantization precision to minimize accuracy degradation.

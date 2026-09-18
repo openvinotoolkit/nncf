@@ -12,6 +12,7 @@ import math
 import os
 from abc import ABC
 from abc import abstractmethod
+from dataclasses import asdict
 from dataclasses import dataclass
 from functools import reduce
 from operator import mul
@@ -965,6 +966,258 @@ class TemplateWeightCompression(ABC):
         assert ref_num_group_sizes == num_group_sizes, (
             f"Expected {ref_num_group_sizes} group size values, but got {num_group_sizes}."
         )
+
+    # Test Custom Annotation
+
+    @staticmethod
+    @abstractmethod
+    def get_custom_annotation_ref_path(ref_name: str) -> Path:
+        """
+        Returns the path to the reference compression configs of the given custom annotation test case.
+        """
+
+    @abstractmethod
+    def get_shared_weight_model(self) -> TModel:
+        """
+        Returns a backend model where two nodes share the same weight, ready to be compressed.
+        """
+
+    def _get_sequential_matmul_model(self):
+        """Returns a backend model with a sequence of MatMul layers, ready to be compressed."""
+        return self.wrap_model(
+            self.get_sequential_matmul_model(transpose_a=False), np.ones([1, 4, 4], dtype=np.float32)
+        )
+
+    def _compress_and_get_configs(self, **kwargs) -> dict[str, dict[str, Any]]:
+        """
+        Compresses a model and returns the compression config assigned to each compressed weight node.
+
+        :param kwargs: Arguments for the `compress_weights` function.
+        :return: A mapping from a node name to the assigned compression config.
+        """
+        captured_weight_params = []
+        original_fn = WeightCompression.apply_with_parameters
+
+        def apply_with_parameters(self, model, graph, dataset, statistics, all_weight_params):
+            captured_weight_params.append(all_weight_params)
+            return original_fn(self, model, graph, dataset, statistics, all_weight_params)
+
+        with patch.object(WeightCompression, "apply_with_parameters", apply_with_parameters):
+            compress_weights(**kwargs)
+
+        all_weight_params = captured_weight_params[-1]
+        return {wp.node_with_weight.node_name: asdict(wp.compression_config) for wp in all_weight_params}
+
+    # The weight nodes of the sequential MatMul model are named "MatMul_<i>" / "linear_<i>" / "/linear/<i>"
+    # depending on the backend, so they are referred to by a pattern that matches the node index.
+    @pytest.mark.parametrize(
+        ("model_name", "kwargs", "annotations", "ignored_scope"),
+        [
+            pytest.param(
+                "sequential_matmul",
+                dict(ratio=1.0, all_layers=False),
+                [
+                    (
+                        nncf.CustomAnnotationScope(patterns=[".*1$"]),
+                        WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                    ),
+                    (
+                        nncf.CustomAnnotationScope(patterns=[".*4$"]),
+                        WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=4),
+                    ),
+                ],
+                None,
+                id="primary_and_backup_precision",
+            ),
+            pytest.param(
+                "sequential_matmul",
+                dict(ratio=0.5, all_layers=True),
+                [
+                    (
+                        nncf.CustomAnnotationScope(patterns=[".*1$"]),
+                        WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=-1),
+                    )
+                ],
+                None,
+                id="mixed_precision",
+            ),
+            pytest.param(
+                "sequential_matmul",
+                dict(ratio=1.0, all_layers=True),
+                [
+                    (
+                        nncf.CustomAnnotationScope(patterns=[".*1$"]),
+                        WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                    )
+                ],
+                IgnoredScope(patterns=[".*1$"]),
+                id="ignored_scope",
+            ),
+            pytest.param(
+                "sequential_matmul",
+                dict(ratio=1.0, all_layers=True),
+                [
+                    (
+                        nncf.CustomAnnotationScope(patterns=[".*1$", ".*2$"]),
+                        WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                    ),
+                    (
+                        nncf.CustomAnnotationScope(patterns=[".*2$"]),
+                        WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=4),
+                    ),
+                ],
+                None,
+                id="overlapping_annotations",
+            ),
+            pytest.param(
+                "sequential_matmul",
+                dict(
+                    ratio=1.0,
+                    all_layers=True,
+                    advanced_parameters=CompressionParams(
+                        group_size_fallback_mode=nncf.GroupSizeFallbackMode.ADJUST, min_adjusted_group_size=4
+                    ),
+                ),
+                # The channel size of the model is 4, so the group size of 3 is invalid
+                [
+                    (
+                        nncf.CustomAnnotationScope(patterns=[".*1$"]),
+                        WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=3),
+                    )
+                ],
+                None,
+                id="group_size_fallback_adjust",
+            ),
+            pytest.param(
+                "sequential_matmul",
+                dict(
+                    ratio=1.0,
+                    all_layers=True,
+                    advanced_parameters=CompressionParams(
+                        group_size_fallback_mode=nncf.GroupSizeFallbackMode.IGNORE, min_adjusted_group_size=4
+                    ),
+                ),
+                [
+                    (
+                        nncf.CustomAnnotationScope(patterns=[".*1$"]),
+                        WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=3),
+                    )
+                ],
+                None,
+                id="group_size_fallback_ignore",
+            ),
+            pytest.param(
+                "shared_weight",
+                dict(ratio=1.0, all_layers=True),
+                [
+                    (
+                        nncf.CustomAnnotationScope(patterns=[".*"]),
+                        WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                    )
+                ],
+                None,
+                id="shared_weight",
+            ),
+            pytest.param(
+                "shared_weight",
+                dict(ratio=1.0, all_layers=True),
+                [
+                    (
+                        nncf.CustomAnnotationScope(patterns=[".*"]),
+                        WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                    )
+                ],
+                IgnoredScope(patterns=[".*"]),
+                id="shared_weight_with_ignored_scope",
+            ),
+        ],
+    )
+    def test_custom_annotation(self, model_name, kwargs, annotations, ignored_scope, request):
+        """
+        Compares the compression config assigned to each weight node with the reference one when the given custom
+        annotation is applied. A node that is not compressed has no config in the reference file.
+
+        Set the NNCF_TEST_REGEN_DOT environment variable to regenerate the reference file.
+        """
+        models = {
+            "sequential_matmul": self._get_sequential_matmul_model,
+            "shared_weight": self.get_shared_weight_model,
+        }
+        configs = self._compress_and_get_configs(
+            model=models[model_name](),
+            mode=CompressWeightsMode.INT4_SYM,
+            group_size=-1,
+            ignored_scope=ignored_scope,
+            **kwargs,
+            custom_annotation=[nncf.CustomAnnotation(scope=scope, config=config) for scope, config in annotations],
+        )
+
+        ref_path = self.get_custom_annotation_ref_path(request.node.callspec.id)
+        if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
+            dump_to_json(ref_path, configs)
+
+        assert configs == load_json(ref_path)
+
+    @pytest.mark.parametrize(
+        ("custom_annotation", "error"),
+        [
+            pytest.param(nncf.CustomAnnotation(), nncf.ValidationError, id="not_a_list"),
+            pytest.param(["anything"], nncf.ValidationError, id="not_an_annotation"),
+            pytest.param([nncf.CustomAnnotation(scope=nncf.IgnoredScope())], nncf.ValidationError, id="wrong_scope"),
+            pytest.param([nncf.CustomAnnotation(config="anything")], nncf.ValidationError, id="wrong_config"),
+            pytest.param(
+                [
+                    nncf.CustomAnnotation(
+                        config=WeightCompressionConfig(mode=CompressWeightsMode.CODEBOOK, codebook_values=None)
+                    )
+                ],
+                nncf.ValidationError,
+                id="codebook_without_values",
+            ),
+            pytest.param(
+                [
+                    nncf.CustomAnnotation(
+                        config=WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=4)
+                    )
+                ],
+                nncf.ParameterNotSupportedError,
+                id="int8_with_group_size",
+            ),
+            pytest.param(
+                [
+                    nncf.CustomAnnotation(
+                        scope=nncf.CustomAnnotationScope(names=["unknown_node"]),
+                        config=WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                    )
+                ],
+                nncf.ValidationError,
+                id="unmatched_scope",
+            ),
+            pytest.param(
+                [
+                    nncf.CustomAnnotation(
+                        scope=nncf.CustomAnnotationScope(patterns=[".*"]),
+                        config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=3),
+                    )
+                ],
+                InvalidGroupSizeError,
+                id="invalid_group_size",
+            ),
+        ],
+    )
+    def test_invalid_custom_annotation(self, custom_annotation, error):
+        """
+        Checks that an error is raised for an invalid custom annotation.
+        """
+        with pytest.raises(error):
+            compress_weights(
+                model=self._get_sequential_matmul_model(),
+                mode=CompressWeightsMode.INT4_SYM,
+                ratio=1.0,
+                group_size=-1,
+                all_layers=True,
+                custom_annotation=custom_annotation,
+            )
 
     @pytest.mark.parametrize("is_3d_weights", [True, False])
     @pytest.mark.parametrize("dataset", [None, np.ones([2, 8, 8], dtype=np.float32)])
