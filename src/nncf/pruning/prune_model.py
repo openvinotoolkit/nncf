@@ -37,6 +37,10 @@ def prune(
     Prunes the given model based on the specified mode and ratio.
     Insert binary masks for the parameters and calculate the initial masks by the given ratio.
 
+    For pruning modes with a fixed structured sparsity pattern, such as ``STRUCTURED_MAGNITUDE_2_4``,
+    the ``ratio`` parameter is ignored: the number of pruned weights in every group of the pattern
+    is determined by the pattern itself.
+
     :param model: The model to be pruned.
     :param mode: The mode of pruning to be applied.
     :param ratio: The ratio of parameters to prune from the model.

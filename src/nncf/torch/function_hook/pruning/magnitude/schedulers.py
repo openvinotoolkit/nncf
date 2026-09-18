@@ -33,6 +33,12 @@ class _BaseMagnitudePruningScheduler(ABC):
     """
 
     def __init__(self, model: nn.Module, mode: PruneMode) -> None:
+        if mode == PruneMode.STRUCTURED_MAGNITUDE_2_4:
+            msg = (
+                f"Ratio schedulers are not supported for {mode} mode because its sparsity pattern "
+                "is fixed and does not depend on a pruning ratio."
+            )
+            raise nncf.ValidationError(msg)
         self.ref_model = weakref.ref(model)
         self.mode = mode
         self.epoch = 0

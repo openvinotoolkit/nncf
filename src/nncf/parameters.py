@@ -241,8 +241,13 @@ class PruneMode(StrEnum):
     :param UNSTRUCTURED_REGULARIZATION_BASED: Unstructured pruning based on trainable regularization masks.
         Trainable masks are introduced for the weights and optimized during training.
         This mode requires an additional regularization loss `RBLoss`.
+    :param STRUCTURED_MAGNITUDE_2_4: Structured magnitude-based pruning with a fixed 2:4 pattern (also known as
+        semi-structured sparsity). For every consecutive group of four weights along the structural dimension,
+        the two weights with the smallest absolute values are zeroed out and the other two are kept,
+        so each group contains exactly two zeros and two non-zero values.
     """
 
     UNSTRUCTURED_MAGNITUDE_LOCAL = auto()
     UNSTRUCTURED_MAGNITUDE_GLOBAL = auto()
     UNSTRUCTURED_REGULARIZATION_BASED = auto()
+    STRUCTURED_MAGNITUDE_2_4 = auto()

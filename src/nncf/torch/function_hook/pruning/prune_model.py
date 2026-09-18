@@ -66,6 +66,8 @@ def prune(
             msg = f"`ratio` parameter should be specified for {mode} mode in nncf.prune function"
             raise nncf.InternalError(msg)
         model = apply_magnitude_pruning(model, parameters_to_sparsity, mode, ratio)
+    elif mode == PruneMode.STRUCTURED_MAGNITUDE_2_4:
+        model = apply_magnitude_pruning(model, parameters_to_sparsity, mode, ratio, graph)
     elif mode == PruneMode.UNSTRUCTURED_REGULARIZATION_BASED:
         if ratio is not None:
             nncf_logger.warning(

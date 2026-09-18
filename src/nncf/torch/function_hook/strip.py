@@ -21,6 +21,7 @@ from nncf.parameters import StripFormat
 from nncf.torch.function_hook.hook_storage import decode_hook_name
 from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
 from nncf.torch.function_hook.pruning.magnitude.modules import UnstructuredPruningMask
+from nncf.torch.function_hook.pruning.magnitude.structured_modules import StructuredPruningMask
 from nncf.torch.function_hook.pruning.rb.modules import RBPruningMask
 from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.model_graph_manager import get_const_data
@@ -167,11 +168,10 @@ def apply_compression_in_place(model: TModel) -> TModel:
             (
                 RBPruningMask,
                 UnstructuredPruningMask,
+                StructuredPruningMask,
                 SymmetricQuantizer,
                 AsymmetricQuantizer,
                 BaseWeightsDecompressor,
-                RBPruningMask,
-                UnstructuredPruningMask,
             ),
         ):
             continue
