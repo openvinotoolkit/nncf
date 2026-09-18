@@ -20,10 +20,11 @@ from typing import Any, Iterable
 import numpy as np
 import openvino as ov
 import torch
-from anomalib.data.mvtec import MVTec
+from anomalib.data import MVTecAD
 from anomalib.data.utils import download
-from anomalib.post_processing.normalization.min_max import normalize
-from anomalib.utils.metrics import create_metric_collection
+from anomalib.utils.normalization.min_max import normalize
+from torchmetrics.classification import BinaryF1Score
+from torchvision.transforms.v2 import Resize
 
 import nncf
 
@@ -32,14 +33,14 @@ HOME_PATH = Path.home()
 MODEL_INFO = download.DownloadInfo(
     name="stfpm_mvtec_capsule",
     url="https://huggingface.co/alexsu52/stfpm_mvtec_capsule/resolve/main/openvino_model.tar",
-    hash="2005ef44eb701ad35e51417d196d8632",
+    hashsum="02b128488ca0db01be531c527a156cb0dad71f7b032e7233167acd87ff67b903",
 )
 MODEL_PATH = HOME_PATH / ".cache/nncf/models/stfpm_mvtec_capsule"
 
 DATASET_INFO = download.DownloadInfo(
     name="mvtec_capsule",
     url="https://huggingface.co/datasets/alexsu52/mvtec_capsule/resolve/main/capsule.tar.xz",
-    hash="380afc46701c99cb7b9a928edbe16eb5",
+    hashsum="f6a41cb11f1589d552888fe9c43a1adcbcae15b70073e19093322f836d00a2b6",
 )
 DATASET_PATH = HOME_PATH / ".cache/nncf/datasets/mvtec_capsule"
 
@@ -51,29 +52,29 @@ def download_and_extract(root: Path, info: download.DownloadInfo) -> None:
         download.download_and_extract(root, info)
 
 
-def get_anomaly_images(data_loader: Iterable[Any]) -> list[dict[str, torch.Tensor]]:
+def get_anomaly_images(data_loader: Iterable[Any]) -> list[Any]:
     anomaly_images_ = []
     for data_item in data_loader:
-        if data_item["label"].int() == 1:
-            anomaly_images_.append({"image": data_item["image"]})
+        if data_item.gt_label.item():
+            anomaly_images_.append(data_item)
     return anomaly_images_
 
 
 def validate(
     model: ov.CompiledModel, val_loader: Iterable[Any], val_params: dict[str, float]
 ) -> tuple[float, list[float]]:
-    metric = create_metric_collection(["F1Score"], prefix="image_")["F1Score"]
-    metric.threshold = 0.5
+    threshold = 0.5
+    metric = BinaryF1Score(threshold=threshold)
     per_sample_metric_values = []
 
     output = model.outputs[0]
 
     for batch in val_loader:
-        anomaly_maps = model(batch["image"])[output]
+        anomaly_maps = model(batch.image)[output]
         pred_scores = np.max(anomaly_maps, axis=(1, 2, 3))
         pred_scores = normalize(pred_scores, val_params["image_threshold"], val_params["min"], val_params["max"])
-        pred_label = 1 if pred_scores > metric.threshold else 0
-        groundtruth_label = batch["label"].int()
+        pred_label = 1 if pred_scores > threshold else 0
+        groundtruth_label = batch.gt_label.int()
         per_sample_metric = 1.0 if pred_label == groundtruth_label else 0.0
         per_sample_metric_values.append(per_sample_metric)
         metric.update(torch.from_numpy(pred_scores), groundtruth_label)
@@ -118,13 +119,13 @@ def run_example():
 
     download_and_extract(DATASET_PATH, DATASET_INFO)
 
-    datamodule = MVTec(
+    datamodule = MVTecAD(
         root=DATASET_PATH,
         category="capsule",
-        image_size=(256, 256),
         train_batch_size=1,
         eval_batch_size=1,
         num_workers=0,
+        augmentations=Resize((256, 256)),
     )
     datamodule.setup()
     test_loader = datamodule.test_dataloader()
@@ -145,7 +146,7 @@ def run_example():
     # >>    model(transform_fn(data_item))
 
     def transform_fn(data_item):
-        return data_item["image"]
+        return data_item.image
 
     # Uses only anomaly images for calibration process
     anomaly_images = get_anomaly_images(test_loader)
