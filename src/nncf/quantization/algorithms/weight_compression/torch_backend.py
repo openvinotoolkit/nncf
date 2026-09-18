@@ -263,6 +263,8 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         compression_config = wc_params.compression_config
         # default mapping for 4bit weight compression and FQ_LORA format, no need to add lora adapters for 8bit weight
         mode_vs_schema_map = {
+            CompressWeightsMode.INT2_SYM: QuantizationScheme.SYMMETRIC_LORA,
+            CompressWeightsMode.INT3_SYM: QuantizationScheme.SYMMETRIC_LORA,
             CompressWeightsMode.INT4_ASYM: QuantizationScheme.ASYMMETRIC_LORA,
             CompressWeightsMode.INT4_SYM: QuantizationScheme.SYMMETRIC_LORA,
             CompressWeightsMode.INT8_ASYM: QuantizationScheme.ASYMMETRIC,
@@ -438,7 +440,14 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model = model.model
 
         transformation_layout = TransformationLayout()
-        is_all_8bit = all(wc_params.compression_config.num_bits == 8 for wc_params in weight_compression_parameters)
+
+        if hasattr(weight_compression_parameters, "sequence"):
+            # avoid track
+            is_all_8bit = all(
+                wc_params.compression_config.num_bits == 8 for wc_params in weight_compression_parameters.sequence
+            )
+        else:
+            is_all_8bit = all(wc_params.compression_config.num_bits == 8 for wc_params in weight_compression_parameters)
         for wc_params in weight_compression_parameters:
             compression_config = wc_params.compression_config
             if compression_config.mode in [
