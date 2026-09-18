@@ -13,6 +13,7 @@ import shutil
 import sys
 import warnings
 from datetime import datetime
+import os
 from pathlib import Path
 from pprint import pprint
 from typing import Any
@@ -21,6 +22,7 @@ import torch
 import torch.nn.functional as F
 import transformers
 from datasets import load_dataset
+import json
 from lm_eval import simple_evaluate
 from lm_eval.models.optimum_lm import OptimumLM
 from optimum.exporters.openvino.convert import export_from_model
@@ -75,6 +77,46 @@ def get_wikitext2(num_samples: int, seqlen: int, tokenizer: Any, device: torch.d
     return trainloader
 
 
+def warmup_triton():
+    @torch.compile
+    def warm_up_compiler(x):
+        return x * 2
+
+    dummy_tensor = torch.randn(2, 2, device="cuda")
+    warm_up_compiler(dummy_tensor)
+
+
+def get_ultrachat_200k(num_samples: int, seqlen: int, tokenizer: Any, device: torch.device) -> list[Tensor]:
+    if not hasattr(tokenizer, "apply_chat_template") or tokenizer.apply_chat_template is None:
+        raise ValueError("Tokenizer must have an 'apply_chat_template' attribute for ultra chat dataset.")
+    
+    trainloader = []
+    text = ""
+    
+    dataset = load_dataset('HuggingFaceH4/ultrachat_200k', split='train_sft', streaming=True)
+
+    for example in dataset:
+        text = tokenizer.apply_chat_template(example["messages"], tokenize=False, add_generation_prompt=True)
+        trainenc = tokenizer(text, return_tensors="pt")
+
+        if trainenc.input_ids.shape[1] < seqlen:
+            continue
+        if trainenc.input_ids.shape[1] > seqlen + 1:
+            i = torch.randint(0, trainenc.input_ids.shape[1] - seqlen - 1, (1,)).item()
+        else:
+            i = 0
+        j = i + seqlen
+        inp = trainenc.input_ids[:, i:j].to(device)
+        trainloader.append(inp)
+        if len(trainloader) >= num_samples:
+            break
+    del dataset
+
+    return trainloader
+    
+       
+    
+
 def get_pile_10k(num_samples: int, seqlen: int, tokenizer: Any, device: torch.device):
     ds = load_dataset("NeelNanda/pile-10k", split="train")
 
@@ -83,6 +125,7 @@ def get_pile_10k(num_samples: int, seqlen: int, tokenizer: Any, device: torch.de
     for example in ds:
         text += " \n" + example["text"]
         trainenc = tokenizer(text, return_tensors="pt")
+
         if trainenc.input_ids.shape[1] < seqlen:
             continue
         text = ""
@@ -355,7 +398,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
         "--dataset",
         type=str,
         default="pile-10k",
-        choices=["pile-10k", "wikitext-2"],
+        choices=["pile-10k", "wikitext-2", "ultrachat_200k"],
         help="The dataset to use for training and evaluation.",
     )
 
@@ -757,6 +800,7 @@ def main(argv) -> float:
     dataset_map = {
         "pile-10k": get_pile_10k,
         "wikitext-2": get_wikitext2,
+        "ultrachat_200k": get_ultrachat_200k,
     }
     load_fn = dataset_map[args.dataset]
     train_loader = load_fn(
@@ -766,11 +810,17 @@ def main(argv) -> float:
         example_input = {k: v.to(device) for k, v in model.dummy_inputs.items()}
         dataset = Dataset([example_input])
     else:
-        calib_loader = load_fn(num_samples=128, seqlen=128, tokenizer=tokenizer, device=device)
+        if args.dataset == "ultrachat_200k":
+            calib_loader = train_loader[:128]
+        else:
+            calib_loader = load_fn(num_samples=128, seqlen=128, tokenizer=tokenizer, device=device)
         dataset = Dataset(map(get_model_input, calib_loader))
 
-    # Pre-compute hiddens of teacher model for distillation loss.
-    orig_hiddens = calc_hiddens(model, train_loader)
+    is_ptq = args.scale_finetune_epochs == 0 and args.epochs == 0
+    orig_hiddens = None
+    if not is_ptq:
+        # Pre-compute hiddens of teacher model for distillation loss.
+        orig_hiddens = calc_hiddens(model, train_loader)
 
     # Create or load model to tune with Fake Quantizers and absorbable LoRA adapters.
     if args.resume and ckpt_file.exists():
@@ -837,7 +887,7 @@ def main(argv) -> float:
             model_state=save_model_state,
         )
 
-    if args.scale_finetune_epochs == 0 and args.epochs == 0:
+    if is_ptq:
         save_checkpoint(model, ckpt_file, model_state=save_model_state)
 
     del model
