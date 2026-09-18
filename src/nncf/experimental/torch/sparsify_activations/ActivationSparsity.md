@@ -30,8 +30,8 @@ Below is an example of applying `sparsify_activations` algorithm to a torch mode
 import nncf
 from nncf.experimental.torch.sparsify_activations import sparsify_activations, TargetScope
 
-model = ... # Your model
-dataset = ... # Calibration set
+model = ...  # Your model
+dataset = ...  # Calibration set
 
 # (Optional) Weight-only quantization
 model = nncf.compress_weights(
@@ -46,8 +46,8 @@ model = sparsify_activations(
     dataset=dataset,
     target_sparsity_by_scope={
         TargetScope(patterns=[".*up_proj.*", ".*gate_proj.*"]): 0.3,
-        TargetScope(patterns=[".*down_proj.*",]): 0.5,
-    }
+        TargetScope(patterns=[".*down_proj.*"]): 0.5,
+    },
 )
 ```
 
