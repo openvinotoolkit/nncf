@@ -36,7 +36,7 @@ class RangeInitCollectorParams:
     @property
     def is_weights(self) -> bool:
         """
-        Returns boolean that defines tensor type.
+        Defines tensor type.
         True for Weights, False for Activations.
         """
         return self._is_weights
@@ -44,14 +44,14 @@ class RangeInitCollectorParams:
     @property
     def scheme(self) -> QuantizationScheme:
         """
-        Returns quantization scheme: symmetric or asymmetric.
+        Quantization scheme: symmetric or asymmetric.
         """
         return self._scheme
 
     @property
     def is_per_channel(self) -> bool:
         """
-        Returns quantization granularity.
+        Quantization granularity.
         """
         return self._is_per_channel
 
@@ -85,7 +85,7 @@ class RangeInitCollectorParams:
         aggregation_axes: tuple[int, ...] | list[int],
     ) -> tuple[int, ...]:
         """
-        Returns axes for a reducer regarding aggregation axes. As aggregator takes axes counting from stacked tensors,
+        Axes for a reducer regarding aggregation axes. As aggregator takes axes counting from stacked tensors,
         from these axes only tensor related axes should be used for reducer.
 
         :param shape_to_reduce: Shape of a reduced tensor.
@@ -99,7 +99,7 @@ class RangeInitCollectorParams:
 
     def _get_aggregation_axes(self, batchwise_statistics: bool) -> tuple[int, ...]:
         """
-        Returns axes for aggregator.
+        Axes for aggregator.
 
         :param batchwise_statistics: Determines whether quantizer statistics should be calculated
             for each item of the batch or for the entire batch.

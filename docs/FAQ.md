@@ -88,7 +88,7 @@ Try reducing batch size for the NNCF training runs if it makes sense to do so in
 
 ### Importing anything from `nncf.torch` hangs
 
-NNCF utilizes the [torch C++ extensions](https://pytorch.org/tutorials/advanced/cpp_extension.html) mechanism to accelerate the quantization-aware training process.
+NNCF utilizes the [torch C++ extensions](https://docs.pytorch.org/tutorials/advanced/cpp_custom_ops.html) mechanism to accelerate the quantization-aware training process.
 This is done by just-in-time compiling a set of C++/CUDA files using the system-local compilers and toolsets.
 The compilation happens at the first import of `nncf.torch` or anything under that namespace on the machine, or within the current Python environment.
 The result is a set of the `.so` files containing the compiled extensions binary code stored in a system-specific location (commonly `~/.cache/torch_extensions`, or alternatively wherever `TORCH_EXTENSIONS_DIR` environment variable points to).

@@ -67,7 +67,7 @@ def get_available_cpu_count(logical: bool = True) -> int:
         return 1
 
 
-def get_available_memory_amount() -> float:
+def get_available_memory_amount() -> int:
     """
     :return: Available memory amount (bytes)
     """

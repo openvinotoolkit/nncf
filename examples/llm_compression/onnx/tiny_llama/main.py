@@ -66,9 +66,10 @@ def main():
     ov_model = OVModelForCausalLM.from_pretrained(OUTPUT_DIR, from_onnx=True)
 
     messages = [{"role": "user", "content": "What is PyTorch?"}]
-    input_ids = tokenizer.apply_chat_template(
+    batch_feature = tokenizer.apply_chat_template(
         messages, tokenize=True, add_generation_prompt=True, return_tensors="pt"
-    ).to(device=model.device)
+    )
+    input_ids = batch_feature["input_ids"]
 
     start_t = time.time()
     output = ov_model.generate(input_ids, max_new_tokens=100)

@@ -23,7 +23,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
             lfs: true
             fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
@@ -32,7 +32,7 @@ jobs:
         run: |
           git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
           git checkout pr-${{ github.event.inputs.pull_request_number }}
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
       - name: Install test requirements
@@ -66,7 +66,7 @@ jobs:
         run: |
           nvidia-smi
           cat /proc/cpuinfo
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: true
       - name: Fetch and Checkout the Pull Request Branch
@@ -74,7 +74,7 @@ jobs:
         run: |
           git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
           git checkout pr-${{ github.event.inputs.pull_request_number }}
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
       - name: Install test requirements
@@ -85,3 +85,5 @@ jobs:
       - name: Run install test scope
         run: |
           pytest tests/cross_fw/install -rA -s --host-configuration gpu --backend torch
+        env:
+          PIP_EXTRA_INDEX_URL: "https://download.pytorch.org/whl/cu126"

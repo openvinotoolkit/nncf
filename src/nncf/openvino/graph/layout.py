@@ -45,7 +45,7 @@ _CONV_BASE_CONST_LAYOUT = {
 }
 
 
-def get_conv_weights_layout_from_node(node: NNCFNode) -> tuple[OVLayoutElem]:
+def get_conv_weights_layout_from_node(node: NNCFNode) -> tuple[OVLayoutElem, ...]:
     """
     Calculates weights layout for a target convolution node.
 
@@ -59,7 +59,7 @@ def get_conv_weights_layout_from_node(node: NNCFNode) -> tuple[OVLayoutElem]:
     )
 
 
-def get_linear_weights_layout_from_node(node: NNCFNode) -> tuple[OVLayoutElem]:
+def get_linear_weights_layout_from_node(node: NNCFNode) -> tuple[OVLayoutElem, ...]:
     """
     Calculates weights layout for a target linear node.
 
@@ -78,7 +78,7 @@ def get_linear_weights_layout_from_node(node: NNCFNode) -> tuple[OVLayoutElem]:
 
 def get_linear_activations_layout_from_node(
     node: NNCFNode, port_id: int, input_shape: tuple[int]
-) -> tuple[OVLayoutElem]:
+) -> tuple[OVLayoutElem, ...]:
     """
     Calculates activations layout for a target linear node.
 
@@ -95,7 +95,9 @@ def get_linear_activations_layout_from_node(
     )
 
 
-def get_conv_weights_layout(ov_metatype: OVOpMetatype, weights_shape: tuple[int, ...]) -> tuple[OVLayoutElem]:
+def get_conv_weights_layout(
+    ov_metatype: type[OVOpMetatype], weights_shape: tuple[int, ...]
+) -> tuple[OVLayoutElem, ...]:
     """
     Calculates weights layout for a target convolution node.
 
@@ -109,7 +111,7 @@ def get_conv_weights_layout(ov_metatype: OVOpMetatype, weights_shape: tuple[int,
     return tuple(weights_layout)
 
 
-def get_linear_input_layout(input_shape: tuple[int, ...], transpose: bool, port_id: int) -> tuple[OVLayoutElem]:
+def get_linear_input_layout(input_shape: tuple[int, ...], transpose: bool, port_id: int) -> tuple[OVLayoutElem, ...]:
     """
     Calculates input layout for a target linear node.
 

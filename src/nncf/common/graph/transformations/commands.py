@@ -139,7 +139,7 @@ class TargetPoint:
     def type(self) -> TargetType:
         return self._target_type
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         return isinstance(other, TargetPoint) and self.type == other.type
 
     def __str__(self) -> str:

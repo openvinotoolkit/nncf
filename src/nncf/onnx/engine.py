@@ -42,7 +42,7 @@ class ONNXEngine(Engine):
         for inp in self.sess.get_inputs():
             self.input_names.add(inp.name)
 
-    def infer(self, input_data: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
+    def infer(self, input_data: dict[str, np.ndarray[Any, Any]]) -> dict[str, np.ndarray[Any, Any]]:
         """
         Runs model on the provided input via ONNXRuntime InferenceSession.
         Returns the dictionary of model outputs by node names.

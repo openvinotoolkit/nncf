@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from typing import Any
 
 import numpy as np
 import openvino as ov
@@ -29,7 +29,7 @@ class OVTargetPoint(TargetPoint):
         self.target_node_name = target_node_name
         self.port_id = port_id
 
-    def __eq__(self, other: "OVTargetPoint") -> bool:
+    def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, OVTargetPoint)
             and self.type == other.type
@@ -105,7 +105,7 @@ class OVBiasCorrectionCommand(TransformationCommand):
     Corrects bias value in the model based on the input value.
     """
 
-    def __init__(self, target_point: OVTargetPoint, bias_value: np.ndarray):
+    def __init__(self, target_point: OVTargetPoint, bias_value: np.ndarray[Any, Any]):
         """
         :param target_point: The TargetPoint instance for the correction that contains layer's information.
         :param bias_value: The bias shift value (numpy format) that will be added to the original bias value.
@@ -119,7 +119,7 @@ class OVWeightUpdateCommand(TransformationCommand):
     Updates weight value in the model.
     """
 
-    def __init__(self, target_point: OVTargetPoint, weight_value: np.ndarray):
+    def __init__(self, target_point: OVTargetPoint, weight_value: np.ndarray[Any, Any]):
         """
         :param target_point: Target point.
         :param weight_value: New weight value.
@@ -167,7 +167,7 @@ class OVBiasInsertionCommand(TransformationCommand):
     Inserts bias for the corresponding node.
     """
 
-    def __init__(self, target_point: OVTargetPoint, bias_value: np.ndarray):
+    def __init__(self, target_point: OVTargetPoint, bias_value: np.ndarray[Any, Any]):
         """
         :param target_point: The TargetPoint instance for the insertion that contains layer's information.
         :param bias_value: Constant value for the bias layer.
@@ -184,7 +184,7 @@ class OVMultiplyInsertionCommand(OVInsertionCommand):
     def __init__(
         self,
         target_point: OVTargetPoint,
-        scale_value: np.ndarray,
+        scale_value: np.ndarray[Any, Any],
         destination_node_names: list[str],
         multiply_node_name: str,
     ):

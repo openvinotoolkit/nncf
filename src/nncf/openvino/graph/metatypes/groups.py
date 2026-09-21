@@ -176,6 +176,7 @@ OPERATIONS_WITH_WEIGHTS = [
     ov_metatypes.OVLSTMSequenceMetatype,
     ov_metatypes.OVGRUSequenceMetatype,
     ov_metatypes.OVEmbeddingMetatype,
+    ov_metatypes.OVGroupedMatMulMetatype,
 ]
 
 

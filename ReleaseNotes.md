@@ -1,5 +1,50 @@
 # Release Notes
 
+## New in Release 3.4.0
+
+- Features:
+  - (OpenVINO) Added `GroupedMatMul` support to the AWQ and Scale Estimation algorithms, enabling data-aware weight compression of `grouped_mm`-based MoE models (https://github.com/openvinotoolkit/nncf/pull/4176).
+- Fixes:
+  - (OpenVINO) Extended the RoPE ignored pattern to recognize the `matmul -> transpose -> cos/sin` structure used by models such as GPT-OSS (https://github.com/openvinotoolkit/nncf/pull/4175).
+  - (PyTorch) Removed the `__getitem__` node that follows split-like operations (e.g. `chunk`) from the TorchFX inference graph, fixing statistic collection errors for models such as YOLO11 (https://github.com/openvinotoolkit/nncf/pull/4155).
+  - (ONNX) Fixed a `KeyError` in bias attribute resolution when a tensor is a model input and therefore has no parent node (https://github.com/openvinotoolkit/nncf/pull/4169).
+  - (ONNX) Fixed squeeze axis determination for `ONNXEmbeddingMetatype` nodes (https://github.com/openvinotoolkit/nncf/pull/4144).
+- Improvements:
+  - (PyTorch) Replaced the deprecated `export_for_training` with `export` in TorchFX examples, documentation, and tests (https://github.com/openvinotoolkit/nncf/pull/4191).
+- Tutorials:
+  - [Post-Training Optimization of Ministral-3 Models](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/ministral-3)
+  - [Post-Training Optimization of Muse Glimmer-30B Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/muse-glimmer)
+- Requirements:
+  - Updated `torch` to 2.13.0 (https://github.com/openvinotoolkit/nncf/pull/4197).
+  - Updated `torchao` to 0.18.0 (https://github.com/openvinotoolkit/nncf/pull/4196).
+  - Updated `transformers` to 5.5.0, `optimum` to 2.3.0, and `optimum-intel` to 2.1.0 (https://github.com/openvinotoolkit/nncf/pull/4200).
+  - Updated `onnx-ir` to 1.0.0 and `onnxscript` to 0.7.1 (https://github.com/openvinotoolkit/nncf/pull/4190).
+  - Updated `datasets` to 5.0.1 (https://github.com/openvinotoolkit/nncf/pull/4182).
+  - Updated the `pydot` upper bound to <= 4.0.1 (https://github.com/openvinotoolkit/nncf/pull/4181).
+
+## New in Release 3.3.0
+
+- Features:
+  - Enabled data-aware compression methods (AWQ, GPTQ, Scale Estimation, and LoRA Correction) for all bit widths < 4, including INT2 and INT3 (https://github.com/openvinotoolkit/nncf/pull/4131).
+  - (OpenVINO) Added INT2 and INT3 symmetric compression types (https://github.com/openvinotoolkit/nncf/pull/4123).
+  - (OpenVINO) Added the `GroupedMatMul` operation support for data-free weight compression (https://github.com/openvinotoolkit/nncf/pull/4130).
+  - (ONNX) Added FP8 support for the ONNX backend (https://github.com/openvinotoolkit/nncf/pull/4072).
+- Fixes:
+  - Fixed the aggregator formula for the HAWQ sensitivity metric used in mixed-precision weight compression (https://github.com/openvinotoolkit/nncf/pull/4106).
+  - Fixed the compression range for asymmetric compression when all weight values are positive or negative (https://github.com/openvinotoolkit/nncf/pull/4074).
+  - Fixed weight serialization to support `safetensors` >= 0.8.0 by converting NumPy scalars to arrays before saving (https://github.com/openvinotoolkit/nncf/pull/4094).
+- Tutorials:
+  - [Post-Training Optimization of OmniVoice Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/omnivoice)
+  - [Post-Training Optimization of HunyuanOCR Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/hunyuan-ocr)
+  - [Post-Training Optimization of Unlimited-OCR Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/unlimited-ocr)
+  - [Post-Training Optimization of Bernini-R](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/bernini-r-image-video)
+- Deprecations/Removals:
+  - Removed unused code, including the `Statistics`, `NNCFDataLoader`, `QuantizersCounter`, and `QuantizationStatistics` classes, and the PyTorch `patch_torch_operators`, `register_module`, and `PTInitializingDataLoader` (https://github.com/openvinotoolkit/nncf/pull/4093).
+  - (PyTorch) Removed the unused `CompressionParameter` class (https://github.com/openvinotoolkit/nncf/pull/4108).
+- Requirements:
+  - Updated `onnx` to 1.22.0 (https://github.com/openvinotoolkit/nncf/pull/4101).
+  - Updated `networkx` to <= 3.6.1 (https://github.com/openvinotoolkit/nncf/pull/4059).
+
 ## New in Release 3.2.0
 
 - Features:

@@ -10,6 +10,8 @@
 # limitations under the License.
 
 
+from typing import Any
+
 import numpy as np
 import openvino as ov
 from openvino import Type
@@ -47,7 +49,7 @@ class OVPreparedModel(PreparedModel):
         if use_fp32_precision:
             config = {inference_precision: Type.f32}
         self._compiled_model = ov.compile_model(model, device_name="CPU", config=config)
-        self._engine = None
+        self._engine: OVCompiledModelEngine | None = None
 
     @property
     def model_for_inference(self) -> ov.CompiledModel:
@@ -68,27 +70,27 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
     # Metatypes
 
     @staticmethod
-    def get_op_with_weights_metatypes() -> list[OVOpMetatype]:
+    def get_op_with_weights_metatypes() -> list[type[OVOpMetatype]]:
         return OPERATIONS_WITH_WEIGHTS
 
     @staticmethod
-    def get_quantizer_metatypes() -> list[OVOpMetatype]:
+    def get_quantizer_metatypes() -> list[type[OVOpMetatype]]:
         return FAKE_QUANTIZE_OPERATIONS
 
     @staticmethod
-    def get_const_metatypes() -> list[OVOpMetatype]:
+    def get_const_metatypes() -> list[type[OVOpMetatype]]:
         return CONSTANT_OPERATIONS
 
     @staticmethod
-    def get_quantizable_metatypes() -> list[OVOpMetatype]:
+    def get_quantizable_metatypes() -> list[type[OVOpMetatype]]:
         return INPUTS_QUANTIZABLE_OPERATIONS
 
     @staticmethod
-    def get_quantize_agnostic_metatypes() -> list[OVOpMetatype]:
+    def get_quantize_agnostic_metatypes() -> list[type[OVOpMetatype]]:
         return QUANTIZE_AGNOSTIC_OPERATIONS + [OVConcatMetatype]
 
     @staticmethod
-    def get_shapeof_metatypes() -> list[OVOpMetatype]:
+    def get_shapeof_metatypes() -> list[type[OVOpMetatype]]:
         return SHAPEOF_OPERATIONS
 
     @staticmethod
@@ -106,15 +108,15 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
         return node.metatype in OPERATIONS_WITH_WEIGHTS and isinstance(node.layer_attributes, OVLayerAttributes)
 
     @staticmethod
-    def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
+    def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray[Any, Any]:
         return get_bias_value(node_with_bias, nncf_graph, model)
 
     @staticmethod
-    def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
+    def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray[Any, Any]:
         return get_weight_value(node_with_weight, model, port_id)
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode) -> list[int | None]:
+    def get_weight_tensor_port_ids(node: NNCFNode) -> list[int]:
         return node.layer_attributes.get_const_port_ids()
 
     @staticmethod

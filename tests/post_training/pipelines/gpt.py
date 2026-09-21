@@ -24,14 +24,37 @@ from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import PTQTestPipeline
 
 
+# TODO(AlexandrDokuchaev): Remove this wrapper when the issue with torch.jit.trace and transformers>=5.0 is fixed
+class CausalLMTracingWrapper(torch.nn.Module):
+    """
+    Wraps a Hugging Face causal language model so it can be exported via ``torch.jit.trace``
+    (used internally by ``openvino.convert_model``).
+
+    Since ``transformers>=5.0`` a causal LM forward pass returns a ``DynamicCache`` in its output
+    and builds the attention mask with a ``torch.diff``-based packed-sequence check when no
+    attention mask is provided. Neither construct is supported by ``torch.jit.trace`` / the
+    OpenVINO PyTorch frontend.
+    """
+
+    def __init__(self, model: torch.nn.Module) -> None:
+        super().__init__()
+        self.model = model
+        self.model.config.use_cache = False
+
+    def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor | None = None) -> torch.Tensor:
+        if attention_mask is None:
+            attention_mask = torch.ones_like(input_ids)
+        return self.model(input_ids=input_ids, attention_mask=attention_mask)
+
+
 class GPT(PTQTestPipeline):
     """Pipeline for causal language models from Hugging Face repository"""
 
     def prepare_model(self) -> None:
         if self.backend in PT_BACKENDS:
             self.model_hf = transformers.AutoModelForCausalLM.from_pretrained(self.model_id)
-            self.model = self.model_hf
-            self.model.config.torchscript = True  # Set to export by convert_model via torch.jit.trace
+            self.model = CausalLMTracingWrapper(self.model_hf)
+
             self.dummy_tensor = self.model_hf.dummy_inputs["input_ids"]
 
         elif self.backend in OV_BACKENDS + [BackendType.FP32]:

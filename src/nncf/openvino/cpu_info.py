@@ -21,14 +21,14 @@ def _get_cpu_name() -> str:
     """
     :return: The name of the CPU.
     """
-    return ov.Core().get_property("CPU", ov.properties.device.full_name)
+    return ov.Core().get_property("CPU", ov.properties.device.full_name)  # type: ignore[no-any-return]
 
 
 def _get_cpu_architecture() -> str:
     """
     :return: The architecture of the CPU.
     """
-    return ov.Core().get_property("CPU", ov.properties.device.architecture)
+    return ov.Core().get_property("CPU", ov.properties.device.architecture)  # type: ignore[no-any-return]
 
 
 def is_arm_cpu() -> bool:

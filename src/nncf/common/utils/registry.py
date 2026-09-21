@@ -35,9 +35,7 @@ class Registry(Generic[TKey, TObject]):
     @property
     def registry_dict(self) -> dict[TKey, TObject]:
         """
-        Return the underlying registry mapping.
-
-        :return: Dictionary with registered objects.
+        The underlying registry mapping.
         """
         return self._registry_dict
 

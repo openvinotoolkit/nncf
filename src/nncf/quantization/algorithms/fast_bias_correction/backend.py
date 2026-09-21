@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -198,7 +198,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         """
 
     def extract_submodel(
-        self, model_transformer: ModelTransformer, input_id: tuple[str, int], output_id: tuple[str, int]
+        self, model_transformer: ModelTransformer[Any], input_id: tuple[str, int], output_id: tuple[str, int]
     ) -> TModel:
         """
         Extracts sub-model using backend-specific ModelTransformer.

@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
+
 import pytest
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoModelForCausalLM
@@ -25,28 +27,39 @@ GENERATED_TEXT_REF = TEST_ROOT / "torch" / "data" / "ref_generated_data.json"
 
 
 @pytest.mark.parametrize(
-    "model, tokenizer, usage_error",
+    "with_model, with_tokenizer, usage_error",
     [
-        [None, None, True],
-        [AutoModelForCausalLM.from_pretrained(BASE_TEST_MODEL_ID), None, True],
-        [None, AutoTokenizer.from_pretrained(BASE_TEST_MODEL_ID), True],
-        [
-            AutoModelForCausalLM.from_pretrained(BASE_TEST_MODEL_ID),
-            AutoTokenizer.from_pretrained(BASE_TEST_MODEL_ID),
-            False,
-        ],
+        (False, False, True),
+        (True, False, True),
+        (False, True, True),
+        (True, True, False),
+    ],
+    ids=["no_model_no_tokenizer", "model_only", "tokenizer_only", "model_and_tokenizer"],
+)
+def test_generate_text_data_usage(with_model: bool, with_tokenizer: bool, usage_error: bool, _seed: None):
+    model = AutoModelForCausalLM.from_pretrained(BASE_TEST_MODEL_ID) if with_model else None
+    tokenizer = AutoTokenizer.from_pretrained(BASE_TEST_MODEL_ID) if with_tokenizer else None
+
+    if usage_error:
+        with pytest.raises(nncf.ValidationError):
+            generate_text_data(model, tokenizer, seq_len=32, dataset_size=1)
+    else:
+        generate_text_data(model, tokenizer, seq_len=32, dataset_size=1)
+
+
+@pytest.mark.parametrize(
+    "model_cls",
+    [
+        AutoModelForCausalLM,
+        pytest.param(
+            OVModelForCausalLM,
+            marks=pytest.mark.xfail(
+                sys.version_info >= (3, 14),
+                reason="https://github.com/huggingface/optimum/pull/2496",
+            ),
+        ),
     ],
 )
-def test_generate_text_data_usage(model, tokenizer, usage_error):
-    try:
-        with set_torch_seed(0):
-            generate_text_data(model, tokenizer, seq_len=2, dataset_size=1)
-    except Exception as e:
-        if usage_error:
-            assert isinstance(e, nncf.ValidationError), "Expected exception."
-
-
-@pytest.mark.parametrize("model_cls", [AutoModelForCausalLM, OVModelForCausalLM])
 def test_generate_text_data_functional(model_cls):
     seq_len = 12
     max_seq_len = seq_len + seq_len // 2

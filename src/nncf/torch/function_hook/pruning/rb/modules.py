@@ -49,7 +49,7 @@ def apply_rb_binary_mask(input_: torch.Tensor, mask: torch.Tensor, training: boo
     :return: The masked input tensor.
     """
     if has_torch_function_unary(input_):
-        return handle_torch_function(apply_rb_binary_mask, (input_,), input_, mask, training)  # type: ignore[no-any-return]
+        return handle_torch_function(apply_rb_binary_mask, (input_,), input_, mask, training)
 
     if training:
         uniform = torch.empty_like(mask, requires_grad=False).uniform_()

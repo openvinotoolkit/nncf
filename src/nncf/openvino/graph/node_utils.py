@@ -38,6 +38,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvertMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupedMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVIfMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
@@ -536,6 +537,8 @@ def get_weight_channel_axes(node: NNCFNode) -> list[int]:
         return [idx for idx, elem in enumerate(weights_layout) if elem in [OVLayoutElem.GROUPS, OVLayoutElem.C_OUT]]
     if node.metatype == OVMatMulMetatype:
         return get_matmul_channel_axes(node)
+    if node.metatype == OVGroupedMatMulMetatype:
+        return [0, 1]
     return node.metatype.const_channel_axis
 
 
@@ -567,7 +570,7 @@ def create_bias_tensor(node_without_bias: NNCFNode, graph: NNCFGraph, value: Any
 
 
 def get_weighted_layer_attributes(
-    ov_node: ov.Node, ov_metatype: OVOpMetatype, constant_attributes: dict[int, Any]
+    ov_node: ov.Node, ov_metatype: type[OVOpMetatype], constant_attributes: dict[int, Any]
 ) -> WeightedLayerAttributes:
     """
     Function retrieves common layer attributes from the given node.
@@ -645,6 +648,8 @@ def get_activation_channel_axis(node: NNCFNode, port_id: int, input_shape: tuple
     if node.metatype == OVMatMulMetatype:
         activations_layout = get_linear_activations_layout_from_node(node, port_id, input_shape)
         channel_axis = activations_layout.index(OVLayoutElem.C_IN)
+    elif node.metatype == OVGroupedMatMulMetatype:
+        channel_axis = len(input_shape) - 1
 
     return channel_axis
 

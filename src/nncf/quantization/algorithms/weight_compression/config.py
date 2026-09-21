@@ -48,7 +48,7 @@ class WeightCompressionConfig:
     @property
     def num_bits(self) -> int:
         """
-        :return: number of bits that is used for storing a single quantized value in the given mode.
+        Number of bits used to store a single quantized value in the given mode.
         """
         if self.is_codebook:
             if self.codebook_values is None:
@@ -61,14 +61,26 @@ class WeightCompressionConfig:
                 return 8
             return 16
 
-        if self.mode in [
-            CompressWeightsMode.INT8_SYM,
-            CompressWeightsMode.INT8_ASYM,
-            CompressWeightsMode.FP8_E4M3,
-            CompressWeightsMode.MXFP8_E4M3,
-        ]:
-            return 8
-        return 4
+        mode_to_bits_map = {
+            CompressWeightsMode.INT8_ASYM: 8,
+            CompressWeightsMode.INT8_SYM: 8,
+            CompressWeightsMode.INT4_SYM: 4,
+            CompressWeightsMode.INT4_ASYM: 4,
+            CompressWeightsMode.NF4: 4,
+            CompressWeightsMode.FP4: 4,
+            CompressWeightsMode.MXFP4: 4,
+            CompressWeightsMode.NVFP4: 4,
+            CompressWeightsMode.FP8_E4M3: 8,
+            CompressWeightsMode.MXFP8_E4M3: 8,
+            CompressWeightsMode.INT3_SYM: 3,
+            CompressWeightsMode.INT2_SYM: 2,
+        }
+
+        try:
+            return mode_to_bits_map[self.mode]
+        except KeyError as e:
+            msg = f"Unsupported compression mode for num_bits: {self.mode}"
+            raise InternalError(msg) from e
 
     @property
     def is_asym_mode(self) -> bool:
@@ -77,7 +89,7 @@ class WeightCompressionConfig:
     @property
     def is_integer(self) -> bool:
         """
-        :return: True if compression type in integer, else False.
+        True if compression type in integer, else False.
         """
         return self.mode not in [
             CompressWeightsMode.NF4,
@@ -94,7 +106,7 @@ class WeightCompressionConfig:
     @property
     def is_codebook(self) -> bool:
         """
-        :return: True if compression type is codebook, else False.
+        True if compression type is codebook, else False.
         """
         return self.mode in [
             CompressWeightsMode.CODEBOOK,
@@ -105,7 +117,7 @@ class WeightCompressionConfig:
     @property
     def compression_dtype(self) -> TensorDataType:
         """
-        :return: data type that is used to store compressed weights.
+        Data type that is used to store compressed weights.
         """
         if self.is_codebook:
             if self.codebook_values is None:
@@ -118,6 +130,8 @@ class WeightCompressionConfig:
                 return TensorDataType.uint8
             return TensorDataType.uint16
         dtype_per_mode = {
+            CompressWeightsMode.INT2_SYM: TensorDataType.int2,
+            CompressWeightsMode.INT3_SYM: TensorDataType.int3,
             CompressWeightsMode.INT4_SYM: TensorDataType.int4,
             CompressWeightsMode.INT4_ASYM: TensorDataType.uint4,
             CompressWeightsMode.INT8_ASYM: TensorDataType.uint8,
@@ -130,6 +144,16 @@ class WeightCompressionConfig:
             CompressWeightsMode.MXFP8_E4M3: TensorDataType.f8e4m3,
         }
         return dtype_per_mode[self.mode]
+
+    @property
+    def is_symmetric_represented_by_unsigned(self) -> bool:
+        """
+        True if compression type is symmetric and represented by unsigned integer, else False.
+        """
+        return self.mode in [
+            CompressWeightsMode.INT2_SYM,
+            CompressWeightsMode.INT3_SYM,
+        ]
 
     def __hash__(self) -> int:
         return hash((self.mode.value, self.group_size))
@@ -160,7 +184,7 @@ class WeightCompressionParameters:
     @cached_property
     def num_weights(self) -> np.uint64:
         """
-        :return: Total number of weights in the weight tensor.
+        Total number of weights in the weight tensor.
         """
         # Explicitly use unsigned 64-bit integer for number of weight in weight compression.
         # To avoid overflow when calculating the total number of weights for large models.

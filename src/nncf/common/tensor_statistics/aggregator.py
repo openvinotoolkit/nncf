@@ -47,7 +47,7 @@ class StatisticsAggregator(ABC):
 
     def __init__(self, dataset: Dataset):
         self.dataset = dataset
-        self.stat_subset_size = None
+        self.stat_subset_size: int | None = None
         self.statistic_points = StatisticPointsContainer()
 
     def _get_iterations_number(self) -> int | None:

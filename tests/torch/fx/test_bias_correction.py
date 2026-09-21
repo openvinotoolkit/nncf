@@ -21,6 +21,7 @@ from nncf.common.factory import build_graph
 from nncf.experimental.torch.fx.model_utils import remove_fq_from_inputs
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.experimental.torch.fx.node_utils import get_bias_value
+from nncf.quantization.algorithms.bias_correction.algorithm import SubgraphData
 from nncf.quantization.algorithms.bias_correction.torch_fx_backend import FXBiasCorrectionAlgoBackend
 from tests.cross_fw.test_templates.helpers import ConvTestModel
 from tests.cross_fw.test_templates.helpers import DepthwiseConvTestModel
@@ -98,10 +99,10 @@ class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
                         ("concat", 1): ("arg0_1", 0),
                         ("conv2d", 0): ("concat", 0),
                     },
-                    "subgraph_data": {
-                        "subgraph_input_ids": {("conv2d", 0)},
-                        "subgraph_output_ids": {("getitem", 0), ("max_pool2d", 0), ("getitem_1", 0)},
-                    },
+                    "subgraph_data": SubgraphData(
+                        input_ids={("conv2d", 0)},
+                        output_ids={("getitem", 0), ("max_pool2d", 0), ("getitem_1", 0)},
+                    ),
                 },
             ),
             (
@@ -113,10 +114,10 @@ class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
                         ("conv2d_3", 0): ("getitem", 0),
                         ("conv2d_5", 0): ("getitem_1", 0),
                     },
-                    "subgraph_data": {
-                        "subgraph_input_ids": {("conv2d_1", 0)},
-                        "subgraph_output_ids": {("relu_1", 0)},
-                    },
+                    "subgraph_data": SubgraphData(
+                        input_ids={("conv2d_1", 0)},
+                        output_ids={("relu_1", 0)},
+                    ),
                 },
             ),
             (
@@ -129,10 +130,10 @@ class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
                         ("conv2d_3", 0): ("getitem", 0),
                         ("conv2d_5", 0): ("getitem_1", 0),
                     },
-                    "subgraph_data": {
-                        "subgraph_input_ids": {("conv2d", 0), ("conv2d_2", 0)},
-                        "subgraph_output_ids": {("getitem", 0), ("getitem_1", 0)},
-                    },
+                    "subgraph_data": SubgraphData(
+                        input_ids={("conv2d", 0), ("conv2d_2", 0)},
+                        output_ids={("getitem", 0), ("getitem_1", 0)},
+                    ),
                 },
             ),
             (
@@ -142,10 +143,10 @@ class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
                         ("conv2d_3", 0): ("getitem", 0),
                         ("conv2d_5", 0): ("getitem_1", 0),
                     },
-                    "subgraph_data": {
-                        "subgraph_input_ids": {("conv2d_3", 0)},
-                        "subgraph_output_ids": {("relu_2", 0)},
-                    },
+                    "subgraph_data": SubgraphData(
+                        input_ids={("conv2d_3", 0)},
+                        output_ids={("relu_2", 0)},
+                    ),
                 },
             ),
             (
@@ -155,10 +156,10 @@ class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
                         ("conv2d_4", 0): ("relu_2", 0),
                         ("conv2d_5", 0): ("getitem_1", 0),
                     },
-                    "subgraph_data": {
-                        "subgraph_input_ids": {("conv2d_4", 0), ("conv2d_5", 0)},
-                        "subgraph_output_ids": {("add_3", 0), ("concat_1", 0)},
-                    },
+                    "subgraph_data": SubgraphData(
+                        input_ids={("conv2d_4", 0), ("conv2d_5", 0)},
+                        output_ids={("add_3", 0), ("concat_1", 0)},
+                    ),
                 },
             ),
             (
@@ -169,14 +170,14 @@ class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
                         ("conv2d_8", 0): ("add_2", 0),
                         ("conv2d_9", 0): ("concat", 0),
                     },
-                    "subgraph_data": {
-                        "subgraph_input_ids": {
+                    "subgraph_data": SubgraphData(
+                        input_ids={
                             ("conv2d_7", 0),
                             ("conv2d_8", 0),
                             ("conv2d_9", 0),
                         },
-                        "subgraph_output_ids": {("concat_2", 0)},
-                    },
+                        output_ids={("concat_2", 0)},
+                    ),
                 },
             ),
             (
@@ -185,10 +186,10 @@ class TestFXBCAlgorithm(TemplateTestBCAlgorithm):
                     "collected_inputs": {
                         ("matmul", 0): ("reshape", 0),
                     },
-                    "subgraph_data": {
-                        "subgraph_input_ids": {("matmul", 0)},
-                        "subgraph_output_ids": {("reshape_1", 0), ("add_4", 0)},
-                    },
+                    "subgraph_data": SubgraphData(
+                        input_ids={("matmul", 0)},
+                        output_ids={("reshape_1", 0), ("add_4", 0)},
+                    ),
                 },
             ),
         ),

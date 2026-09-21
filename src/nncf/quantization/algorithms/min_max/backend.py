@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import TypeVar
+from typing import Callable, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -40,6 +40,14 @@ class MinMaxAlgoBackend(ABC):
         Property for backend-specific metatypes that require preserving float subgraphs
         when removing the ShapeOf subgraph.
         """
+
+    @property
+    def inference_graph_transformations(self) -> list[Callable[[NNCFGraph], None]]:
+        """
+        Property for backend-specific inference graph transformations. Each function transforms the
+        NNCFGraph in place.
+        """
+        return []
 
     @property
     @abstractmethod
@@ -198,13 +206,17 @@ class MinMaxAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def create_convert_insertion_command(
+        nncf_graph: NNCFGraph,
         target_point: TargetPoint,
+        quantizer_config: QuantizerConfig,
         parameters: FakeConvertParameters,
     ) -> Command:
         """
         Returns backend-specific convert insertion command.
 
+        :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
         :param target_point: Target location for the correction.
+        :param quantizer_config: QuantizerConfig instance for the current layer.
         :param parameters: FakeConvertParameters to calculate activation quantization parameters.
         :return: Backend-specific Command for the quantizer insertion operation.
         """

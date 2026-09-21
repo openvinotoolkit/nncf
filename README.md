@@ -163,10 +163,8 @@ def transform_fn(data_item):
 calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
 
 # Step 3: Export model to TorchFX
-input_shape = (1, 3, 224, 224)
-fx_model = torch.export.export_for_training(model, args=(ex_input,)).module()
-# or
-# fx_model = torch.export.export(model, args=(ex_input,)).module()
+ex_input = torch.randn(1, 3, 224, 224)
+fx_model = torch.export.export(model, args=(ex_input,)).module()
 
 # Step 4: Run the quantization pipeline
 quantized_fx_model = nncf.quantize(fx_model, calibration_dataset)
@@ -298,7 +296,6 @@ Compact scripts demonstrating quantization/weight compression and corresponding 
 | [OpenVINO MobileNetV2](./examples/post_training_quantization/openvino/mobilenet_v2/README.md)                                            |            Post-Training Quantization            |  OpenVINO  |  Image Classification  |
 | [OpenVINO YOLO26](./examples/post_training_quantization/openvino/yolo26/README.md)                                                       |            Post-Training Quantization            |  OpenVINO  |    Object Detection    |
 | [OpenVINO YOLOv8 QwAC](./examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/README.md)                   | Post-Training Quantization with Accuracy Control |  OpenVINO  |    Object Detection    |
-| [OpenVINO Anomaly Classification](./examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control/README.md) | Post-Training Quantization with Accuracy Control |  OpenVINO  | Anomaly Classification |
 | [PyTorch MobileNetV2](./examples/post_training_quantization/torch/mobilenet_v2/README.md)                                                |            Post-Training Quantization            |  PyTorch   |  Image Classification  |
 | [PyTorch SSD](./examples/post_training_quantization/torch/ssd300_vgg16/README.md)                                                        |            Post-Training Quantization            |  PyTorch   |    Object Detection    |
 | [TorchFX Resnet18](./examples/post_training_quantization/torch_fx/resnet18/README.md)                                                    |            Post-Training Quantization            |  TorchFX   |  Image Classification  |

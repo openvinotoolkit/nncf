@@ -15,8 +15,12 @@ import pytest
 
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.onnx.graph.onnx_helper import get_tensor_value
+from nncf.onnx.quantization.quantizer_parameters import convert_fc_params_to_onnx_params
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import FP8Type
 from nncf.quantization.advanced_parameters import OverflowFix
+from nncf.quantization.fake_quantize import FakeConvertParameters
+from nncf.tensor import Tensor
 from tests.cross_fw.shared.comparator import compare_stats
 from tests.cross_fw.shared.json import load_json
 from tests.onnx.conftest import ONNX_TEST_ROOT
@@ -113,3 +117,55 @@ def test_scales(model, preset):
 
     ref_nodes_params = load_json(ref_stats_path)
     compare_stats(ref_nodes_params, q_nodes_params)
+
+
+@pytest.mark.parametrize(
+    "scale,shift,destination_type,axis,expected",
+    [
+        (
+            np.array(2, dtype=np.float32),
+            np.array(0, dtype=np.float32),
+            FP8Type.E4M3,
+            None,
+            (np.array(0.5, dtype=np.float32), np.array(0, dtype=np.float32), onnx.TensorProto.FLOAT8E4M3FN),
+        ),
+        (
+            np.array(2, dtype=np.float32),
+            np.array(0, dtype=np.float32),
+            FP8Type.E5M2,
+            None,
+            (np.array(0.5, dtype=np.float32), np.array(0, dtype=np.float32), onnx.TensorProto.FLOAT8E5M2),
+        ),
+        (
+            np.array(0, dtype=np.float32),
+            np.array(0, dtype=np.float32),
+            FP8Type.E5M2,
+            None,
+            (np.array(8388608, dtype=np.float32), np.array(0, dtype=np.float32), onnx.TensorProto.FLOAT8E5M2),
+        ),
+        (
+            np.array([2, 4, 8], dtype=np.float32).reshape(3, 1, 1, 1),
+            np.array([0, 0, 0], dtype=np.float32).reshape(3, 1, 1, 1),
+            FP8Type.E4M3,
+            0,
+            (
+                np.array([0.5, 0.25, 0.125], dtype=np.float32),
+                np.array([0, 0, 0], dtype=np.float32),
+                onnx.TensorProto.FLOAT8E4M3FN,
+            ),
+        ),
+    ],
+)
+def test_convert_fc_params_to_onnx_params(scale, shift, destination_type, axis, expected):
+    fc_params = FakeConvertParameters(Tensor(scale), Tensor(shift), destination_type)
+    onnx_params = convert_fc_params_to_onnx_params(fc_params, axis)
+    expected_scale, expected_zp, expected_type = expected
+
+    assert expected_scale.shape == onnx_params.scale.shape
+    assert np.allclose(expected_scale, onnx_params.scale, atol=1e-5)
+
+    assert expected_zp.shape == onnx_params.zero_point.shape
+    assert np.allclose(expected_zp, onnx_params.zero_point, atol=1e-5)
+
+    assert expected_type == onnx_params.tensor_type
+    assert axis == onnx_params.axis

@@ -744,6 +744,13 @@ class OVSinMetatype(OVOpMetatype):
     op_names = ["Sin"]
 
 
+@OV_OPERATOR_METATYPES.register()
+class OVGroupedMatMulMetatype(OVOpMetatype):
+    name = "GroupedMatMulOp"
+    op_names = ["GroupedMatMul"]
+    output_channel_axis = -1
+
+
 def get_operator_metatypes() -> list[type[OperatorMetatype]]:
     """
     Returns a list of the operator metatypes.

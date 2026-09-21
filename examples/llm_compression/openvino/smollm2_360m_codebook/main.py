@@ -48,9 +48,10 @@ def generate_answers(
 
     for question in questions:
         messages.append({"role": "user", "content": question})
-        input_ids = tokenizer.apply_chat_template(
+        batch_feature = tokenizer.apply_chat_template(
             messages, tokenize=True, add_generation_prompt=True, return_tensors="pt"
-        ).to(device=model.device)
+        )
+        input_ids = batch_feature["input_ids"]
         input_len = len(input_ids[0])
 
         output = model.generate(input_ids, max_new_tokens=max_new_tokens, do_sample=False)[0]
@@ -61,7 +62,7 @@ def generate_answers(
     return answers_by_questions
 
 
-def print_answers(header: str, answers_by_questions: list[str]) -> None:
+def print_answers(header: str, answers_by_questions: dict[str, str]) -> None:
     """
     Print the answers to the console.
 
@@ -81,7 +82,7 @@ QUESTIONS = [
 ]
 
 
-def load_model_and_tokenizer(model_id: str, export=True) -> tuple[OVModelForCausalLM, AutoTokenizer]:
+def load_model_and_tokenizer(model_id: str, export: bool = True) -> tuple[OVModelForCausalLM, AutoTokenizer]:
     """
     Load the model and tokenizer from the specified model ID.
 

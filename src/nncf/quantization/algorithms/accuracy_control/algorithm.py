@@ -29,6 +29,7 @@ from nncf.quantization.advanced_parameters import RestoreMode
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
+from nncf.quantization.algorithms.accuracy_control.ranker import GroupToRank
 from nncf.quantization.algorithms.accuracy_control.ranker import Ranker
 
 TModel = TypeVar("TModel")
@@ -110,8 +111,8 @@ class QuantizationAccuracyRestorerReport:
     :param num_iterations: Number of iterations performed.
     """
 
-    def __init__(self):
-        self.removed_groups = []
+    def __init__(self) -> None:
+        self.removed_groups: list[GroupToRank] = []
         self.removed_all = False
         self.reached_required_drop = False
         self.num_quantized_operations = None
@@ -120,7 +121,7 @@ class QuantizationAccuracyRestorerReport:
     @property
     def removed_quantizers(self) -> list[NNCFNode]:
         """
-        Returns all removed quantizers during accuracy-aware algorithm.
+        All removed quantizers during accuracy-aware algorithm.
         """
         quantizers = []
         for group in self.removed_groups:
@@ -130,7 +131,7 @@ class QuantizationAccuracyRestorerReport:
     @property
     def reverted_operations(self) -> list[NNCFNode]:
         """
-        Returns all operations which were reverted to original precision
+        All operations which were reverted to original precision
         during accuracy-aware algorithm.
         """
         operations = []
@@ -355,7 +356,7 @@ class QuantizationAccuracyRestorer:
                 break
 
             nncf_logger.info(
-                f"Accuracy drop with the new quantization scope is {float(current_accuracy_drop)} ({self.drop_type})"
+                f"Accuracy drop with the new quantization scope is {current_accuracy_drop} ({self.drop_type})"
             )
 
             # Continue greedy quantizer remove
@@ -479,9 +480,9 @@ class QuantizationAccuracyRestorer:
             )
 
     @staticmethod
-    def _print_completion_message(accuracy_drop: float, drop_type: DropType) -> None:
+    def _print_completion_message(accuracy_drop: float | None, drop_type: DropType) -> None:
         if accuracy_drop is None or accuracy_drop < 0:
             reason = "metric of the quantized model is greater than the metric of the initial model"
         else:
-            reason = f"achieved required accuracy drop {float(accuracy_drop)} ({drop_type})"
+            reason = f"achieved required accuracy drop {accuracy_drop} ({drop_type})"
         nncf_logger.info(f"Algorithm completed: {reason}")

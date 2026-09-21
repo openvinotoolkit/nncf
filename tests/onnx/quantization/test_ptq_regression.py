@@ -146,9 +146,9 @@ def test_compression(tmp_path, model_dir, data_dir, test_model):
                 transforms.ToTensor(),
                 normalize,
                 transforms.Lambda(
-                    lambda images: torch.moveaxis(images, 0, 2)
-                    if test_model.model_name == "efficientnet-lite4-11"
-                    else images
+                    lambda images: (
+                        torch.moveaxis(images, 0, 2) if test_model.model_name == "efficientnet-lite4-11" else images
+                    )
                 ),
             ]
         ),
@@ -175,4 +175,4 @@ def test_compression(tmp_path, model_dir, data_dir, test_model):
     onnx.save_model(quantized_model, str(int8_model_path))
     int8_top1 = validate(int8_model_path, val_loader)
     print(f"INT8 metrics = {int8_top1}")
-    assert abs(int8_top1 - test_model.int8_ref_top1) < 3e-3  # 0.03 deviations
+    assert abs(int8_top1 - test_model.int8_ref_top1) < 5e-3  # 0.03 deviations

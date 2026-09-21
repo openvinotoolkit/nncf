@@ -2155,6 +2155,8 @@ class TemplateTestNNCFTensorOperators:
                 and dtype == TensorDataType.bfloat16
                 or dtype
                 in [
+                    TensorDataType.int2,
+                    TensorDataType.int3,
                     TensorDataType.int4,
                     TensorDataType.uint4,
                     TensorDataType.nf4,
@@ -2189,6 +2191,8 @@ class TemplateTestNNCFTensorOperators:
                 and dtype == TensorDataType.bfloat16
                 or dtype
                 in [
+                    TensorDataType.int2,
+                    TensorDataType.int3,
                     TensorDataType.int4,
                     TensorDataType.uint4,
                     TensorDataType.uint16,

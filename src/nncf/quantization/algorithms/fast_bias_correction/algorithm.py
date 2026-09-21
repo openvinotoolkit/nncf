@@ -17,6 +17,7 @@ from nncf import Dataset
 from nncf.common.factory import EngineFactory
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -28,6 +29,7 @@ from nncf.common.tensor_statistics.statistical_functions import mean_per_channel
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
 
@@ -84,7 +86,7 @@ class FastBiasCorrection(Algorithm):
         self.apply_for_all_nodes = apply_for_all_nodes
         self.inplace_statistics = inplace_statistics
         self.backend_params = backend_params
-        self._backend_entity = None
+        self._backend_entity: FastBiasCorrectionAlgoBackend | None = None
         self._algorithm_key = f"FBC_{hash(self)}"
 
         if self.apply_for_all_nodes:
@@ -145,7 +147,7 @@ class FastBiasCorrection(Algorithm):
 
         # Fill `node_and_new_bias_value` list. It is a correspondence between nodes
         # for which we should update bias and new bias values.
-        node_and_new_bias_value = []
+        node_and_new_bias_value: list[tuple[NNCFNode, Tensor]] = []
 
         for node, bias_value in track(node_and_bias_value, description="Applying Fast Bias correction"):
             node_name = node.node_name

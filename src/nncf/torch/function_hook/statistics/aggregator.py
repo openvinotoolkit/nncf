@@ -68,6 +68,9 @@ class PT2StatisticsAggregator(StatisticsAggregator):
         for _statistic_points in statistic_points.values():
             for _statistic_point in _statistic_points:
                 target_point = _statistic_point.target_point
+                if not isinstance(target_point, PTTargetPoint):
+                    msg = f"Unexpected target point type: {type(target_point)}"
+                    raise nncf.InternalError(msg)
                 for collectors in _statistic_point.algorithm_to_tensor_collectors.values():
                     for collector in collectors:
                         command = PT2InsertionCommand(

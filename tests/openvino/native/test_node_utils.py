@@ -15,10 +15,13 @@ import pytest
 from openvino import opset13 as opset
 
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.utils.os import is_macos
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupedMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
+from nncf.openvino.graph.node_utils import get_activation_channel_axis
 from nncf.openvino.graph.node_utils import get_const_value_as_numpy_tensor
 from nncf.openvino.graph.node_utils import get_const_value_as_ov_tensor
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
@@ -152,6 +155,48 @@ def test_get_weight_channel_axes_for_matmul(weights_port_id, transpose, shape, d
 
     assert len(actual_channel_axes) == len(expected_channel_axes)
     assert all(a == b for a, b in zip(actual_channel_axes, expected_channel_axes))
+
+
+def test_get_weight_channel_axes_for_grouped_matmul():
+    SHAPE = (256, 2048, 512)
+    constant_attrs = {1: {"name": "mat_b", "shape": SHAPE, "dtype": "f32"}}
+    attributes = {
+        NNCFNode.ID_NODE_ATTR: 0,
+        NNCFNode.NODE_NAME_ATTR: "test",
+        NNCFNode.METATYPE_ATTR: OVGroupedMatMulMetatype,
+        NNCFNode.LAYER_ATTRIBUTES: OVLayerAttributes(
+            layer_attributes=GenericWeightedLayerAttributes(False, SHAPE),
+            constant_attributes=constant_attrs,
+        ),
+    }
+    node = NNCFNode(attributes)
+    actual_channel_axes = get_weight_channel_axes(node)
+    assert tuple(actual_channel_axes) == (0, 1)
+
+
+@pytest.mark.parametrize(
+    "input_shape,expected_channel_axis",
+    [
+        # 2D act x 3D weight
+        ((512, 2048), 1),
+        # 3D act x 3D weight
+        ((256, 512, 2048), 2),
+    ],
+)
+def test_get_activation_channel_axis_for_grouped_matmul(input_shape, expected_channel_axis):
+    SHAPE = (256, 1024, 2048)
+    constant_attrs = {1: {"name": "mat_b", "shape": SHAPE, "dtype": "f32"}}
+    attributes = {
+        NNCFNode.ID_NODE_ATTR: 0,
+        NNCFNode.NODE_NAME_ATTR: "test",
+        NNCFNode.METATYPE_ATTR: OVGroupedMatMulMetatype,
+        NNCFNode.LAYER_ATTRIBUTES: OVLayerAttributes(
+            layer_attributes=GenericWeightedLayerAttributes(False, SHAPE),
+            constant_attributes=constant_attrs,
+        ),
+    }
+    node = NNCFNode(attributes)
+    assert get_activation_channel_axis(node, port_id=0, input_shape=input_shape) == expected_channel_axis
 
 
 @pytest.mark.parametrize(

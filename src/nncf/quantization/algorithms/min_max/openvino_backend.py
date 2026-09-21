@@ -136,7 +136,9 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def create_convert_insertion_command(
+        nncf_graph: NNCFGraph,
         target_point: OVTargetPoint,
+        quantizer_config: QuantizerConfig,
         parameters: FakeConvertParameters,
     ) -> OVQuantizerInsertionCommand:
         return OVConvertInsertionCommand(target_point, parameters)

@@ -149,7 +149,9 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def create_convert_insertion_command(
+        nncf_graph: NNCFGraph,
         target_point: PTTargetPoint,
+        quantizer_config: QuantizerConfig,
         parameters: FakeConvertParameters,
     ) -> TransformationCommand:
         msg = "FakeConvert insertion not implemented in PyTorch backend!"
@@ -232,7 +234,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             half_range=False,
             logarithm_scale=False,
             is_quantized_on_export=False,
-            compression_lr_multiplier=None,
         )
         quantizer = quantizer_cls(quantizer_spec)
 

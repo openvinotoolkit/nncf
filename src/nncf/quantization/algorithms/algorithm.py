@@ -30,9 +30,7 @@ class Algorithm(ABC):
     @abstractmethod
     def available_backends(self) -> list[BackendType]:
         """
-        Returns list of the available backends for the algorithm.
-
-        :return: List of backends supported by the algorithm.
+        A list of the available backends for the algorithm.
         """
 
     @abstractmethod

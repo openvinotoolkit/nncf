@@ -110,26 +110,6 @@ def post_training_quantization_onnx_yolo8_quantize_with_accuracy_control() -> di
     }
 
 
-def post_training_quantization_openvino_anomaly_stfpm_quantize_with_accuracy_control() -> dict[str, float]:
-    from examples.post_training_quantization.openvino.anomaly_stfpm_quantize_with_accuracy_control.main import (
-        run_example as anomaly_stfpm_main,
-    )
-
-    fp32_top1, int8_top1, fp32_fps, int8_fps, fp32_size, int8_size = anomaly_stfpm_main()
-
-    return {
-        "fp32_top1": float(fp32_top1),
-        "int8_top1": float(int8_top1),
-        "accuracy_drop": float(fp32_top1 - int8_top1),
-        "fp32_fps": fp32_fps,
-        "int8_fps": int8_fps,
-        "performance_speed_up": int8_fps / fp32_fps,
-        "fp32_model_size": fp32_size,
-        "int8_model_size": int8_size,
-        "model_compression_rate": fp32_size / int8_size,
-    }
-
-
 def post_training_quantization_torch_ssd300_vgg16() -> dict[str, float]:
     from examples.post_training_quantization.torch.ssd300_vgg16.main import main as ssd300_vgg16_main
 
@@ -198,6 +178,14 @@ def llm_compression_synthetic() -> dict[str, float]:
 
 def fp8_llm_quantization() -> dict[str, float]:
     from examples.llm_compression.openvino.smollm2_360m_fp8.main import main as fp8_llm_quantization_main
+
+    result = fp8_llm_quantization_main()
+
+    return {"answers": list(result.values())}
+
+
+def fp8_llm_quantization_onnx() -> dict[str, float]:
+    from examples.llm_compression.onnx.smollm2_360m_fp8.main import main as fp8_llm_quantization_main
 
     result = fp8_llm_quantization_main()
 

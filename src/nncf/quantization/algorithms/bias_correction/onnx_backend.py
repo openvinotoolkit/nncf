@@ -14,6 +14,7 @@ import onnx
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.builders import get_mean_statistic_collector
 from nncf.common.tensor_statistics.collectors import TensorCollector
@@ -46,11 +47,11 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     def model_extraction_command(
         input_ids: set[tuple[str, int]], output_ids: set[tuple[str, int]]
     ) -> ONNXModelExtractionCommand:
-        return ONNXModelExtractionCommand(input_ids, output_ids)
+        return ONNXModelExtractionCommand(list(input_ids), list(output_ids))
 
     @staticmethod
     def output_insertion_command(nncf_graph: NNCFGraph, target_point: ONNXTargetPoint) -> ONNXOutputInsertionCommand:
-        nncf_input_node_next_nodes = {}
+        nncf_input_node_next_nodes: dict[NNCFNodeName, list[NNCFNodeName]] = {}
         for input_node in nncf_graph.get_input_nodes():
             next_nodes = nncf_graph.get_next_nodes(input_node)
             nncf_input_node_next_nodes[input_node.node_name] = [node.node_name for node in next_nodes]
@@ -70,7 +71,7 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return Tensor(raw_data[output_name])
 
     @staticmethod
-    def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> tuple[int, int]:
+    def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
         return 0
 
     @staticmethod
