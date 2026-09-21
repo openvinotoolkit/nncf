@@ -79,12 +79,12 @@ def _(a: T_NUMPY) -> T_NUMPY_ARRAY:
 
 @numeric.max.register
 def _(a: T_NUMPY, axis: T_AXIS = None, keepdims: bool = False) -> T_NUMPY_ARRAY:
-    return np.array(np.max(a, axis=axis, keepdims=keepdims))
+    return np.array(np.max(a, axis=axis, keepdims=keepdims))  # type: ignore[call-overload]
 
 
 @numeric.min.register
 def _(a: T_NUMPY, axis: T_AXIS = None, keepdims: bool = False) -> T_NUMPY:
-    return np.array(np.min(a, axis=axis, keepdims=keepdims))
+    return np.array(np.min(a, axis=axis, keepdims=keepdims))  # type: ignore[call-overload]
 
 
 @numeric.abs.register
@@ -155,7 +155,7 @@ def _(
     *,
     range: tuple[float, float] | None = None,
 ) -> T_NUMPY:
-    return np.histogram(a=a, bins=bins, range=range)[0]
+    return np.histogram(a=a, bins=bins, range=range)[0]  # type: ignore[index]
 
 
 @numeric.isempty.register
@@ -171,7 +171,7 @@ def _(
     atol: float = 1e-08,
     equal_nan: bool = False,
 ) -> T_NUMPY_ARRAY:
-    return np.isclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
+    return np.isclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)  # type: ignore[return-value]
 
 
 @numeric.maximum.register
@@ -243,7 +243,7 @@ def _(
     dtype: TensorDataType | None = None,
 ) -> T_NUMPY_ARRAY:
     np_dtype = convert_to_numpy_dtype(dtype)
-    return np.array(np.mean(a, axis=axis, keepdims=keepdims, dtype=np_dtype))  # type: ignore [arg-type]
+    return np.array(np.mean(a, axis=axis, keepdims=keepdims, dtype=np_dtype))  # type: ignore[call-overload]
 
 
 @numeric.median.register
@@ -252,7 +252,7 @@ def _(
     axis: T_SHAPE | None = None,
     keepdims: bool = False,
 ) -> T_NUMPY_ARRAY:
-    return np.array(np.median(a, axis=axis, keepdims=keepdims))  # type: ignore [arg-type]
+    return np.array(np.median(a, axis=axis, keepdims=keepdims))
 
 
 @numeric.floor.register
@@ -262,7 +262,7 @@ def _(a: T_NUMPY) -> T_NUMPY:
 
 @numeric.round.register
 def _(a: T_NUMPY, decimals: int = 0) -> T_NUMPY_ARRAY:
-    return np.round(a, decimals=decimals)
+    return np.round(a, decimals=decimals)  # type: ignore[return-value]
 
 
 @numeric.power.register
@@ -333,7 +333,7 @@ def _(a: T_NUMPY) -> T_NUMBER:
 
 @numeric.sum.register
 def _(a: T_NUMPY, axis: T_AXIS = None, keepdims: bool = False) -> T_NUMPY_ARRAY:
-    return np.array(np.sum(a, axis=axis, keepdims=keepdims))
+    return np.array(np.sum(a, axis=axis, keepdims=keepdims))  # type: ignore[call-overload]
 
 
 @numeric.cumsum.register
@@ -353,7 +353,7 @@ def _(
     keepdims: bool = False,
     ddof: int = 0,
 ) -> T_NUMPY_ARRAY:
-    return np.array(np.var(a, axis=axis, keepdims=keepdims, ddof=ddof))  # type: ignore[arg-type]
+    return np.array(np.var(a, axis=axis, keepdims=keepdims, ddof=ddof))  # type: ignore[call-overload]
 
 
 @numeric.size.register
@@ -408,7 +408,7 @@ def _(
     keepdims: bool = False,
 ) -> T_NUMPY_ARRAY:
     if mask is None:
-        return np.mean(x, axis=axis, keepdims=keepdims)
+        return np.mean(x, axis=axis, keepdims=keepdims)  # type: ignore[call-overload]
     masked_x = np.ma.array(x, mask=mask)
     result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims)
     if isinstance(result, np.ma.MaskedArray):
@@ -421,7 +421,7 @@ def _(x: T_NUMPY_ARRAY, mask: T_NUMPY_ARRAY | None, axis: T_AXIS, keepdims: bool
     if mask is None:
         return np.median(x, axis=axis, keepdims=keepdims)
     masked_x = np.ma.array(x, mask=mask)
-    result = np.ma.median(masked_x, axis=axis, keepdims=keepdims)  # type: ignore[no-untyped-call]
+    result = np.ma.median(masked_x, axis=axis, keepdims=keepdims)
     if isinstance(result, np.ma.MaskedArray):
         return result.data
     return result
@@ -440,8 +440,8 @@ def _(a: T_NUMPY) -> T_NUMPY:
 @numeric.searchsorted.register
 def _(
     a: T_NUMPY_ARRAY, v: T_NUMPY_ARRAY, side: Literal["left", "right"] = "left", sorter: T_NUMPY_ARRAY | None = None
-) -> T_NUMPY_ARRAY:
-    return np.searchsorted(a, v, side, sorter)
+) -> T_NUMPY_ARRAY | float:
+    return np.searchsorted(a, v, side, sorter)  # type: ignore[return-value]
 
 
 @numeric.as_numpy_tensor.register

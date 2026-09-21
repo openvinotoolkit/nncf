@@ -432,7 +432,7 @@ def _(x: torch.Tensor, mask: torch.Tensor | None, axis: T_AXIS, keepdims: bool =
     if not isinstance(axis, int):
         device = x.device
         np_masked_x = np.ma.array(x.detach().cpu().numpy(), mask=mask.detach().cpu().numpy())
-        result = torch.tensor(np.ma.median(np_masked_x, axis=axis, keepdims=keepdims))  # type: ignore[no-untyped-call]
+        result = torch.tensor(np.ma.median(np_masked_x, axis=axis, keepdims=keepdims))
         return result.type(x.dtype).to(device)
     pt_masked_x = x.masked_fill(mask, torch.nan)
     ret = torch.nanquantile(pt_masked_x, q=0.5, dim=axis, keepdim=keepdims)
