@@ -4,6 +4,7 @@ on:
     workflows:
       - "Test examples"
       - "Weight compression"
+      - "[Schedule] Nightly"
     types:
       - requested
       - completed

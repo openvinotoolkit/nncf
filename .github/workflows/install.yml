@@ -1,11 +1,17 @@
 name: Test install
+run-name: "Test install${{ inputs.pr_num != '' && format(' PR#{0}', inputs.pr_num) || '' }}"
 permissions: read-all
 
 on:
   workflow_call:
+    inputs:
+      pr_num:
+        description: 'The pull request number'
+        type: string
+        default: ''
   workflow_dispatch:
     inputs:
-      pull_request_number:
+      pr_num:
         description: 'The pull request number'
         default: ''
 
@@ -25,13 +31,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-            lfs: true
-            fetch-depth: 0  # Fetch full history to allow checking out any branch or PR
-      - name: Fetch and Checkout the Pull Request Branch
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pull_request_number != '' }}
-        run: |
-          git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
-          git checkout pr-${{ github.event.inputs.pull_request_number }}
+          lfs: true
+          ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
@@ -69,11 +70,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: true
-      - name: Fetch and Checkout the Pull Request Branch
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.pull_request_number != '' }}
-        run: |
-          git fetch origin pull/${{ github.event.inputs.pull_request_number }}/head:pr-${{ github.event.inputs.pull_request_number }}
-          git checkout pr-${{ github.event.inputs.pull_request_number }}
+          ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
