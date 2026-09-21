@@ -30,7 +30,7 @@ tinyllama_data_aware_awq_scale_estimation_backend_TORCH:
   metric_value: 0.82814
   num_int4: 94
   num_int8: 124
-  atol: 0.01 # difference across devices: 0.85502 vs 0.86102
+  atol: 0.01 # difference across devices
 tinyllama_data_aware_awq_scale_estimation_stateful_backend_OV:
   metric_value: 0.83415
   num_int4: 94
