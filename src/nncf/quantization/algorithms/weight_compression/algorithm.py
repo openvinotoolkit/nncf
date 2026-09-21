@@ -1431,7 +1431,7 @@ class WeightCompression(Algorithm):
         Repacks compressed weight constants to a lower-bit representation when possible.
 
         Iterates over all nodes in the graph and attempts to replace compressed constants
-        (i8, u8, i4, u4) with a more compact symmetric representation (i2, i3, i6) if the
+        (i8, u8, i4, u4) with a more compact symmetric representation (i2, i3) if the
         actual value range allows it.
 
         :param model: Backend-specific model with compressed weights.

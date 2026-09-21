@@ -21,11 +21,8 @@ import torch
 import torch.nn.functional as F
 import transformers
 from datasets import load_dataset
-from lm_eval import simple_evaluate
-from lm_eval.models.optimum_lm import OptimumLM
 from optimum.exporters.openvino.convert import export_from_model
 from optimum.intel.openvino import OVModelForCausalLM
-from optimum.modeling_base import OptimizedModel
 from torch import Tensor
 from torch import nn
 from torch.jit import TracerWarning
@@ -77,15 +74,6 @@ def get_wikitext2(num_samples: int, seqlen: int, tokenizer: Any, device: torch.d
     return trainloader
 
 
-def warmup_triton():
-    @torch.compile
-    def warm_up_compiler(x):
-        return x * 2
-
-    dummy_tensor = torch.randn(2, 2, device="cuda")
-    warm_up_compiler(dummy_tensor)
-
-
 def get_ultrachat_200k(num_samples: int, seqlen: int, tokenizer: Any, device: torch.device) -> list[Tensor]:
     if not hasattr(tokenizer, "apply_chat_template") or tokenizer.apply_chat_template is None:
         msg = "Tokenizer must have an 'apply_chat_template' attribute for ultra chat dataset."
@@ -116,7 +104,7 @@ def get_ultrachat_200k(num_samples: int, seqlen: int, tokenizer: Any, device: to
     return trainloader
 
 
-def get_pile_10k(num_samples: int, seqlen: int, tokenizer: Any, device: torch.device):
+def get_pile_10k(num_samples: int, seqlen: int, tokenizer: Any, device: torch.device) -> list[Tensor]:
     ds = load_dataset("NeelNanda/pile-10k", split="train")
 
     trainloader = []
@@ -139,27 +127,6 @@ def get_pile_10k(num_samples: int, seqlen: int, tokenizer: Any, device: torch.de
             break
 
     return trainloader
-
-
-def measure_perplexity(
-    optimum_model: OptimizedModel,
-    max_length: int | None = None,
-    limit: int | float | None = None,
-) -> float:
-    """
-    Measure perplexity on the Wikitext dataset, via rolling loglikelihoods for a given model.
-
-    :param optimum_model: A model to be evaluated.
-    :param max_length: The maximum sequence length for evaluation.
-    :param limit: Limit the number of examples per task (only use this for testing).
-        If <1, limit is a percentage of the total number of examples.
-    :return: The similarity score as a float.
-    """
-    task = "wikitext"
-    print("#" * 50 + " Evaluate via lm-eval-harness " + "#" * 50)
-    lm_obj = OptimumLM(pretrained=optimum_model, max_length=max_length)
-    results = simple_evaluate(lm_obj, tasks=[task], limit=limit, log_samples=False)
-    return results["results"][task]["word_perplexity,none"]
 
 
 @torch.no_grad()
@@ -316,9 +283,9 @@ def load_checkpoint(model: nn.Module, ckpt_file: Path) -> nn.Module:
 
 
 @torch.no_grad()
-def export_to_openvino(pretrained: str, ckpt_file: Path, ir_dir: Path) -> OVModelForCausalLM:
+def export_to_openvino(pretrained: str, ckpt_file: Path, ir_dir: Path):
     """
-    Create a wrapper of OpenVINO model from the checkpoint for evaluation on CPU via WWB.
+    Export the quantized model to OpenVINO IR format.
 
     :param pretrained: The name or path of the pretrained model.
     :param ckpt_file: The path to the checkpoint file to load the model weights and NNCF configurations.
@@ -333,13 +300,6 @@ def export_to_openvino(pretrained: str, ckpt_file: Path, ir_dir: Path) -> OVMode
     model_to_eval = OVModelForCausalLM.from_pretrained(ir_dir)
     model_to_eval.model = repack_weights(model_to_eval.model)
     model_to_eval.save_pretrained(ir_dir / "repacked")
-
-    return OVModelForCausalLM.from_pretrained(
-        model_id=ir_dir / "repacked",
-        trust_remote_code=True,
-        load_in_8bit=False,
-        compile=True,
-    )
 
 
 @torch.no_grad()
@@ -358,14 +318,6 @@ def export_to_dequantized_torch(pretrained: str, ckpt_file: Path, pt_dir: Path):
     model_to_eval = nncf.strip(model_to_eval, do_copy=False, strip_format=StripFormat.IN_PLACE)
     model_to_eval.save_pretrained(pt_dir)
     tokenizer.save_pretrained(pt_dir)
-
-
-def limit_type(astr: str):
-    value = float(astr)
-    if value < 0 or value > 1:
-        msg = "value not in range [0,1]"
-        raise argparse.ArgumentTypeError(msg)
-    return value
 
 
 def get_argument_parser() -> argparse.ArgumentParser:
@@ -429,14 +381,6 @@ def get_argument_parser() -> argparse.ArgumentParser:
     # Data params
     parser.add_argument("--num_train_samples", type=int, default=2048, help="Number of training samples")
     parser.add_argument("--train_seqlen", type=int, default=1024, help="Train data context length.")
-    parser.add_argument("--eval_seqlen", type=int, default=2048, help="Evaluation data context length.")
-    parser.add_argument(
-        "--limit",
-        type=limit_type,
-        default=None,
-        help="A percentage of the total number of examples for evaluation. "
-        "Should be on the range [0,1]. If None, all samples will be used.",
-    )
 
     # Training params
     parser.add_argument(
@@ -941,15 +885,8 @@ def main(argv) -> float:
         export_to_dequantized_torch(args.pretrained, ckpt_file, ckpt_file.parent / "dequantized")
         print(f"The finetuned model has been exported to torch and saved to: {ckpt_file.parent / 'dequantized'}\n")
 
-    # Export the best tuned model to OpenVINO and evaluate it using LM-Evaluation-Harness.
-    model_for_eval = export_to_openvino(args.pretrained, ckpt_file, ckpt_file.parent)
-    ov_perplexity = measure_perplexity(model_for_eval, args.eval_seqlen, args.limit)
-    tb.add_scalar("ov_perplexity", ov_perplexity, 0)
-    print(
-        f"The finetuned model has been exported to OpenVINO and saved to: {ckpt_file.parent}\n"
-        f"The word perplexity on wikitext (test) = {ov_perplexity:.4f}"
-    )
-    return ov_perplexity
+    # Export the best tuned model to OpenVINO.
+    export_to_openvino(args.pretrained, ckpt_file, ckpt_file.parent)
 
 
 if __name__ == "__main__":
