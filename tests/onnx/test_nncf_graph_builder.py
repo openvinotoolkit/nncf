@@ -19,6 +19,9 @@ import torch
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXMatMulMetatype
 from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
+from nncf.onnx.graph.nncf_graph_builder import _get_bias_attr
+from nncf.onnx.graph.onnx_helper import get_children_node_mapping
+from nncf.onnx.graph.onnx_helper import get_parents_node_mapping
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.onnx.common import ModelBuilder
@@ -165,3 +168,19 @@ def test_multiedge_nncf_graph():
     assert len(edges) == 2
     assert edges[0].to_node.node_id == edges[1].to_node.node_id
     assert edges[0].input_port_id != edges[1].input_port_id
+
+
+def test_get_bias_attr():
+    mb = ModelBuilder()
+    x = mb.add_input("x", (4, 3))
+    y = mb.add_input("y", (4, 2))
+    matmul = mb.add_matmul(x, (3, 2))
+    add = mb.add_add(y, matmul)
+    mb.add_output(add, (4, 2))
+    model = mb.build(opset_version=21, ir_version=10)
+
+    children_node_mapping = get_children_node_mapping(model)
+    parents_node_mapping = get_parents_node_mapping(model)
+
+    matmul_node = next(x for x in model.graph.node if x.name == "MatMul_0")
+    assert _get_bias_attr(matmul_node, model, parents_node_mapping, children_node_mapping) == {}

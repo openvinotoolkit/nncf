@@ -1,0 +1,22 @@
+digraph {
+"0 conv1_weight" [id=0, type="get_attr"];
+"1 conv2_weight" [id=1, type="get_attr"];
+"2 x" [id=2, type=input];
+"3 conv2d" [id=3, type=conv2d];
+"4 chunk" [id=4, type=chunk];
+"5 getitem" [id=5, type="__getitem__"];
+"6 getitem_1" [id=6, type="__getitem__"];
+"7 conv2d_1" [id=7, type=conv2d];
+"8 cat" [id=8, type=cat];
+"9 output" [id=9, type=output];
+"0 conv1_weight" -> "3 conv2d" [key=0, style=solid, label="(4, 4, 1, 1)"];
+"1 conv2_weight" -> "7 conv2d_1" [key=0, style=solid, label="(2, 2, 1, 1)"];
+"2 x" -> "3 conv2d" [key=0, style=solid, label="(1, 4, 8, 8)"];
+"3 conv2d" -> "4 chunk" [key=0, style=solid, label="(1, 4, 8, 8)"];
+"4 chunk" -> "5 getitem" [key=0, style=solid, label="(1, 2, 8, 8)"];
+"4 chunk" -> "6 getitem_1" [key=0, style=solid, label="(1, 2, 8, 8)"];
+"5 getitem" -> "7 conv2d_1" [key=0, style=solid, label="(1, 2, 8, 8)"];
+"6 getitem_1" -> "8 cat" [key=0, style=solid, label="(1, 2, 8, 8)"];
+"7 conv2d_1" -> "8 cat" [key=0, style=solid, label="(1, 2, 8, 8)"];
+"8 cat" -> "9 output" [key=0, style=solid, label="(1, 4, 8, 8)"];
+}

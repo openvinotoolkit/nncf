@@ -62,7 +62,6 @@ install-openvino-test:
 
 install-openvino-dev: install-openvino-test install-pre-commit
 	pip install -r examples/post_training_quantization/openvino/mobilenet_v2/requirements.txt
-	pip install -r examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control/requirements.txt
 	pip install -r examples/post_training_quantization/openvino/yolov8/requirements.txt
 	pip install -r examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/requirements.txt
 
@@ -114,7 +113,7 @@ test-torch-cuda:
 	pytest ${COVERAGE_ARGS} tests/torch -ra -m "cuda and not weekly and not nightly and not models_hub and not legacy" --junitxml ${JUNITXML_PATH}
 
 test-torch-nightly:
-	pytest ${COVERAGE_ARGS} tests/torch -m "nightly or legacy" --junitxml ${JUNITXML_PATH} $(DATA_ARG)
+	pytest ${COVERAGE_ARGS} tests/torch -m "long or legacy" --junitxml ${JUNITXML_PATH} $(DATA_ARG)
 
 test-torch-weekly:
 	pytest ${COVERAGE_ARGS} tests/torch -m weekly \
