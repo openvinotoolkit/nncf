@@ -2,9 +2,10 @@ name: "Add Job Link to PR"
 on:
   workflow_run:
     workflows:
+      - "[Schedule] Nightly"
+      - "[Schedule] Weekly"
       - "Test examples"
       - "Weight compression"
-      - "[Schedule] Nightly"
     types:
       - requested
       - completed
