@@ -102,7 +102,7 @@ class ImageClassificationBase(PTQTestPipeline):
             def process_result(request, userdata):
                 output_data = request.get_output_tensor().data
                 predicted_label = np.argmax(output_data, axis=1)
-                predictions[userdata] = predicted_label
+                predictions[userdata] = predicted_label[0]
                 pbar.update(advance=1)
 
             infer_queue.set_callback(process_result)
@@ -134,8 +134,8 @@ class ImageClassificationBase(PTQTestPipeline):
             # W/A for memory leaks when using torch DataLoader and OpenVINO
             pred = compiled_model(images)
             pred = torch.argmax(pred, dim=1)
-            predictions[i] = pred.numpy()
-            references[i] = target.numpy()
+            predictions[i] = pred.numpy()[0]
+            references[i] = target.numpy()[0]
         return predictions, references
 
     def _validate(self) -> None:
