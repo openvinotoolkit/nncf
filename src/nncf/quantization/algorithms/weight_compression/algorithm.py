@@ -1447,8 +1447,17 @@ class WeightCompression(Algorithm):
 
         backend_entity = OVWeightCompressionAlgoBackend(model)
 
+        n_repacked_tensors = 0
+        bits_before = 0
+        bits_after = 0
+
         for node in graph.topological_sort():
-            is_repacked = backend_entity.try_repack(node, graph)
+            is_repacked, bits_before_node, bits_after_node = backend_entity.try_repack(node, graph)
             if is_repacked:
-                print(f"Repacked node: {node.node_name}")
+                n_repacked_tensors += 1
+                bits_before += bits_before_node
+                bits_after += bits_after_node
+        print(f"Total repacked tensors: {n_repacked_tensors}")
+        print(f"Total MB before: {bits_before / 8 / 1024 / 1024}")
+        print(f"Total MB after: {bits_after / 8 / 1024 / 1024}")
         return model

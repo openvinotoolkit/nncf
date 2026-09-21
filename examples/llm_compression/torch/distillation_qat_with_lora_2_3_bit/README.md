@@ -73,10 +73,9 @@ python main.py \
   --dataset pile-10k \
   --num_train_samples 2048 \
   --train_seqlen 1024 \
-  --eval_seqlen 2048 \
   --lr 1e-4 \
   --epochs 1 \
-  --scale_finetune_epochs 0 \
+  --scale_epochs 0 \
   --batch_size 32 \
   --microbatch_size 8 \
   --lora_rank 256
@@ -98,14 +97,12 @@ python main.py \
 - `--dataset`: one of `pile-10k`, `wikitext-2`, or `ultrachat_200k`
 - `--num_train_samples`: number of training samples
 - `--train_seqlen`: context length for training samples
-- `--eval_seqlen`: context length for evaluation
-- `--limit`: fraction of validation examples to use, in `[0, 1]`
 
 ### Training
 
 - `--lr`: base learning rate
 - `--epochs`: number of main training epochs
-- `--scale_finetune_epochs`: extra epochs where only quantizer scales are trained
+- `--scale_epochs`: extra epochs where only quantizer scales are trained
 - `--linear_lr_scheduler`: use a linear learning-rate decay schedule
 - `--batch_size`: accumulation target
 - `--microbatch_size`: per-step microbatch size
@@ -144,7 +141,7 @@ The optimization loop is distillation-based:
 - teacher hidden states are precomputed with the original model
 - the compressed model receives the same tokens
 - the script minimizes a KL divergence between the student and teacher outputs / hidden states
-- optimizer updates are accumulated across microbatches and applied when `batch_size // microbatch_size` is reached
+- optimizer updates are accumulated across microbatch steps and applied when `batch_size // microbatch_size` is reached
 
 This makes the example a low-bit QAT + LoRA distillation workflow rather than a plain quantization pass.
 

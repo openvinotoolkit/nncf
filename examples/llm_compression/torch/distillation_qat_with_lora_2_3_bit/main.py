@@ -296,10 +296,12 @@ def export_to_openvino(pretrained: str, ckpt_file: Path, ir_dir: Path):
     model_to_eval = load_checkpoint(model_to_eval, ckpt_file)
     model_to_eval = nncf.strip(model_to_eval, do_copy=False, strip_format=StripFormat.DQ)
     export_from_model(model_to_eval, ir_dir, device="cpu")
+    print(f"The OpenVINO model has been exported and saved to: {ir_dir}")
 
     model_to_eval = OVModelForCausalLM.from_pretrained(ir_dir)
     model_to_eval.model = repack_weights(model_to_eval.model)
     model_to_eval.save_pretrained(ir_dir / "repacked")
+    print(f"The OpenVINO model has been repacked and saved to: {ir_dir / 'repacked'}")
 
 
 @torch.no_grad()
@@ -392,7 +394,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--epochs", type=int, default=1, help="Number of epochs.")
     parser.add_argument(
-        "--scale_finetune_epochs",
+        "--scale_epochs",
         type=int,
         default=0,
         help="Number of additional epochs after the main training loop during which only the quantizer scales are "
@@ -492,14 +494,6 @@ def _get_weight_data(module: nn.Module) -> torch.Tensor | None:
     w = module.weight
     if w.device.type != "meta":
         return w.data
-    hook = getattr(module, "_hf_hook", None)
-    if hook is not None:
-        wm = getattr(hook, "weights_map", None)
-        if wm is not None:
-            try:
-                return wm["weight"].cpu()
-            except Exception:
-                pass
     return None
 
 
@@ -512,16 +506,6 @@ def _set_weight_data(module: nn.Module, data: torch.Tensor) -> None:
     w = module.weight
     if w.device.type != "meta":
         w.data.copy_(data.to(device=w.device, dtype=w.dtype))
-        return
-    hook = getattr(module, "_hf_hook", None)
-    if hook is not None:
-        wm = getattr(hook, "weights_map", None)
-        if wm is not None:
-            try:
-                original = wm["weight"]
-                wm["weight"] = data.to(device=original.device, dtype=original.dtype)
-            except Exception:
-                pass
 
 
 # rescale scale to [min, max] to avoid extreme values that cause instability during training or quantization
@@ -559,12 +543,8 @@ def equalize_up_gate_with_layernorm(model: nn.Module, eps: float = 1e-5, use_ali
         if use_align_scale:
             s = align_scale(s, min=0.1, max=1.0)
         # Divide gate/up input columns by s.
-        print("Max val before equalization gate:", w_gate.abs().max().item())
-        print("Max val before equalization up:", w_up.abs().max().item())
         _set_weight_data(gate, w_gate * (1.0 / s.unsqueeze(0)))
         _set_weight_data(up, w_up * (1.0 / s.unsqueeze(0)))
-        print("Max val after equalization gate:", _get_weight_data(gate).abs().max().item())
-        print("Max val after equalization up:", _get_weight_data(up).abs().max().item())
 
         # Scale producer (LayerNorm/RMSNorm) so its output is multiplied by s.
         s_dev = s.to(dtype=w_prod.dtype)
@@ -628,9 +608,7 @@ def equalize_down_proj(
         s = w_down.abs().mean(dim=0).clamp_min(eps).to(dtype=w_down.dtype)
         if use_align_scale:
             s = align_scale(s, min=0.1, max=1.0)
-        print("Max val before equalization:", w_down.abs().max().item())
         _set_weight_data(down, w_down * (1.0 / s.unsqueeze(0)))
-        print("Max val after equalization:", _get_weight_data(down).abs().max().item())
 
         # Scale producer output rows by s.
         for prod in producers:
@@ -790,12 +768,12 @@ def main(argv) -> float:
         dataset = Dataset([example_input])
     else:
         if args.dataset == "ultrachat_200k":
-            calib_loader = train_loader[:128]
+            calib_loader = train_loader[:129]
         else:
-            calib_loader = load_fn(num_samples=128, seqlen=128, tokenizer=tokenizer, device=device)
+            calib_loader = load_fn(num_samples=129, seqlen=128, tokenizer=tokenizer, device=device)
         dataset = Dataset(map(get_model_input, calib_loader))
 
-    is_ptq = args.scale_finetune_epochs == 0 and args.epochs == 0
+    is_ptq = args.scale_epochs == 0 and args.epochs == 0
     orig_hiddens = None
     if not is_ptq:
         # Pre-compute hiddens of teacher model for distillation loss.
@@ -847,7 +825,7 @@ def main(argv) -> float:
     )
 
     # Optional scales-only finetuning phase: LoRA adapters are frozen, only quantizer scales are trained.
-    if args.scale_finetune_epochs > 0:
+    if args.scale_epochs > 0:
         scale_params = set_trainable(model, lora_lr=args.lr, fq_lr=fq_lr, scales_only=True)
         opt = torch.optim.AdamW(scale_params, weight_decay=weight_decay)
         run_training(
@@ -858,13 +836,13 @@ def main(argv) -> float:
             scheduler=get_linear_lr_scheduler(
                 opt,
                 args.linear_lr_scheduler,
-                args.scale_finetune_epochs,
+                args.scale_epochs,
                 microbatches_per_epoch,
                 grad_accumulation_steps,
             ),
             ckpt_file=ckpt_file,
             tb=tb,
-            num_epochs=args.scale_finetune_epochs,
+            num_epochs=args.scale_epochs,
             phase_desc="Scales-only epoch",
             start_total_steps=total_steps,
             device=device,
