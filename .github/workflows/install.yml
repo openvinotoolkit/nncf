@@ -85,3 +85,5 @@ jobs:
       - name: Run install test scope
         run: |
           pytest tests/cross_fw/install -rA -s --host-configuration gpu --backend torch
+        env:
+          PIP_EXTRA_INDEX_URL: "https://download.pytorch.org/whl/cu126"

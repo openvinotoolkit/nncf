@@ -2,16 +2,16 @@
 openvino==2026.3.1
 
 # Pytorch
-torch==2.10.0
-torchvision==0.25.0
-torchao==0.17.0
+torch==2.13.0
+torchvision==0.28.0
+torchao==0.18.0
 
 # ONNX
 onnx==1.22.0
-onnx-ir==0.1.15
+onnx-ir==1.0.0
 onnxruntime==1.23.2; python_version < '3.11'
 onnxruntime==1.24.3; python_version >= '3.11'
-onnxscript==0.6.2
+onnxscript==0.7.1
 
 # Tests and examples
 pytest==9.0.3
@@ -22,9 +22,10 @@ pytest-xdist==3.8.0
 pytest-forked==1.6.0
 pytest-split==0.11.0
 
-datasets==5.0.0
+datasets==5.0.1
 matplotlib==3.10.9
 pandas==2.3.3
 fastprogress==1.0.5
 fastcore==1.11.5
 typing_extensions==4.16.0; python_version < '3.12'
+pydot==3.0.4; python_version < '3.11'

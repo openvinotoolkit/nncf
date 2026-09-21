@@ -24,10 +24,6 @@ from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.image_classification_base import ImageClassificationBase
 
 
-def _torch_export_for_training(model: torch.nn.Module, args: tuple[Any, ...]) -> torch.fx.GraphModule:
-    return torch.export.export_for_training(model, args, strict=True).module(check_guards=False)
-
-
 def _torch_export(model: torch.nn.Module, args: tuple[Any, ...]) -> torch.fx.GraphModule:
     return torch.export.export(model, args, strict=True).module(check_guards=False)
 
@@ -43,19 +39,17 @@ class ImageClassificationTorchvision(ImageClassificationBase):
     """Pipeline for Image Classification model from torchvision repository"""
 
     models_vs_model_params = {
-        models.resnet18: VisionModelParams(models.ResNet18_Weights.DEFAULT, _torch_export_for_training),
-        models.mobilenet_v3_small: VisionModelParams(
-            models.MobileNet_V3_Small_Weights.DEFAULT, _torch_export_for_training
-        ),
+        models.resnet18: VisionModelParams(models.ResNet18_Weights.DEFAULT, _torch_export),
+        models.mobilenet_v3_small: VisionModelParams(models.MobileNet_V3_Small_Weights.DEFAULT, _torch_export),
         models.vit_b_16: VisionModelParams(
             models.ViT_B_16_Weights.DEFAULT,
-            _torch_export_for_training,
-            export_torch_before_ov_convert=False,  # OV convert of exported model has issues Issue-162009
+            _torch_export,
+            export_torch_before_ov_convert=False,
         ),
         models.swin_v2_s: VisionModelParams(
             models.Swin_V2_S_Weights.DEFAULT,
             _torch_export,
-            export_torch_before_ov_convert=False,  # OV convert of exported model has issues Issue-162009
+            export_torch_before_ov_convert=False,
         ),
     }
 
