@@ -130,7 +130,9 @@ class ImageClassificationBase(PTQTestPipeline):
             )
         else:
             compiled_model = torch.compile(self.compressed_model)
-        for i, (images, target) in enumerate(val_loader):
+        for i, data in enumerate(val_loader):
+            images = data["image"]
+            target = data["label"]
             # W/A for memory leaks when using torch DataLoader and OpenVINO
             pred = compiled_model(images)
             pred = torch.argmax(pred, dim=1)
