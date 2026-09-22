@@ -160,7 +160,7 @@ def validate_custom_annotation(custom_annotation: list[CustomAnnotation] | None)
     for annotation in custom_annotation:
         if not isinstance(annotation, CustomAnnotation):
             msg = (
-                "The custom_annotation option expects a list of nncf.CustomAnnotation instances, "
+                "The custom_annotation argument expects a list of nncf.CustomAnnotation instances, "
                 f"but an element of type {type(annotation).__name__} is given."
             )
             raise nncf.ValidationError(msg)
@@ -1198,11 +1198,10 @@ class WeightCompression(Algorithm):
             overlapped_names = sorted(annotated_names & node_name_to_config.keys())
             if overlapped_names:
                 config = annotation.config
-                group_size = "per-channel" if config.group_size == -1 else f"group size {config.group_size}"
                 nncf_logger.warning(
                     f"Several custom annotations match the same nodes. The configuration of the custom annotation "
-                    f"with index {index} ({config.mode.value}, {group_size}) takes precedence, since it is the last "
-                    "matched one, and is used for the following nodes:\n\t" + "\n\t".join(overlapped_names)
+                    f"with index {index} ({config.mode.value}, {config.group_size}) takes precedence, since it is "
+                    "the last matched one, and is used for the following nodes:\n\t" + "\n\t".join(overlapped_names)
                 )
             for node_name in annotated_names:
                 node_name_to_config[node_name] = annotation.config
@@ -1216,10 +1215,35 @@ class WeightCompression(Algorithm):
         skipped_weight_params: list[WeightCompressionParameters],
     ) -> dict[str, WeightCompressionConfig]:
         """
-        Drops the annotated configurations that can not be assigned to a weight, i.e. the ones matching a node
-        without a weight, a weight with a data type that the annotated mode can not compress, or a weight that is
-        compressed under another node.
+        Validate and drop the annotated configurations that can not be assigned to a weight, i.e. the ones
+        matching a node without a weight or a weight with a data type that the annotated mode can not compress.
+        The configuration of a node whose weight is compressed under another node, e.g. a shared weight, is moved
+        to that node, so that the annotation takes effect no matter which of the nodes sharing a weight is
+        matched by it.
         """
+        node_names_with_weight = set(node.node_name for node in self.get_nodes_to_compress(graph))
+        node_names_without_weight = node_name_to_config.keys() - node_names_with_weight
+        if node_names_without_weight:
+            nncf_logger.warning(
+                "The following nodes are matched by the custom annotation, but have no weight to compress. "
+                "The annotation has no effect for them:\n\t" + "\n\t".join(sorted(node_names_without_weight))
+            )
+
+        # A weight is compressed under a single node, so the annotation of the other nodes sharing this weight,
+        # e.g. the ones matched by the annotation only, is moved to the node under which it is compressed.
+        node_name_by_weight_name = {wp.weight_name: wp.node_with_weight.node_name for wp in all_weight_params}
+        compressed_node_names = set(node_name_by_weight_name.values())
+        moved_configs = {}
+        shared_weight_node_names = set()
+        for node_name in (node_name_to_config.keys() & node_names_with_weight) - compressed_node_names:
+            node = graph.get_node_by_name(node_name)
+            for weight_name, _ in self._backend_entity.get_weight_names_and_port_ids(node, graph):
+                if weight_name in node_name_by_weight_name:
+                    moved_configs[node_name_by_weight_name[weight_name]] = node_name_to_config[node_name]
+                    shared_weight_node_names.add(node_name)
+        # The annotation of the node under which a weight is compressed takes precedence over the moved one
+        node_name_to_config = moved_configs | node_name_to_config
+
         unsupported_node_names = set()
         for w_params in all_weight_params + skipped_weight_params:
             node_name = w_params.node_with_weight.node_name
@@ -1231,31 +1255,6 @@ class WeightCompression(Algorithm):
                 "The compression mode defined by the custom annotation is not supported for the data type of the "
                 "following nodes. They are kept with the configuration assigned by the algorithm:\n\t"
                 + "\n\t".join(sorted(unsupported_node_names))
-            )
-
-        node_names_with_weight = set(node.node_name for node in self.get_nodes_to_compress(graph))
-        node_names_without_weight = node_name_to_config.keys() - node_names_with_weight
-        if node_names_without_weight:
-            nncf_logger.warning(
-                "The following nodes are matched by the custom annotation, but have no weight to compress. "
-                "The annotation has no effect for them:\n\t" + "\n\t".join(sorted(node_names_without_weight))
-            )
-
-        # A weight is compressed under a single node, so the annotation of the other nodes that share this weight,
-        # e.g. the ones matched by the annotation only, can not be assigned to it.
-        compressed_weight_names = set(w_params.weight_name for w_params in all_weight_params)
-        compressed_node_names = set(w_params.node_with_weight.node_name for w_params in all_weight_params)
-        shared_weight_node_names = set()
-        for node_name in (node_name_to_config.keys() & node_names_with_weight) - compressed_node_names:
-            node = graph.get_node_by_name(node_name)
-            weight_names = (name for name, _ in self._backend_entity.get_weight_names_and_port_ids(node, graph))
-            if any(weight_name in compressed_weight_names for weight_name in weight_names):
-                shared_weight_node_names.add(node_name)
-        if shared_weight_node_names:
-            nncf_logger.warning(
-                "The weight of the following nodes matched by the custom annotation is compressed under another "
-                "node, e.g. a shared weight. The annotation has no effect for them:\n\t"
-                + "\n\t".join(sorted(shared_weight_node_names))
             )
 
         dropped_node_names = unsupported_node_names | node_names_without_weight | shared_weight_node_names

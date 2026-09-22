@@ -520,6 +520,10 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return get_torch_fx_model(model, torch.randint(0, 10, (8,)))
 
     @staticmethod
+    def get_shared_weight_node_name() -> str:
+        return "linear_1"
+
+    @staticmethod
     def get_custom_annotation_ref_path(ref_name: str) -> Path:
         return CUSTOM_ANNOTATION_REFERENCES_DIR / f"{ref_name}.json"
 

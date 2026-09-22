@@ -982,6 +982,14 @@ class TemplateWeightCompression(ABC):
         Returns a backend model where two nodes share the same weight.
         """
 
+    @staticmethod
+    @abstractmethod
+    def get_shared_weight_node_name() -> str:
+        """
+        Returns the name of the node from `get_shared_weight_model` whose weight is compressed under the other
+        node sharing it.
+        """
+
     def _compress_and_get_configs(self, **kwargs) -> dict[str, dict[str, Any]]:
         """
         Compresses a model and returns the compression config assigned to each compressed weight node.
@@ -1072,7 +1080,6 @@ class TemplateWeightCompression(ABC):
                         group_size_fallback_mode=nncf.GroupSizeFallbackMode.ADJUST, min_adjusted_group_size=4
                     ),
                 ),
-                # The channel size of the model is 4, so the group size of 3 is invalid
                 [
                     (
                         nncf.CustomAnnotationScope(patterns=[".*1$"]),
@@ -1124,6 +1131,14 @@ class TemplateWeightCompression(ABC):
                 IgnoredScope(patterns=[".*"]),
                 id="shared_weight_with_ignored_scope",
             ),
+            pytest.param(
+                "shared_weight",
+                dict(ratio=1.0, all_layers=True),
+                # The scope is None, since the annotated node name is backend-specific
+                [(None, WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=2))],
+                None,
+                id="shared_weight_annotated_by_other_node",
+            ),
         ],
     )
     def test_custom_annotation(self, model_name, kwargs, annotations, ignored_scope, request):
@@ -1138,13 +1153,19 @@ class TemplateWeightCompression(ABC):
         else:
             model = self.get_shared_weight_model()
 
+        shared_weight_scope = nncf.CustomAnnotationScope(names=[self.get_shared_weight_node_name()])
+        custom_annotation = [
+            nncf.CustomAnnotation(scope=shared_weight_scope if scope is None else scope, config=config)
+            for scope, config in annotations
+        ]
+
         configs = self._compress_and_get_configs(
             model=model,
             mode=CompressWeightsMode.INT4_SYM,
             group_size=-1,
             ignored_scope=ignored_scope,
             **kwargs,
-            custom_annotation=[nncf.CustomAnnotation(scope=scope, config=config) for scope, config in annotations],
+            custom_annotation=custom_annotation,
         )
 
         ref_path = self.get_custom_annotation_ref_path(request.node.callspec.id)

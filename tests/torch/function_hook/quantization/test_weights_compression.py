@@ -733,6 +733,10 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return GraphModelWrapper(model, example_input=torch.randint(0, 10, (8,)))
 
     @staticmethod
+    def get_shared_weight_node_name() -> str:
+        return "lm_head/linear/0"
+
+    @staticmethod
     def get_custom_annotation_ref_path(ref_name: str) -> Path:
         return CUSTOM_ANNOTATION_REFERENCES_DIR / f"{ref_name}.json"
 
