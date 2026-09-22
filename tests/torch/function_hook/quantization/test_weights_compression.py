@@ -596,7 +596,8 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
     def get_sequential_matmul_model(transpose_a: bool) -> torch.nn.Module:
         if transpose_a:
             pytest.skip("transpose_a=True is not supported for PT backend")
-        return SequentialMatmulModel()
+        model = wrap_model(SequentialMatmulModel())
+        return GraphModelWrapper(model, example_input=torch.ones([1, 4, 4], dtype=torch.float32))
 
     @staticmethod
     def get_model_for_test_scale_estimation(transpose_a: bool):

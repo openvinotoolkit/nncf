@@ -184,7 +184,7 @@ class TemplateWeightCompression(ABC):
     @staticmethod
     @abstractmethod
     def get_sequential_matmul_model(transpose_a: bool) -> TModel:
-        """Returns a backend model for test_mixed_precision."""
+        """Returns a backend model with a sequence of MatMul layers."""
 
     @staticmethod
     @abstractmethod
@@ -979,14 +979,8 @@ class TemplateWeightCompression(ABC):
     @abstractmethod
     def get_shared_weight_model(self) -> TModel:
         """
-        Returns a backend model where two nodes share the same weight, ready to be compressed.
+        Returns a backend model where two nodes share the same weight.
         """
-
-    def _get_sequential_matmul_model(self):
-        """Returns a backend model with a sequence of MatMul layers, ready to be compressed."""
-        return self.wrap_model(
-            self.get_sequential_matmul_model(transpose_a=False), np.ones([1, 4, 4], dtype=np.float32)
-        )
 
     def _compress_and_get_configs(self, **kwargs) -> dict[str, dict[str, Any]]:
         """
@@ -1139,12 +1133,13 @@ class TemplateWeightCompression(ABC):
 
         Set the NNCF_TEST_REGEN_DOT environment variable to regenerate the reference file.
         """
-        models = {
-            "sequential_matmul": self._get_sequential_matmul_model,
-            "shared_weight": self.get_shared_weight_model,
-        }
+        if model_name == "sequential_matmul":
+            model = self.get_sequential_matmul_model(transpose_a=False)
+        else:
+            model = self.get_shared_weight_model()
+
         configs = self._compress_and_get_configs(
-            model=models[model_name](),
+            model=model,
             mode=CompressWeightsMode.INT4_SYM,
             group_size=-1,
             ignored_scope=ignored_scope,
@@ -1211,7 +1206,7 @@ class TemplateWeightCompression(ABC):
         """
         with pytest.raises(error):
             compress_weights(
-                model=self._get_sequential_matmul_model(),
+                model=self.get_sequential_matmul_model(transpose_a=False),
                 mode=CompressWeightsMode.INT4_SYM,
                 ratio=1.0,
                 group_size=-1,
