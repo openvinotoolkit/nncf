@@ -62,13 +62,8 @@ def main() -> str:
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        messages = [
-            {
-                "role": "system",
-                "content": "You are a friendly chatbot who always responds in the style of a pirate",
-            },
-            {"role": "user", "content": "How many helicopters can a human eat in one sitting?"},
-        ]
+        messages = [{"role": "user", "content": "What is PyTorch?"}]
+
         batch_feature = tokenizer.apply_chat_template(
             messages, tokenize=True, add_generation_prompt=True, return_tensors="pt"
         )
