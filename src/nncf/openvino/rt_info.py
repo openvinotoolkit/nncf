@@ -38,8 +38,7 @@ def exclude_empty_fields(value: dict[str, Any]) -> dict[str, Any]:
 def compression_config_to_dict(config: WeightCompressionConfig) -> dict[str, Any]:
     """
     Converts a weight compression config into a dictionary suitable for dumping into Model's meta section.
-
-    Codebook values are reduced to their number since the values themselves are too large to be dumped.
+    Codebook values are saved as their size since the values themselves are too large to be dumped.
 
     :param config: Weight compression config.
     :return: Dictionary with the compression config parameters.
@@ -75,6 +74,8 @@ def dump_parameters(
             # Special condition for the list of custom annotations
             elif isinstance(value, (list, tuple)) and any(isinstance(item, CustomAnnotation) for item in value):
                 for i, annotation in enumerate(value):
+                    # Index each annotation so its scope and config stay paired and annotations
+                    # do not overwrite each other, e.g. custom_annotation/0/{scope/patterns,config}.
                     dump_parameters(
                         model,
                         {"scope": annotation.scope, "config": compression_config_to_dict(annotation.config)},
