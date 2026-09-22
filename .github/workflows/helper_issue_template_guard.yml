@@ -5,21 +5,26 @@ on:
     types: [opened, edited, reopened]
 
 permissions:
+  contents: read
   issues: write
+
+concurrency:
+  group: issue-template-guard-${{ github.event.issue.number }}
+  cancel-in-progress: true
 
 jobs:
   guard:
     runs-on: ubuntu-latest
     steps:
-      - uses: AlexanderDokuchaev/issue-template-guard@test
+      - uses: AlexanderDokuchaev/issue-template-guard@61d77fe9487aeb6fc27da48e0d1e9d0bd3e25e56
         with:
           label_name: template-missing
           message: |
             Thanks for opening this issue :wave:
 
-            This issue does not follow our issue template. Please edit it and
-            fill in every required section from the template.
+            This issue does not follow our issue template.
+            Please edit it and fill in every required section from the template.
 
             Please read for more information:
-                - [Contribution Guidelines](https://github.com/openvinotoolkit/nncf/blob/develop/CONTRIBUTING.md)
-                - [AI Policy](https://github.com/openvinotoolkit/nncf/blob/develop/AI_POLICY.md)
+              - [Contribution Guidelines](https://github.com/openvinotoolkit/nncf/blob/develop/CONTRIBUTING.md)
+              - [AI Policy](https://github.com/openvinotoolkit/nncf/blob/develop/AI_POLICY.md)
