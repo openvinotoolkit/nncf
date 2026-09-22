@@ -23,6 +23,8 @@ jobs:
     timeout-minutes: 40
     runs-on: windows-2025
     steps:
+      - name: CPU Info
+        run: awk 'BEGIN{RS=""} END{print}' /proc/cpuinfo
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: true
@@ -45,6 +47,8 @@ jobs:
     timeout-minutes: 40
     runs-on: windows-2025-8-core
     steps:
+      - name: CPU Info
+        run: awk 'BEGIN{RS=""} END{print}' /proc/cpuinfo
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: true
@@ -67,6 +71,8 @@ jobs:
     timeout-minutes: 40
     runs-on: windows-2025-8-core
     steps:
+      - name: CPU Info
+        run: awk 'BEGIN{RS=""} END{print}' /proc/cpuinfo
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: true
@@ -91,6 +97,8 @@ jobs:
     env:
       NNCF_EXTENSION_LOAD_TIMEOUT: 180
     steps:
+      - name: CPU Info
+        run: awk 'BEGIN{RS=""} END{print}' /proc/cpuinfo
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: true
