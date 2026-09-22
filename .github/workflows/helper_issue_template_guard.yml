@@ -26,5 +26,6 @@ jobs:
             Please edit it and fill in every required section from the template.
 
             Please read for more information:
+
               - [Contribution Guidelines](https://github.com/openvinotoolkit/nncf/blob/develop/CONTRIBUTING.md)
               - [AI Policy](https://github.com/openvinotoolkit/nncf/blob/develop/AI_POLICY.md)
