@@ -228,8 +228,6 @@ def run_pipeline(
     )
     pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
 
-    pipeline.run()
-    return
     try:
         pipeline.run()
     except Exception as e:
