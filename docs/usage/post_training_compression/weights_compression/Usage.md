@@ -141,7 +141,9 @@ compressed_model = compress_weights(
   layer. A layer that is matched by both the `ignored_scope` and a custom annotation is compressed with the
   user-defined configuration and a warning is logged. If several annotations match the same layer, the last one takes
   precedence. A weight shared by several layers is compressed once, so annotating any of them applies the
-  configuration to this weight. The codebook compression modes are not supported by an annotation.
+  configuration to this weight. The codebook compression modes are not supported by an annotation. The mode of an
+  annotation must be supported by the backend, the same as the `mode` option, e.g. NF4 can not be annotated for a
+  Torch, TorchFX or ONNX model.
 
 #### Data-aware methods
 

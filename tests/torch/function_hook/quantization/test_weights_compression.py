@@ -741,6 +741,10 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return "wte/embedding/0"
 
     @staticmethod
+    def get_mode_not_supported_by_backend() -> CompressWeightsMode | None:
+        return CompressWeightsMode.NF4
+
+    @staticmethod
     def get_custom_annotation_ref_path(ref_name: str) -> Path:
         return CUSTOM_ANNOTATION_REFERENCES_DIR / f"{ref_name}.json"
 

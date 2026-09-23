@@ -1034,6 +1034,13 @@ class TemplateWeightCompression(ABC):
         Returns the name of the node from `get_shared_weight_model` that the shared weight is compressed under,
         """
 
+    @staticmethod
+    def get_mode_not_supported_by_backend() -> CompressWeightsMode | None:
+        """
+        Returns a compression mode that is not supported by the backend, or None if all the modes are supported.
+        """
+        return None
+
     def _compress_and_get_configs(self, **kwargs) -> dict[str, dict[str, Any]]:
         """
         Compresses a model and returns the compression config assigned to each compressed weight node.
@@ -1410,12 +1417,28 @@ class TemplateWeightCompression(ABC):
                 InvalidGroupSizeError,
                 id="invalid_group_size",
             ),
+            pytest.param(
+                None,
+                nncf.ParameterNotSupportedError,
+                id="mode_not_supported_by_backend",
+            ),
         ],
     )
-    def test_invalid_custom_annotation(self, custom_annotation, error):
+    def test_invalid_custom_annotation(self, custom_annotation, error, request):
         """
         Checks that an error is raised for an invalid custom annotation.
         """
+        if request.node.callspec.id == "mode_not_supported_by_backend":
+            mode = self.get_mode_not_supported_by_backend()
+            if mode is None:
+                pytest.skip("The backend supports all the compression modes")
+            custom_annotation = [
+                nncf.CustomAnnotation(
+                    scope=nncf.CustomAnnotationScope(patterns=[".*"]),
+                    config=WeightCompressionConfig(mode=mode, group_size=-1),
+                )
+            ]
+
         with pytest.raises(error):
             compress_weights(
                 model=self.get_sequential_matmul_model(transpose_a=False),

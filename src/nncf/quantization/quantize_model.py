@@ -37,6 +37,7 @@ from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_qua
 from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipeline
 from nncf.quantization.algorithms.weight_compression.algorithm import check_user_compression_configuration
 from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
+from nncf.quantization.algorithms.weight_compression.algorithm import validate_custom_annotation
 from nncf.quantization.telemetry_extractors import CompressionStartedWithCompressWeightsApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeWithAccuracyControlApi
@@ -394,6 +395,31 @@ def quantize_with_accuracy_control(
     raise nncf.UnsupportedBackendError(msg)
 
 
+def _validate_compression_modes_supported_by_backend(
+    backend_name: str,
+    not_supported_modes: list[CompressWeightsMode],
+    mode: CompressWeightsMode,
+    custom_annotation: list[CustomAnnotation] | None,
+) -> None:
+    """
+    Checks that neither the compression mode nor the mode defined by the custom annotation
+    are unsupported by the backend.
+
+    :param backend_name: Name of the backend to use in the error message.
+    :param not_supported_modes: List of the compression modes that are not supported by the backend.
+    :param mode: Compression mode of the algorithm.
+    :param custom_annotation: List of the user-defined weight compression configurations, if given.
+    :raises nncf.ParameterNotSupportedError: If any of the given modes is not supported by the backend.
+    """
+    given_modes = [mode] + [annotation.config.mode for annotation in custom_annotation or []]
+    if any(given_mode in not_supported_modes for given_mode in given_modes):
+        msg = (
+            f"{backend_name} backend does not support {[m.value for m in not_supported_modes]} modes "
+            "for weight compression."
+        )
+        raise nncf.ParameterNotSupportedError(msg)
+
+
 @api(canonical_alias="nncf.compress_weights")
 @tracked_function(
     MODEL_BASED_CATEGORY,
@@ -506,6 +532,8 @@ def compress_weights(
     :type custom_annotation: list[nncf.CustomAnnotation]
     :return: The non-trainable model with compressed weights.
     """
+    validate_custom_annotation(custom_annotation)
+
     backend = get_backend(model)
     compression_weights_impl: Callable[..., Any] | None = None
 
@@ -526,11 +554,7 @@ def compress_weights(
             CompressWeightsMode.ADAPTIVE_CODEBOOK,
             CompressWeightsMode.CB4,
         ]
-        if mode in not_supported_modes:
-            msg = (
-                f"Torch backend does not support {[m.value for m in not_supported_modes]} modes for weight compression."
-            )
-            raise nncf.ParameterNotSupportedError(msg)
+        _validate_compression_modes_supported_by_backend("Torch", not_supported_modes, mode, custom_annotation)
 
         options = {"gptq": gptq, "lora_correction": lora_correction}
         unsupported_options = [name for name, value in options.items() if value is not None]
@@ -576,11 +600,7 @@ def compress_weights(
             CompressWeightsMode.ADAPTIVE_CODEBOOK,
             CompressWeightsMode.CB4,
         ]
-        if mode in not_supported_modes:
-            msg = (
-                f"Torch backend does not support {[m.value for m in not_supported_modes]} modes for weight compression."
-            )
-            raise nncf.ParameterNotSupportedError(msg)
+        _validate_compression_modes_supported_by_backend("Torch", not_supported_modes, mode, custom_annotation)
 
         options = {"gptq": gptq, "lora_correction": lora_correction}
         unsupported_options = [name for name, value in options.items() if value is not None]
@@ -647,11 +667,7 @@ def compress_weights(
             CompressWeightsMode.ADAPTIVE_CODEBOOK,
             CompressWeightsMode.CB4,
         ]
-        if mode in not_supported_modes:
-            msg = (
-                f"ONNX backend does not support {[m.value for m in not_supported_modes]} modes for weight compression."
-            )
-            raise nncf.ParameterNotSupportedError(msg)
+        _validate_compression_modes_supported_by_backend("ONNX", not_supported_modes, mode, custom_annotation)
 
         options = {"gptq": gptq, "lora_correction": lora_correction}
         unsupported_options = [name for name, value in options.items() if value is not None]
@@ -683,7 +699,6 @@ def compress_weights(
         backup_mode,
         compression_format,
         advanced_parameters,
-        custom_annotation,
     )
     weight_compression_configuration = get_weight_compression_configuration(
         mode,

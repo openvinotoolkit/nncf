@@ -218,12 +218,10 @@ def check_user_compression_configuration(
     backup_mode: BackupMode | None,
     compression_format: CompressionFormat | None,
     advanced_parameters: AdvancedCompressionParameters | None,
-    custom_annotation: list[CustomAnnotation] | None = None,
 ) -> None:
     """
     Validates the user's weight compression configuration for correctness.
     """
-    validate_custom_annotation(custom_annotation)
     if mode in INT8_MODES:
         if (ratio and ratio != 1) or (group_size and group_size != -1):
             msg = (
