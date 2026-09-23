@@ -3322,7 +3322,7 @@ digraph {
 "66 Reshape_54" -> "69 Gemm_55" [key=0, style=solid, label="[]"];
 "67 QuantizeLinear_h.0.attn.c_attn.weight_1" -> "68 DequantizeLinear_h.0.attn.c_attn.weight_1" [key=0, style=dashed, label="[768, 2304]"];
 "68 DequantizeLinear_h.0.attn.c_attn.weight_1" -> "69 Gemm_55" [key=0, style=solid, label="[768, 2304]"];
-"69 Gemm_55" -> "75 Reshape_59" [key=0, style=solid, label="[]"];
+"69 Gemm_55" -> "75 Reshape_59" [key=0, style=solid, label="[-1, 2304]"];
 "70 Constant_nncf_62" -> "71 Unsqueeze_56" [key=0, style=dashed, label="[1]"];
 "71 Unsqueeze_56" -> "74 Concat_58" [key=0, style=dashed, label="[1]"];
 "72 Constant_nncf_64" -> "73 Unsqueeze_57" [key=0, style=dashed, label="[1]"];
@@ -3503,7 +3503,7 @@ digraph {
 "221 Reshape_177" -> "224 Gemm_178" [key=0, style=solid, label="[]"];
 "222 QuantizeLinear_h.0.attn.c_proj.weight_1" -> "223 DequantizeLinear_h.0.attn.c_proj.weight_1" [key=0, style=dashed, label="[768, 768]"];
 "223 DequantizeLinear_h.0.attn.c_proj.weight_1" -> "224 Gemm_178" [key=0, style=solid, label="[768, 768]"];
-"224 Gemm_178" -> "230 Reshape_182" [key=0, style=solid, label="[]"];
+"224 Gemm_178" -> "230 Reshape_182" [key=0, style=solid, label="[-1, 768]"];
 "225 Constant_nncf_209" -> "226 Unsqueeze_179" [key=0, style=dashed, label="[1]"];
 "226 Unsqueeze_179" -> "229 Concat_181" [key=0, style=dashed, label="[1]"];
 "227 Constant_nncf_211" -> "228 Unsqueeze_180" [key=0, style=dashed, label="[1]"];
@@ -3545,7 +3545,7 @@ digraph {
 "257 Reshape_206" -> "260 Gemm_207" [key=0, style=solid, label="[]"];
 "258 QuantizeLinear_h.0.mlp.c_fc.weight_1" -> "259 DequantizeLinear_h.0.mlp.c_fc.weight_1" [key=0, style=dashed, label="[768, 3072]"];
 "259 DequantizeLinear_h.0.mlp.c_fc.weight_1" -> "260 Gemm_207" [key=0, style=solid, label="[768, 3072]"];
-"260 Gemm_207" -> "266 Reshape_211" [key=0, style=solid, label="[]"];
+"260 Gemm_207" -> "266 Reshape_211" [key=0, style=solid, label="[-1, 3072]"];
 "261 Constant_nncf_241" -> "262 Unsqueeze_208" [key=0, style=dashed, label="[1]"];
 "262 Unsqueeze_208" -> "265 Concat_210" [key=0, style=dashed, label="[1]"];
 "263 Constant_nncf_243" -> "264 Unsqueeze_209" [key=0, style=dashed, label="[1]"];
@@ -3587,7 +3587,7 @@ digraph {
 "294 Reshape_236" -> "297 Gemm_237" [key=0, style=solid, label="[]"];
 "295 QuantizeLinear_h.0.mlp.c_proj.weight_1" -> "296 DequantizeLinear_h.0.mlp.c_proj.weight_1" [key=0, style=dashed, label="[3072, 768]"];
 "296 DequantizeLinear_h.0.mlp.c_proj.weight_1" -> "297 Gemm_237" [key=0, style=solid, label="[3072, 768]"];
-"297 Gemm_237" -> "303 Reshape_241" [key=0, style=solid, label="[]"];
+"297 Gemm_237" -> "303 Reshape_241" [key=0, style=solid, label="[-1, 768]"];
 "298 Constant_nncf_274" -> "299 Unsqueeze_238" [key=0, style=dashed, label="[1]"];
 "299 Unsqueeze_238" -> "302 Concat_240" [key=0, style=dashed, label="[1]"];
 "300 Constant_nncf_276" -> "301 Unsqueeze_239" [key=0, style=dashed, label="[1]"];
@@ -3629,7 +3629,7 @@ digraph {
 "330 Reshape_265" -> "333 Gemm_266" [key=0, style=solid, label="[]"];
 "331 QuantizeLinear_h.1.attn.c_attn.weight_1" -> "332 DequantizeLinear_h.1.attn.c_attn.weight_1" [key=0, style=dashed, label="[768, 2304]"];
 "332 DequantizeLinear_h.1.attn.c_attn.weight_1" -> "333 Gemm_266" [key=0, style=solid, label="[768, 2304]"];
-"333 Gemm_266" -> "339 Reshape_270" [key=0, style=solid, label="[]"];
+"333 Gemm_266" -> "339 Reshape_270" [key=0, style=solid, label="[-1, 2304]"];
 "334 Constant_nncf_306" -> "335 Unsqueeze_267" [key=0, style=dashed, label="[1]"];
 "335 Unsqueeze_267" -> "338 Concat_269" [key=0, style=dashed, label="[1]"];
 "336 Constant_nncf_308" -> "337 Unsqueeze_268" [key=0, style=dashed, label="[1]"];
@@ -3810,7 +3810,7 @@ digraph {
 "485 Reshape_388" -> "488 Gemm_389" [key=0, style=solid, label="[]"];
 "486 QuantizeLinear_h.1.attn.c_proj.weight_1" -> "487 DequantizeLinear_h.1.attn.c_proj.weight_1" [key=0, style=dashed, label="[768, 768]"];
 "487 DequantizeLinear_h.1.attn.c_proj.weight_1" -> "488 Gemm_389" [key=0, style=solid, label="[768, 768]"];
-"488 Gemm_389" -> "494 Reshape_393" [key=0, style=solid, label="[]"];
+"488 Gemm_389" -> "494 Reshape_393" [key=0, style=solid, label="[-1, 768]"];
 "489 Constant_nncf_453" -> "490 Unsqueeze_390" [key=0, style=dashed, label="[1]"];
 "490 Unsqueeze_390" -> "493 Concat_392" [key=0, style=dashed, label="[1]"];
 "491 Constant_nncf_455" -> "492 Unsqueeze_391" [key=0, style=dashed, label="[1]"];
@@ -3852,7 +3852,7 @@ digraph {
 "521 Reshape_417" -> "524 Gemm_418" [key=0, style=solid, label="[]"];
 "522 QuantizeLinear_h.1.mlp.c_fc.weight_1" -> "523 DequantizeLinear_h.1.mlp.c_fc.weight_1" [key=0, style=dashed, label="[768, 3072]"];
 "523 DequantizeLinear_h.1.mlp.c_fc.weight_1" -> "524 Gemm_418" [key=0, style=solid, label="[768, 3072]"];
-"524 Gemm_418" -> "530 Reshape_422" [key=0, style=solid, label="[]"];
+"524 Gemm_418" -> "530 Reshape_422" [key=0, style=solid, label="[-1, 3072]"];
 "525 Constant_nncf_485" -> "526 Unsqueeze_419" [key=0, style=dashed, label="[1]"];
 "526 Unsqueeze_419" -> "529 Concat_421" [key=0, style=dashed, label="[1]"];
 "527 Constant_nncf_487" -> "528 Unsqueeze_420" [key=0, style=dashed, label="[1]"];
@@ -3894,7 +3894,7 @@ digraph {
 "558 Reshape_447" -> "561 Gemm_448" [key=0, style=solid, label="[]"];
 "559 QuantizeLinear_h.1.mlp.c_proj.weight_1" -> "560 DequantizeLinear_h.1.mlp.c_proj.weight_1" [key=0, style=dashed, label="[3072, 768]"];
 "560 DequantizeLinear_h.1.mlp.c_proj.weight_1" -> "561 Gemm_448" [key=0, style=solid, label="[3072, 768]"];
-"561 Gemm_448" -> "567 Reshape_452" [key=0, style=solid, label="[]"];
+"561 Gemm_448" -> "567 Reshape_452" [key=0, style=solid, label="[-1, 768]"];
 "562 Constant_nncf_518" -> "563 Unsqueeze_449" [key=0, style=dashed, label="[1]"];
 "563 Unsqueeze_449" -> "566 Concat_451" [key=0, style=dashed, label="[1]"];
 "564 Constant_nncf_520" -> "565 Unsqueeze_450" [key=0, style=dashed, label="[1]"];
@@ -3936,7 +3936,7 @@ digraph {
 "594 Reshape_476" -> "597 Gemm_477" [key=0, style=solid, label="[]"];
 "595 QuantizeLinear_h.2.attn.c_attn.weight_1" -> "596 DequantizeLinear_h.2.attn.c_attn.weight_1" [key=0, style=dashed, label="[768, 2304]"];
 "596 DequantizeLinear_h.2.attn.c_attn.weight_1" -> "597 Gemm_477" [key=0, style=solid, label="[768, 2304]"];
-"597 Gemm_477" -> "603 Reshape_481" [key=0, style=solid, label="[]"];
+"597 Gemm_477" -> "603 Reshape_481" [key=0, style=solid, label="[-1, 2304]"];
 "598 Constant_nncf_550" -> "599 Unsqueeze_478" [key=0, style=dashed, label="[1]"];
 "599 Unsqueeze_478" -> "602 Concat_480" [key=0, style=dashed, label="[1]"];
 "600 Constant_nncf_552" -> "601 Unsqueeze_479" [key=0, style=dashed, label="[1]"];
@@ -4117,7 +4117,7 @@ digraph {
 "749 Reshape_599" -> "752 Gemm_600" [key=0, style=solid, label="[]"];
 "750 QuantizeLinear_h.2.attn.c_proj.weight_1" -> "751 DequantizeLinear_h.2.attn.c_proj.weight_1" [key=0, style=dashed, label="[768, 768]"];
 "751 DequantizeLinear_h.2.attn.c_proj.weight_1" -> "752 Gemm_600" [key=0, style=solid, label="[768, 768]"];
-"752 Gemm_600" -> "758 Reshape_604" [key=0, style=solid, label="[]"];
+"752 Gemm_600" -> "758 Reshape_604" [key=0, style=solid, label="[-1, 768]"];
 "753 Constant_nncf_697" -> "754 Unsqueeze_601" [key=0, style=dashed, label="[1]"];
 "754 Unsqueeze_601" -> "757 Concat_603" [key=0, style=dashed, label="[1]"];
 "755 Constant_nncf_699" -> "756 Unsqueeze_602" [key=0, style=dashed, label="[1]"];
@@ -4159,7 +4159,7 @@ digraph {
 "785 Reshape_628" -> "788 Gemm_629" [key=0, style=solid, label="[]"];
 "786 QuantizeLinear_h.2.mlp.c_fc.weight_1" -> "787 DequantizeLinear_h.2.mlp.c_fc.weight_1" [key=0, style=dashed, label="[768, 3072]"];
 "787 DequantizeLinear_h.2.mlp.c_fc.weight_1" -> "788 Gemm_629" [key=0, style=solid, label="[768, 3072]"];
-"788 Gemm_629" -> "794 Reshape_633" [key=0, style=solid, label="[]"];
+"788 Gemm_629" -> "794 Reshape_633" [key=0, style=solid, label="[-1, 3072]"];
 "789 Constant_nncf_729" -> "790 Unsqueeze_630" [key=0, style=dashed, label="[1]"];
 "790 Unsqueeze_630" -> "793 Concat_632" [key=0, style=dashed, label="[1]"];
 "791 Constant_nncf_731" -> "792 Unsqueeze_631" [key=0, style=dashed, label="[1]"];
@@ -4201,7 +4201,7 @@ digraph {
 "822 Reshape_658" -> "825 Gemm_659" [key=0, style=solid, label="[]"];
 "823 QuantizeLinear_h.2.mlp.c_proj.weight_1" -> "824 DequantizeLinear_h.2.mlp.c_proj.weight_1" [key=0, style=dashed, label="[3072, 768]"];
 "824 DequantizeLinear_h.2.mlp.c_proj.weight_1" -> "825 Gemm_659" [key=0, style=solid, label="[3072, 768]"];
-"825 Gemm_659" -> "831 Reshape_663" [key=0, style=solid, label="[]"];
+"825 Gemm_659" -> "831 Reshape_663" [key=0, style=solid, label="[-1, 768]"];
 "826 Constant_nncf_762" -> "827 Unsqueeze_660" [key=0, style=dashed, label="[1]"];
 "827 Unsqueeze_660" -> "830 Concat_662" [key=0, style=dashed, label="[1]"];
 "828 Constant_nncf_764" -> "829 Unsqueeze_661" [key=0, style=dashed, label="[1]"];
@@ -4243,7 +4243,7 @@ digraph {
 "858 Reshape_687" -> "861 Gemm_688" [key=0, style=solid, label="[]"];
 "859 QuantizeLinear_h.3.attn.c_attn.weight_1" -> "860 DequantizeLinear_h.3.attn.c_attn.weight_1" [key=0, style=dashed, label="[768, 2304]"];
 "860 DequantizeLinear_h.3.attn.c_attn.weight_1" -> "861 Gemm_688" [key=0, style=solid, label="[768, 2304]"];
-"861 Gemm_688" -> "867 Reshape_692" [key=0, style=solid, label="[]"];
+"861 Gemm_688" -> "867 Reshape_692" [key=0, style=solid, label="[-1, 2304]"];
 "862 Constant_nncf_794" -> "863 Unsqueeze_689" [key=0, style=dashed, label="[1]"];
 "863 Unsqueeze_689" -> "866 Concat_691" [key=0, style=dashed, label="[1]"];
 "864 Constant_nncf_796" -> "865 Unsqueeze_690" [key=0, style=dashed, label="[1]"];
@@ -4424,7 +4424,7 @@ digraph {
 "1013 Reshape_810" -> "1016 Gemm_811" [key=0, style=solid, label="[]"];
 "1014 QuantizeLinear_h.3.attn.c_proj.weight_1" -> "1015 DequantizeLinear_h.3.attn.c_proj.weight_1" [key=0, style=dashed, label="[768, 768]"];
 "1015 DequantizeLinear_h.3.attn.c_proj.weight_1" -> "1016 Gemm_811" [key=0, style=solid, label="[768, 768]"];
-"1016 Gemm_811" -> "1022 Reshape_815" [key=0, style=solid, label="[]"];
+"1016 Gemm_811" -> "1022 Reshape_815" [key=0, style=solid, label="[-1, 768]"];
 "1017 Constant_nncf_941" -> "1018 Unsqueeze_812" [key=0, style=dashed, label="[1]"];
 "1018 Unsqueeze_812" -> "1021 Concat_814" [key=0, style=dashed, label="[1]"];
 "1019 Constant_nncf_943" -> "1020 Unsqueeze_813" [key=0, style=dashed, label="[1]"];
@@ -4466,7 +4466,7 @@ digraph {
 "1049 Reshape_839" -> "1052 Gemm_840" [key=0, style=solid, label="[]"];
 "1050 QuantizeLinear_h.3.mlp.c_fc.weight_1" -> "1051 DequantizeLinear_h.3.mlp.c_fc.weight_1" [key=0, style=dashed, label="[768, 3072]"];
 "1051 DequantizeLinear_h.3.mlp.c_fc.weight_1" -> "1052 Gemm_840" [key=0, style=solid, label="[768, 3072]"];
-"1052 Gemm_840" -> "1058 Reshape_844" [key=0, style=solid, label="[]"];
+"1052 Gemm_840" -> "1058 Reshape_844" [key=0, style=solid, label="[-1, 3072]"];
 "1053 Constant_nncf_973" -> "1054 Unsqueeze_841" [key=0, style=dashed, label="[1]"];
 "1054 Unsqueeze_841" -> "1057 Concat_843" [key=0, style=dashed, label="[1]"];
 "1055 Constant_nncf_975" -> "1056 Unsqueeze_842" [key=0, style=dashed, label="[1]"];
@@ -4508,7 +4508,7 @@ digraph {
 "1086 Reshape_869" -> "1089 Gemm_870" [key=0, style=solid, label="[]"];
 "1087 QuantizeLinear_h.3.mlp.c_proj.weight_1" -> "1088 DequantizeLinear_h.3.mlp.c_proj.weight_1" [key=0, style=dashed, label="[3072, 768]"];
 "1088 DequantizeLinear_h.3.mlp.c_proj.weight_1" -> "1089 Gemm_870" [key=0, style=solid, label="[3072, 768]"];
-"1089 Gemm_870" -> "1095 Reshape_874" [key=0, style=solid, label="[]"];
+"1089 Gemm_870" -> "1095 Reshape_874" [key=0, style=solid, label="[-1, 768]"];
 "1090 Constant_nncf_1006" -> "1091 Unsqueeze_871" [key=0, style=dashed, label="[1]"];
 "1091 Unsqueeze_871" -> "1094 Concat_873" [key=0, style=dashed, label="[1]"];
 "1092 Constant_nncf_1008" -> "1093 Unsqueeze_872" [key=0, style=dashed, label="[1]"];
@@ -4550,7 +4550,7 @@ digraph {
 "1122 Reshape_898" -> "1125 Gemm_899" [key=0, style=solid, label="[]"];
 "1123 QuantizeLinear_h.4.attn.c_attn.weight_1" -> "1124 DequantizeLinear_h.4.attn.c_attn.weight_1" [key=0, style=dashed, label="[768, 2304]"];
 "1124 DequantizeLinear_h.4.attn.c_attn.weight_1" -> "1125 Gemm_899" [key=0, style=solid, label="[768, 2304]"];
-"1125 Gemm_899" -> "1131 Reshape_903" [key=0, style=solid, label="[]"];
+"1125 Gemm_899" -> "1131 Reshape_903" [key=0, style=solid, label="[-1, 2304]"];
 "1126 Constant_nncf_1038" -> "1127 Unsqueeze_900" [key=0, style=dashed, label="[1]"];
 "1127 Unsqueeze_900" -> "1130 Concat_902" [key=0, style=dashed, label="[1]"];
 "1128 Constant_nncf_1040" -> "1129 Unsqueeze_901" [key=0, style=dashed, label="[1]"];
@@ -4731,7 +4731,7 @@ digraph {
 "1277 Reshape_1021" -> "1280 Gemm_1022" [key=0, style=solid, label="[]"];
 "1278 QuantizeLinear_h.4.attn.c_proj.weight_1" -> "1279 DequantizeLinear_h.4.attn.c_proj.weight_1" [key=0, style=dashed, label="[768, 768]"];
 "1279 DequantizeLinear_h.4.attn.c_proj.weight_1" -> "1280 Gemm_1022" [key=0, style=solid, label="[768, 768]"];
-"1280 Gemm_1022" -> "1286 Reshape_1026" [key=0, style=solid, label="[]"];
+"1280 Gemm_1022" -> "1286 Reshape_1026" [key=0, style=solid, label="[-1, 768]"];
 "1281 Constant_nncf_1185" -> "1282 Unsqueeze_1023" [key=0, style=dashed, label="[1]"];
 "1282 Unsqueeze_1023" -> "1285 Concat_1025" [key=0, style=dashed, label="[1]"];
 "1283 Constant_nncf_1187" -> "1284 Unsqueeze_1024" [key=0, style=dashed, label="[1]"];
@@ -4773,7 +4773,7 @@ digraph {
 "1313 Reshape_1050" -> "1316 Gemm_1051" [key=0, style=solid, label="[]"];
 "1314 QuantizeLinear_h.4.mlp.c_fc.weight_1" -> "1315 DequantizeLinear_h.4.mlp.c_fc.weight_1" [key=0, style=dashed, label="[768, 3072]"];
 "1315 DequantizeLinear_h.4.mlp.c_fc.weight_1" -> "1316 Gemm_1051" [key=0, style=solid, label="[768, 3072]"];
-"1316 Gemm_1051" -> "1322 Reshape_1055" [key=0, style=solid, label="[]"];
+"1316 Gemm_1051" -> "1322 Reshape_1055" [key=0, style=solid, label="[-1, 3072]"];
 "1317 Constant_nncf_1217" -> "1318 Unsqueeze_1052" [key=0, style=dashed, label="[1]"];
 "1318 Unsqueeze_1052" -> "1321 Concat_1054" [key=0, style=dashed, label="[1]"];
 "1319 Constant_nncf_1219" -> "1320 Unsqueeze_1053" [key=0, style=dashed, label="[1]"];
@@ -4815,7 +4815,7 @@ digraph {
 "1350 Reshape_1080" -> "1353 Gemm_1081" [key=0, style=solid, label="[]"];
 "1351 QuantizeLinear_h.4.mlp.c_proj.weight_1" -> "1352 DequantizeLinear_h.4.mlp.c_proj.weight_1" [key=0, style=dashed, label="[3072, 768]"];
 "1352 DequantizeLinear_h.4.mlp.c_proj.weight_1" -> "1353 Gemm_1081" [key=0, style=solid, label="[3072, 768]"];
-"1353 Gemm_1081" -> "1359 Reshape_1085" [key=0, style=solid, label="[]"];
+"1353 Gemm_1081" -> "1359 Reshape_1085" [key=0, style=solid, label="[-1, 768]"];
 "1354 Constant_nncf_1250" -> "1355 Unsqueeze_1082" [key=0, style=dashed, label="[1]"];
 "1355 Unsqueeze_1082" -> "1358 Concat_1084" [key=0, style=dashed, label="[1]"];
 "1356 Constant_nncf_1252" -> "1357 Unsqueeze_1083" [key=0, style=dashed, label="[1]"];
@@ -4857,7 +4857,7 @@ digraph {
 "1386 Reshape_1109" -> "1389 Gemm_1110" [key=0, style=solid, label="[]"];
 "1387 QuantizeLinear_h.5.attn.c_attn.weight_1" -> "1388 DequantizeLinear_h.5.attn.c_attn.weight_1" [key=0, style=dashed, label="[768, 2304]"];
 "1388 DequantizeLinear_h.5.attn.c_attn.weight_1" -> "1389 Gemm_1110" [key=0, style=solid, label="[768, 2304]"];
-"1389 Gemm_1110" -> "1395 Reshape_1114" [key=0, style=solid, label="[]"];
+"1389 Gemm_1110" -> "1395 Reshape_1114" [key=0, style=solid, label="[-1, 2304]"];
 "1390 Constant_nncf_1282" -> "1391 Unsqueeze_1111" [key=0, style=dashed, label="[1]"];
 "1391 Unsqueeze_1111" -> "1394 Concat_1113" [key=0, style=dashed, label="[1]"];
 "1392 Constant_nncf_1284" -> "1393 Unsqueeze_1112" [key=0, style=dashed, label="[1]"];
@@ -5038,7 +5038,7 @@ digraph {
 "1541 Reshape_1232" -> "1544 Gemm_1233" [key=0, style=solid, label="[]"];
 "1542 QuantizeLinear_h.5.attn.c_proj.weight_1" -> "1543 DequantizeLinear_h.5.attn.c_proj.weight_1" [key=0, style=dashed, label="[768, 768]"];
 "1543 DequantizeLinear_h.5.attn.c_proj.weight_1" -> "1544 Gemm_1233" [key=0, style=solid, label="[768, 768]"];
-"1544 Gemm_1233" -> "1550 Reshape_1237" [key=0, style=solid, label="[]"];
+"1544 Gemm_1233" -> "1550 Reshape_1237" [key=0, style=solid, label="[-1, 768]"];
 "1545 Constant_nncf_1429" -> "1546 Unsqueeze_1234" [key=0, style=dashed, label="[1]"];
 "1546 Unsqueeze_1234" -> "1549 Concat_1236" [key=0, style=dashed, label="[1]"];
 "1547 Constant_nncf_1431" -> "1548 Unsqueeze_1235" [key=0, style=dashed, label="[1]"];
@@ -5080,7 +5080,7 @@ digraph {
 "1577 Reshape_1261" -> "1580 Gemm_1262" [key=0, style=solid, label="[]"];
 "1578 QuantizeLinear_h.5.mlp.c_fc.weight_1" -> "1579 DequantizeLinear_h.5.mlp.c_fc.weight_1" [key=0, style=dashed, label="[768, 3072]"];
 "1579 DequantizeLinear_h.5.mlp.c_fc.weight_1" -> "1580 Gemm_1262" [key=0, style=solid, label="[768, 3072]"];
-"1580 Gemm_1262" -> "1586 Reshape_1266" [key=0, style=solid, label="[]"];
+"1580 Gemm_1262" -> "1586 Reshape_1266" [key=0, style=solid, label="[-1, 3072]"];
 "1581 Constant_nncf_1461" -> "1582 Unsqueeze_1263" [key=0, style=dashed, label="[1]"];
 "1582 Unsqueeze_1263" -> "1585 Concat_1265" [key=0, style=dashed, label="[1]"];
 "1583 Constant_nncf_1463" -> "1584 Unsqueeze_1264" [key=0, style=dashed, label="[1]"];
@@ -5122,7 +5122,7 @@ digraph {
 "1614 Reshape_1291" -> "1617 Gemm_1292" [key=0, style=solid, label="[]"];
 "1615 QuantizeLinear_h.5.mlp.c_proj.weight_1" -> "1616 DequantizeLinear_h.5.mlp.c_proj.weight_1" [key=0, style=dashed, label="[3072, 768]"];
 "1616 DequantizeLinear_h.5.mlp.c_proj.weight_1" -> "1617 Gemm_1292" [key=0, style=solid, label="[3072, 768]"];
-"1617 Gemm_1292" -> "1623 Reshape_1296" [key=0, style=solid, label="[]"];
+"1617 Gemm_1292" -> "1623 Reshape_1296" [key=0, style=solid, label="[-1, 768]"];
 "1618 Constant_nncf_1494" -> "1619 Unsqueeze_1293" [key=0, style=dashed, label="[1]"];
 "1619 Unsqueeze_1293" -> "1622 Concat_1295" [key=0, style=dashed, label="[1]"];
 "1620 Constant_nncf_1496" -> "1621 Unsqueeze_1294" [key=0, style=dashed, label="[1]"];
@@ -5164,7 +5164,7 @@ digraph {
 "1650 Reshape_1320" -> "1653 Gemm_1321" [key=0, style=solid, label="[]"];
 "1651 QuantizeLinear_h.6.attn.c_attn.weight_1" -> "1652 DequantizeLinear_h.6.attn.c_attn.weight_1" [key=0, style=dashed, label="[768, 2304]"];
 "1652 DequantizeLinear_h.6.attn.c_attn.weight_1" -> "1653 Gemm_1321" [key=0, style=solid, label="[768, 2304]"];
-"1653 Gemm_1321" -> "1659 Reshape_1325" [key=0, style=solid, label="[]"];
+"1653 Gemm_1321" -> "1659 Reshape_1325" [key=0, style=solid, label="[-1, 2304]"];
 "1654 Constant_nncf_1526" -> "1655 Unsqueeze_1322" [key=0, style=dashed, label="[1]"];
 "1655 Unsqueeze_1322" -> "1658 Concat_1324" [key=0, style=dashed, label="[1]"];
 "1656 Constant_nncf_1528" -> "1657 Unsqueeze_1323" [key=0, style=dashed, label="[1]"];
@@ -5345,7 +5345,7 @@ digraph {
 "1805 Reshape_1443" -> "1808 Gemm_1444" [key=0, style=solid, label="[]"];
 "1806 QuantizeLinear_h.6.attn.c_proj.weight_1" -> "1807 DequantizeLinear_h.6.attn.c_proj.weight_1" [key=0, style=dashed, label="[768, 768]"];
 "1807 DequantizeLinear_h.6.attn.c_proj.weight_1" -> "1808 Gemm_1444" [key=0, style=solid, label="[768, 768]"];
-"1808 Gemm_1444" -> "1814 Reshape_1448" [key=0, style=solid, label="[]"];
+"1808 Gemm_1444" -> "1814 Reshape_1448" [key=0, style=solid, label="[-1, 768]"];
 "1809 Constant_nncf_1673" -> "1810 Unsqueeze_1445" [key=0, style=dashed, label="[1]"];
 "1810 Unsqueeze_1445" -> "1813 Concat_1447" [key=0, style=dashed, label="[1]"];
 "1811 Constant_nncf_1675" -> "1812 Unsqueeze_1446" [key=0, style=dashed, label="[1]"];
@@ -5387,7 +5387,7 @@ digraph {
 "1841 Reshape_1472" -> "1844 Gemm_1473" [key=0, style=solid, label="[]"];
 "1842 QuantizeLinear_h.6.mlp.c_fc.weight_1" -> "1843 DequantizeLinear_h.6.mlp.c_fc.weight_1" [key=0, style=dashed, label="[768, 3072]"];
 "1843 DequantizeLinear_h.6.mlp.c_fc.weight_1" -> "1844 Gemm_1473" [key=0, style=solid, label="[768, 3072]"];
-"1844 Gemm_1473" -> "1850 Reshape_1477" [key=0, style=solid, label="[]"];
+"1844 Gemm_1473" -> "1850 Reshape_1477" [key=0, style=solid, label="[-1, 3072]"];
 "1845 Constant_nncf_1705" -> "1846 Unsqueeze_1474" [key=0, style=dashed, label="[1]"];
 "1846 Unsqueeze_1474" -> "1849 Concat_1476" [key=0, style=dashed, label="[1]"];
 "1847 Constant_nncf_1707" -> "1848 Unsqueeze_1475" [key=0, style=dashed, label="[1]"];
@@ -5429,7 +5429,7 @@ digraph {
 "1878 Reshape_1502" -> "1881 Gemm_1503" [key=0, style=solid, label="[]"];
 "1879 QuantizeLinear_h.6.mlp.c_proj.weight_1" -> "1880 DequantizeLinear_h.6.mlp.c_proj.weight_1" [key=0, style=dashed, label="[3072, 768]"];
 "1880 DequantizeLinear_h.6.mlp.c_proj.weight_1" -> "1881 Gemm_1503" [key=0, style=solid, label="[3072, 768]"];
-"1881 Gemm_1503" -> "1887 Reshape_1507" [key=0, style=solid, label="[]"];
+"1881 Gemm_1503" -> "1887 Reshape_1507" [key=0, style=solid, label="[-1, 768]"];
 "1882 Constant_nncf_1738" -> "1883 Unsqueeze_1504" [key=0, style=dashed, label="[1]"];
 "1883 Unsqueeze_1504" -> "1886 Concat_1506" [key=0, style=dashed, label="[1]"];
 "1884 Constant_nncf_1740" -> "1885 Unsqueeze_1505" [key=0, style=dashed, label="[1]"];
@@ -5471,7 +5471,7 @@ digraph {
 "1914 Reshape_1531" -> "1917 Gemm_1532" [key=0, style=solid, label="[]"];
 "1915 QuantizeLinear_h.7.attn.c_attn.weight_1" -> "1916 DequantizeLinear_h.7.attn.c_attn.weight_1" [key=0, style=dashed, label="[768, 2304]"];
 "1916 DequantizeLinear_h.7.attn.c_attn.weight_1" -> "1917 Gemm_1532" [key=0, style=solid, label="[768, 2304]"];
-"1917 Gemm_1532" -> "1923 Reshape_1536" [key=0, style=solid, label="[]"];
+"1917 Gemm_1532" -> "1923 Reshape_1536" [key=0, style=solid, label="[-1, 2304]"];
 "1918 Constant_nncf_1770" -> "1919 Unsqueeze_1533" [key=0, style=dashed, label="[1]"];
 "1919 Unsqueeze_1533" -> "1922 Concat_1535" [key=0, style=dashed, label="[1]"];
 "1920 Constant_nncf_1772" -> "1921 Unsqueeze_1534" [key=0, style=dashed, label="[1]"];
@@ -5652,7 +5652,7 @@ digraph {
 "2069 Reshape_1654" -> "2072 Gemm_1655" [key=0, style=solid, label="[]"];
 "2070 QuantizeLinear_h.7.attn.c_proj.weight_1" -> "2071 DequantizeLinear_h.7.attn.c_proj.weight_1" [key=0, style=dashed, label="[768, 768]"];
 "2071 DequantizeLinear_h.7.attn.c_proj.weight_1" -> "2072 Gemm_1655" [key=0, style=solid, label="[768, 768]"];
-"2072 Gemm_1655" -> "2078 Reshape_1659" [key=0, style=solid, label="[]"];
+"2072 Gemm_1655" -> "2078 Reshape_1659" [key=0, style=solid, label="[-1, 768]"];
 "2073 Constant_nncf_1917" -> "2074 Unsqueeze_1656" [key=0, style=dashed, label="[1]"];
 "2074 Unsqueeze_1656" -> "2077 Concat_1658" [key=0, style=dashed, label="[1]"];
 "2075 Constant_nncf_1919" -> "2076 Unsqueeze_1657" [key=0, style=dashed, label="[1]"];
@@ -5694,7 +5694,7 @@ digraph {
 "2105 Reshape_1683" -> "2108 Gemm_1684" [key=0, style=solid, label="[]"];
 "2106 QuantizeLinear_h.7.mlp.c_fc.weight_1" -> "2107 DequantizeLinear_h.7.mlp.c_fc.weight_1" [key=0, style=dashed, label="[768, 3072]"];
 "2107 DequantizeLinear_h.7.mlp.c_fc.weight_1" -> "2108 Gemm_1684" [key=0, style=solid, label="[768, 3072]"];
-"2108 Gemm_1684" -> "2114 Reshape_1688" [key=0, style=solid, label="[]"];
+"2108 Gemm_1684" -> "2114 Reshape_1688" [key=0, style=solid, label="[-1, 3072]"];
 "2109 Constant_nncf_1949" -> "2110 Unsqueeze_1685" [key=0, style=dashed, label="[1]"];
 "2110 Unsqueeze_1685" -> "2113 Concat_1687" [key=0, style=dashed, label="[1]"];
 "2111 Constant_nncf_1951" -> "2112 Unsqueeze_1686" [key=0, style=dashed, label="[1]"];
@@ -5736,7 +5736,7 @@ digraph {
 "2142 Reshape_1713" -> "2145 Gemm_1714" [key=0, style=solid, label="[]"];
 "2143 QuantizeLinear_h.7.mlp.c_proj.weight_1" -> "2144 DequantizeLinear_h.7.mlp.c_proj.weight_1" [key=0, style=dashed, label="[3072, 768]"];
 "2144 DequantizeLinear_h.7.mlp.c_proj.weight_1" -> "2145 Gemm_1714" [key=0, style=solid, label="[3072, 768]"];
-"2145 Gemm_1714" -> "2151 Reshape_1718" [key=0, style=solid, label="[]"];
+"2145 Gemm_1714" -> "2151 Reshape_1718" [key=0, style=solid, label="[-1, 768]"];
 "2146 Constant_nncf_1982" -> "2147 Unsqueeze_1715" [key=0, style=dashed, label="[1]"];
 "2147 Unsqueeze_1715" -> "2150 Concat_1717" [key=0, style=dashed, label="[1]"];
 "2148 Constant_nncf_1984" -> "2149 Unsqueeze_1716" [key=0, style=dashed, label="[1]"];
@@ -5778,7 +5778,7 @@ digraph {
 "2178 Reshape_1742" -> "2181 Gemm_1743" [key=0, style=solid, label="[]"];
 "2179 QuantizeLinear_h.8.attn.c_attn.weight_1" -> "2180 DequantizeLinear_h.8.attn.c_attn.weight_1" [key=0, style=dashed, label="[768, 2304]"];
 "2180 DequantizeLinear_h.8.attn.c_attn.weight_1" -> "2181 Gemm_1743" [key=0, style=solid, label="[768, 2304]"];
-"2181 Gemm_1743" -> "2187 Reshape_1747" [key=0, style=solid, label="[]"];
+"2181 Gemm_1743" -> "2187 Reshape_1747" [key=0, style=solid, label="[-1, 2304]"];
 "2182 Constant_nncf_2014" -> "2183 Unsqueeze_1744" [key=0, style=dashed, label="[1]"];
 "2183 Unsqueeze_1744" -> "2186 Concat_1746" [key=0, style=dashed, label="[1]"];
 "2184 Constant_nncf_2016" -> "2185 Unsqueeze_1745" [key=0, style=dashed, label="[1]"];
@@ -5959,7 +5959,7 @@ digraph {
 "2333 Reshape_1865" -> "2336 Gemm_1866" [key=0, style=solid, label="[]"];
 "2334 QuantizeLinear_h.8.attn.c_proj.weight_1" -> "2335 DequantizeLinear_h.8.attn.c_proj.weight_1" [key=0, style=dashed, label="[768, 768]"];
 "2335 DequantizeLinear_h.8.attn.c_proj.weight_1" -> "2336 Gemm_1866" [key=0, style=solid, label="[768, 768]"];
-"2336 Gemm_1866" -> "2342 Reshape_1870" [key=0, style=solid, label="[]"];
+"2336 Gemm_1866" -> "2342 Reshape_1870" [key=0, style=solid, label="[-1, 768]"];
 "2337 Constant_nncf_2161" -> "2338 Unsqueeze_1867" [key=0, style=dashed, label="[1]"];
 "2338 Unsqueeze_1867" -> "2341 Concat_1869" [key=0, style=dashed, label="[1]"];
 "2339 Constant_nncf_2163" -> "2340 Unsqueeze_1868" [key=0, style=dashed, label="[1]"];
@@ -6001,7 +6001,7 @@ digraph {
 "2369 Reshape_1894" -> "2372 Gemm_1895" [key=0, style=solid, label="[]"];
 "2370 QuantizeLinear_h.8.mlp.c_fc.weight_1" -> "2371 DequantizeLinear_h.8.mlp.c_fc.weight_1" [key=0, style=dashed, label="[768, 3072]"];
 "2371 DequantizeLinear_h.8.mlp.c_fc.weight_1" -> "2372 Gemm_1895" [key=0, style=solid, label="[768, 3072]"];
-"2372 Gemm_1895" -> "2378 Reshape_1899" [key=0, style=solid, label="[]"];
+"2372 Gemm_1895" -> "2378 Reshape_1899" [key=0, style=solid, label="[-1, 3072]"];
 "2373 Constant_nncf_2193" -> "2374 Unsqueeze_1896" [key=0, style=dashed, label="[1]"];
 "2374 Unsqueeze_1896" -> "2377 Concat_1898" [key=0, style=dashed, label="[1]"];
 "2375 Constant_nncf_2195" -> "2376 Unsqueeze_1897" [key=0, style=dashed, label="[1]"];
@@ -6043,7 +6043,7 @@ digraph {
 "2406 Reshape_1924" -> "2409 Gemm_1925" [key=0, style=solid, label="[]"];
 "2407 QuantizeLinear_h.8.mlp.c_proj.weight_1" -> "2408 DequantizeLinear_h.8.mlp.c_proj.weight_1" [key=0, style=dashed, label="[3072, 768]"];
 "2408 DequantizeLinear_h.8.mlp.c_proj.weight_1" -> "2409 Gemm_1925" [key=0, style=solid, label="[3072, 768]"];
-"2409 Gemm_1925" -> "2415 Reshape_1929" [key=0, style=solid, label="[]"];
+"2409 Gemm_1925" -> "2415 Reshape_1929" [key=0, style=solid, label="[-1, 768]"];
 "2410 Constant_nncf_2226" -> "2411 Unsqueeze_1926" [key=0, style=dashed, label="[1]"];
 "2411 Unsqueeze_1926" -> "2414 Concat_1928" [key=0, style=dashed, label="[1]"];
 "2412 Constant_nncf_2228" -> "2413 Unsqueeze_1927" [key=0, style=dashed, label="[1]"];
@@ -6085,7 +6085,7 @@ digraph {
 "2442 Reshape_1953" -> "2445 Gemm_1954" [key=0, style=solid, label="[]"];
 "2443 QuantizeLinear_h.9.attn.c_attn.weight_1" -> "2444 DequantizeLinear_h.9.attn.c_attn.weight_1" [key=0, style=dashed, label="[768, 2304]"];
 "2444 DequantizeLinear_h.9.attn.c_attn.weight_1" -> "2445 Gemm_1954" [key=0, style=solid, label="[768, 2304]"];
-"2445 Gemm_1954" -> "2451 Reshape_1958" [key=0, style=solid, label="[]"];
+"2445 Gemm_1954" -> "2451 Reshape_1958" [key=0, style=solid, label="[-1, 2304]"];
 "2446 Constant_nncf_2258" -> "2447 Unsqueeze_1955" [key=0, style=dashed, label="[1]"];
 "2447 Unsqueeze_1955" -> "2450 Concat_1957" [key=0, style=dashed, label="[1]"];
 "2448 Constant_nncf_2260" -> "2449 Unsqueeze_1956" [key=0, style=dashed, label="[1]"];
@@ -6266,7 +6266,7 @@ digraph {
 "2597 Reshape_2076" -> "2600 Gemm_2077" [key=0, style=solid, label="[]"];
 "2598 QuantizeLinear_h.9.attn.c_proj.weight_1" -> "2599 DequantizeLinear_h.9.attn.c_proj.weight_1" [key=0, style=dashed, label="[768, 768]"];
 "2599 DequantizeLinear_h.9.attn.c_proj.weight_1" -> "2600 Gemm_2077" [key=0, style=solid, label="[768, 768]"];
-"2600 Gemm_2077" -> "2606 Reshape_2081" [key=0, style=solid, label="[]"];
+"2600 Gemm_2077" -> "2606 Reshape_2081" [key=0, style=solid, label="[-1, 768]"];
 "2601 Constant_nncf_2405" -> "2602 Unsqueeze_2078" [key=0, style=dashed, label="[1]"];
 "2602 Unsqueeze_2078" -> "2605 Concat_2080" [key=0, style=dashed, label="[1]"];
 "2603 Constant_nncf_2407" -> "2604 Unsqueeze_2079" [key=0, style=dashed, label="[1]"];
@@ -6308,7 +6308,7 @@ digraph {
 "2633 Reshape_2105" -> "2636 Gemm_2106" [key=0, style=solid, label="[]"];
 "2634 QuantizeLinear_h.9.mlp.c_fc.weight_1" -> "2635 DequantizeLinear_h.9.mlp.c_fc.weight_1" [key=0, style=dashed, label="[768, 3072]"];
 "2635 DequantizeLinear_h.9.mlp.c_fc.weight_1" -> "2636 Gemm_2106" [key=0, style=solid, label="[768, 3072]"];
-"2636 Gemm_2106" -> "2642 Reshape_2110" [key=0, style=solid, label="[]"];
+"2636 Gemm_2106" -> "2642 Reshape_2110" [key=0, style=solid, label="[-1, 3072]"];
 "2637 Constant_nncf_2437" -> "2638 Unsqueeze_2107" [key=0, style=dashed, label="[1]"];
 "2638 Unsqueeze_2107" -> "2641 Concat_2109" [key=0, style=dashed, label="[1]"];
 "2639 Constant_nncf_2439" -> "2640 Unsqueeze_2108" [key=0, style=dashed, label="[1]"];
@@ -6350,7 +6350,7 @@ digraph {
 "2670 Reshape_2135" -> "2673 Gemm_2136" [key=0, style=solid, label="[]"];
 "2671 QuantizeLinear_h.9.mlp.c_proj.weight_1" -> "2672 DequantizeLinear_h.9.mlp.c_proj.weight_1" [key=0, style=dashed, label="[3072, 768]"];
 "2672 DequantizeLinear_h.9.mlp.c_proj.weight_1" -> "2673 Gemm_2136" [key=0, style=solid, label="[3072, 768]"];
-"2673 Gemm_2136" -> "2679 Reshape_2140" [key=0, style=solid, label="[]"];
+"2673 Gemm_2136" -> "2679 Reshape_2140" [key=0, style=solid, label="[-1, 768]"];
 "2674 Constant_nncf_2470" -> "2675 Unsqueeze_2137" [key=0, style=dashed, label="[1]"];
 "2675 Unsqueeze_2137" -> "2678 Concat_2139" [key=0, style=dashed, label="[1]"];
 "2676 Constant_nncf_2472" -> "2677 Unsqueeze_2138" [key=0, style=dashed, label="[1]"];
@@ -6392,7 +6392,7 @@ digraph {
 "2706 Reshape_2164" -> "2709 Gemm_2165" [key=0, style=solid, label="[]"];
 "2707 QuantizeLinear_h.10.attn.c_attn.weight_1" -> "2708 DequantizeLinear_h.10.attn.c_attn.weight_1" [key=0, style=dashed, label="[768, 2304]"];
 "2708 DequantizeLinear_h.10.attn.c_attn.weight_1" -> "2709 Gemm_2165" [key=0, style=solid, label="[768, 2304]"];
-"2709 Gemm_2165" -> "2715 Reshape_2169" [key=0, style=solid, label="[]"];
+"2709 Gemm_2165" -> "2715 Reshape_2169" [key=0, style=solid, label="[-1, 2304]"];
 "2710 Constant_nncf_2502" -> "2711 Unsqueeze_2166" [key=0, style=dashed, label="[1]"];
 "2711 Unsqueeze_2166" -> "2714 Concat_2168" [key=0, style=dashed, label="[1]"];
 "2712 Constant_nncf_2504" -> "2713 Unsqueeze_2167" [key=0, style=dashed, label="[1]"];
@@ -6573,7 +6573,7 @@ digraph {
 "2861 Reshape_2287" -> "2864 Gemm_2288" [key=0, style=solid, label="[]"];
 "2862 QuantizeLinear_h.10.attn.c_proj.weight_1" -> "2863 DequantizeLinear_h.10.attn.c_proj.weight_1" [key=0, style=dashed, label="[768, 768]"];
 "2863 DequantizeLinear_h.10.attn.c_proj.weight_1" -> "2864 Gemm_2288" [key=0, style=solid, label="[768, 768]"];
-"2864 Gemm_2288" -> "2870 Reshape_2292" [key=0, style=solid, label="[]"];
+"2864 Gemm_2288" -> "2870 Reshape_2292" [key=0, style=solid, label="[-1, 768]"];
 "2865 Constant_nncf_2649" -> "2866 Unsqueeze_2289" [key=0, style=dashed, label="[1]"];
 "2866 Unsqueeze_2289" -> "2869 Concat_2291" [key=0, style=dashed, label="[1]"];
 "2867 Constant_nncf_2651" -> "2868 Unsqueeze_2290" [key=0, style=dashed, label="[1]"];
@@ -6615,7 +6615,7 @@ digraph {
 "2897 Reshape_2316" -> "2900 Gemm_2317" [key=0, style=solid, label="[]"];
 "2898 QuantizeLinear_h.10.mlp.c_fc.weight_1" -> "2899 DequantizeLinear_h.10.mlp.c_fc.weight_1" [key=0, style=dashed, label="[768, 3072]"];
 "2899 DequantizeLinear_h.10.mlp.c_fc.weight_1" -> "2900 Gemm_2317" [key=0, style=solid, label="[768, 3072]"];
-"2900 Gemm_2317" -> "2906 Reshape_2321" [key=0, style=solid, label="[]"];
+"2900 Gemm_2317" -> "2906 Reshape_2321" [key=0, style=solid, label="[-1, 3072]"];
 "2901 Constant_nncf_2681" -> "2902 Unsqueeze_2318" [key=0, style=dashed, label="[1]"];
 "2902 Unsqueeze_2318" -> "2905 Concat_2320" [key=0, style=dashed, label="[1]"];
 "2903 Constant_nncf_2683" -> "2904 Unsqueeze_2319" [key=0, style=dashed, label="[1]"];
@@ -6657,7 +6657,7 @@ digraph {
 "2934 Reshape_2346" -> "2937 Gemm_2347" [key=0, style=solid, label="[]"];
 "2935 QuantizeLinear_h.10.mlp.c_proj.weight_1" -> "2936 DequantizeLinear_h.10.mlp.c_proj.weight_1" [key=0, style=dashed, label="[3072, 768]"];
 "2936 DequantizeLinear_h.10.mlp.c_proj.weight_1" -> "2937 Gemm_2347" [key=0, style=solid, label="[3072, 768]"];
-"2937 Gemm_2347" -> "2943 Reshape_2351" [key=0, style=solid, label="[]"];
+"2937 Gemm_2347" -> "2943 Reshape_2351" [key=0, style=solid, label="[-1, 768]"];
 "2938 Constant_nncf_2714" -> "2939 Unsqueeze_2348" [key=0, style=dashed, label="[1]"];
 "2939 Unsqueeze_2348" -> "2942 Concat_2350" [key=0, style=dashed, label="[1]"];
 "2940 Constant_nncf_2716" -> "2941 Unsqueeze_2349" [key=0, style=dashed, label="[1]"];
@@ -6699,7 +6699,7 @@ digraph {
 "2970 Reshape_2375" -> "2973 Gemm_2376" [key=0, style=solid, label="[]"];
 "2971 QuantizeLinear_h.11.attn.c_attn.weight_1" -> "2972 DequantizeLinear_h.11.attn.c_attn.weight_1" [key=0, style=dashed, label="[768, 2304]"];
 "2972 DequantizeLinear_h.11.attn.c_attn.weight_1" -> "2973 Gemm_2376" [key=0, style=solid, label="[768, 2304]"];
-"2973 Gemm_2376" -> "2979 Reshape_2380" [key=0, style=solid, label="[]"];
+"2973 Gemm_2376" -> "2979 Reshape_2380" [key=0, style=solid, label="[-1, 2304]"];
 "2974 Constant_nncf_2746" -> "2975 Unsqueeze_2377" [key=0, style=dashed, label="[1]"];
 "2975 Unsqueeze_2377" -> "2978 Concat_2379" [key=0, style=dashed, label="[1]"];
 "2976 Constant_nncf_2748" -> "2977 Unsqueeze_2378" [key=0, style=dashed, label="[1]"];
@@ -6880,7 +6880,7 @@ digraph {
 "3125 Reshape_2498" -> "3128 Gemm_2499" [key=0, style=solid, label="[]"];
 "3126 QuantizeLinear_h.11.attn.c_proj.weight_1" -> "3127 DequantizeLinear_h.11.attn.c_proj.weight_1" [key=0, style=dashed, label="[768, 768]"];
 "3127 DequantizeLinear_h.11.attn.c_proj.weight_1" -> "3128 Gemm_2499" [key=0, style=solid, label="[768, 768]"];
-"3128 Gemm_2499" -> "3134 Reshape_2503" [key=0, style=solid, label="[]"];
+"3128 Gemm_2499" -> "3134 Reshape_2503" [key=0, style=solid, label="[-1, 768]"];
 "3129 Constant_nncf_2893" -> "3130 Unsqueeze_2500" [key=0, style=dashed, label="[1]"];
 "3130 Unsqueeze_2500" -> "3133 Concat_2502" [key=0, style=dashed, label="[1]"];
 "3131 Constant_nncf_2895" -> "3132 Unsqueeze_2501" [key=0, style=dashed, label="[1]"];
@@ -6922,7 +6922,7 @@ digraph {
 "3161 Reshape_2527" -> "3164 Gemm_2528" [key=0, style=solid, label="[]"];
 "3162 QuantizeLinear_h.11.mlp.c_fc.weight_1" -> "3163 DequantizeLinear_h.11.mlp.c_fc.weight_1" [key=0, style=dashed, label="[768, 3072]"];
 "3163 DequantizeLinear_h.11.mlp.c_fc.weight_1" -> "3164 Gemm_2528" [key=0, style=solid, label="[768, 3072]"];
-"3164 Gemm_2528" -> "3170 Reshape_2532" [key=0, style=solid, label="[]"];
+"3164 Gemm_2528" -> "3170 Reshape_2532" [key=0, style=solid, label="[-1, 3072]"];
 "3165 Constant_nncf_2925" -> "3166 Unsqueeze_2529" [key=0, style=dashed, label="[1]"];
 "3166 Unsqueeze_2529" -> "3169 Concat_2531" [key=0, style=dashed, label="[1]"];
 "3167 Constant_nncf_2927" -> "3168 Unsqueeze_2530" [key=0, style=dashed, label="[1]"];
@@ -6964,7 +6964,7 @@ digraph {
 "3198 Reshape_2557" -> "3201 Gemm_2558" [key=0, style=solid, label="[]"];
 "3199 QuantizeLinear_h.11.mlp.c_proj.weight_1" -> "3200 DequantizeLinear_h.11.mlp.c_proj.weight_1" [key=0, style=dashed, label="[3072, 768]"];
 "3200 DequantizeLinear_h.11.mlp.c_proj.weight_1" -> "3201 Gemm_2558" [key=0, style=solid, label="[3072, 768]"];
-"3201 Gemm_2558" -> "3207 Reshape_2562" [key=0, style=solid, label="[]"];
+"3201 Gemm_2558" -> "3207 Reshape_2562" [key=0, style=solid, label="[-1, 768]"];
 "3202 Constant_nncf_2958" -> "3203 Unsqueeze_2559" [key=0, style=dashed, label="[1]"];
 "3203 Unsqueeze_2559" -> "3206 Concat_2561" [key=0, style=dashed, label="[1]"];
 "3204 Constant_nncf_2960" -> "3205 Unsqueeze_2560" [key=0, style=dashed, label="[1]"];
