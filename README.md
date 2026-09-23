@@ -97,10 +97,12 @@ model = ov.Core().read_model("/model_path")
 val_dataset = datasets.ImageFolder("/path", transform=transforms.Compose([transforms.ToTensor()]))
 dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1)
 
+
 # Step 1: Initialize transformation function
 def transform_fn(data_item):
     images, _ = data_item
     return images
+
 
 # Step 2: Initialize NNCF Dataset
 calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
@@ -124,16 +126,17 @@ model = models.mobilenet_v2()
 val_dataset = datasets.ImageFolder("/path", transform=transforms.Compose([transforms.ToTensor()]))
 dataset_loader = torch.utils.data.DataLoader(val_dataset)
 
+
 # Step 1: Initialize the transformation function
 def transform_fn(data_item):
     images, _ = data_item
     return images
 
+
 # Step 2: Initialize NNCF Dataset
 calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
 # Step 3: Run the quantization pipeline
 quantized_model = nncf.quantize(model, calibration_dataset)
-
 ```
 
 **NOTE** If the Post-Training Quantization algorithm does not meet quality requirements you can fine-tune the quantized pytorch model. You can find an example of the Quantization-Aware training pipeline for a pytorch model [here](examples/quantization_aware_training/torch/resnet18/README.md).
@@ -154,10 +157,12 @@ model = models.mobilenet_v2()
 val_dataset = datasets.ImageFolder("/path", transform=transforms.Compose([transforms.ToTensor()]))
 dataset_loader = torch.utils.data.DataLoader(val_dataset)
 
+
 # Step 1: Initialize the transformation function
 def transform_fn(data_item):
     images, _ = data_item
     return images
+
 
 # Step 2: Initialize NNCF Dataset
 calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
@@ -189,9 +194,12 @@ dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1)
 
 # Step 1: Initialize transformation function
 input_name = onnx_model.graph.input[0].name
+
+
 def transform_fn(data_item):
     images, _ = data_item
     return {input_name: images.numpy()}
+
 
 # Step 2: Initialize NNCF Dataset
 calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
