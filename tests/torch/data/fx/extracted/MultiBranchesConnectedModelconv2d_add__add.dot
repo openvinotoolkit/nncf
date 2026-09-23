@@ -1,4 +1,4 @@
-strict digraph {
+digraph {
 "0 conv_a_weight" [id=0, type="get_attr"];
 "1 conv_a_bias" [id=1, type="get_attr"];
 "2 conv_b_weight" [id=2, type="get_attr"];
@@ -11,18 +11,18 @@ strict digraph {
 "9 add__1" [id=9, type="add_"];
 "10 add" [id=10, type=add];
 "11 output" [id=11, type=output];
-"0 conv_a_weight" -> "6 conv2d" [style=solid, label="(3, 3, 1, 1)"];
-"1 conv_a_bias" -> "6 conv2d" [style=solid, label="(3,)"];
-"2 conv_b_weight" -> "7 conv2d_1" [style=solid, label="(3, 3, 1, 1)"];
-"3 conv_b_bias" -> "7 conv2d_1" [style=solid, label="(3,)"];
-"4 bias" -> "8 add_" [style=solid, label="(1,)"];
-"4 bias" -> "9 add__1" [style=solid, label="(1,)"];
-"5 conv2d_input_0" -> "6 conv2d" [style=solid, label=None];
-"6 conv2d" -> "7 conv2d_1" [style=solid, label="(1, 3, 3, 3)"];
-"6 conv2d" -> "8 add_" [style=solid, label="(1, 3, 3, 3)"];
-"7 conv2d_1" -> "9 add__1" [style=solid, label="(1, 3, 3, 3)"];
-"8 add_" -> "10 add" [style=solid, label="(1, 3, 3, 3)"];
-"8 add_" -> "11 output" [style=solid, label="(1, 3, 3, 3)"];
-"9 add__1" -> "10 add" [style=solid, label="(1, 3, 3, 3)"];
-"10 add" -> "11 output" [style=solid, label="(1, 3, 3, 3)"];
+"0 conv_a_weight" -> "6 conv2d" [key=0, style=solid, label="(3, 3, 1, 1)"];
+"1 conv_a_bias" -> "6 conv2d" [key=0, style=solid, label="(3,)"];
+"2 conv_b_weight" -> "7 conv2d_1" [key=0, style=solid, label="(3, 3, 1, 1)"];
+"3 conv_b_bias" -> "7 conv2d_1" [key=0, style=solid, label="(3,)"];
+"4 bias" -> "8 add_" [key=0, style=solid, label="(1,)"];
+"4 bias" -> "9 add__1" [key=0, style=solid, label="(1,)"];
+"5 conv2d_input_0" -> "6 conv2d" [key=0, style=solid, label=None];
+"6 conv2d" -> "7 conv2d_1" [key=0, style=solid, label="(1, 3, 3, 3)"];
+"6 conv2d" -> "8 add_" [key=0, style=solid, label="(1, 3, 3, 3)"];
+"7 conv2d_1" -> "9 add__1" [key=0, style=solid, label="(1, 3, 3, 3)"];
+"8 add_" -> "10 add" [key=0, style=solid, label="(1, 3, 3, 3)"];
+"8 add_" -> "11 output" [key=0, style=solid, label="(1, 3, 3, 3)"];
+"9 add__1" -> "10 add" [key=0, style=solid, label="(1, 3, 3, 3)"];
+"10 add" -> "11 output" [key=0, style=solid, label="(1, 3, 3, 3)"];
 }
