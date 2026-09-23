@@ -1180,31 +1180,61 @@ class WeightCompression(Algorithm):
 
         return all_weight_params, ratio_defining_params, skipped_weight_params
 
+    def _get_node_name_to_owner_name(
+        self, graph: NNCFGraph, all_weight_params: list[WeightCompressionParameters]
+    ) -> dict[str, str]:
+        """
+        Maps the name of a node whose weight is compressed under another node, e.g. a shared weight, to the name
+        of that node. It allows the custom annotation to take effect no matter which of the nodes sharing a weight
+        is matched by it.
+
+        :param graph: NNCFGraph instance.
+        :param all_weight_params: List of all weight compression parameters that can be compressed.
+        :return: A mapping from a node name to the name of the node under which its weight is compressed.
+        """
+        owner_name_by_weight_name = {wp.weight_name: wp.node_with_weight.node_name for wp in all_weight_params}
+        node_name_to_owner_name = {}
+        for node in self.get_nodes_to_compress(graph):
+            for weight_name, _ in self._backend_entity.get_weight_names_and_port_ids(node, graph):
+                owner_name = owner_name_by_weight_name.get(weight_name)
+                if owner_name is not None and owner_name != node.node_name:
+                    node_name_to_owner_name[node.node_name] = owner_name
+        return node_name_to_owner_name
+
     @staticmethod
     def _get_custom_annotation_configs(
-        custom_annotation: list[CustomAnnotation], graph: NNCFGraph
+        custom_annotation: list[CustomAnnotation], graph: NNCFGraph, node_name_to_owner_name: dict[str, str]
     ) -> dict[str, WeightCompressionConfig]:
         """
         Maps node names matched by the custom annotation to the user-defined weight compression configuration.
-        If several annotations match the same node, the last one takes precedence.
+        If several annotations match the same node, the last one takes precedence. The name of a node whose weight
+        is compressed under another node is replaced with the name of that node, so that the nodes sharing a weight
+        are annotated as a single one.
 
         :param custom_annotation: List of user-defined custom annotations.
         :param graph: NNCFGraph instance.
+        :param node_name_to_owner_name: A mapping from a node name to the name of the node under which its weight
+            is compressed.
         :return: A mapping from a node name to the user-defined weight compression configuration.
         """
         node_name_to_config: dict[str, WeightCompressionConfig] = {}
-        for index, annotation in enumerate(custom_annotation):
+        overlapped_names = set()
+        for annotation in custom_annotation:
             annotated_names = get_node_names_from_scope(annotation.scope, graph, strict=annotation.scope.validate)
-            overlapped_names = sorted(annotated_names & node_name_to_config.keys())
-            if overlapped_names:
-                config = annotation.config
-                nncf_logger.warning(
-                    f"Several custom annotations match the same nodes. The configuration of the custom annotation "
-                    f"with index {index} ({config.mode.value}, {config.group_size}) takes precedence, since it is "
-                    "the last matched one, and is used for the following nodes:\n\t" + "\n\t".join(overlapped_names)
-                )
-            for node_name in annotated_names:
+            owner_names = set(node_name_to_owner_name.get(name, name) for name in annotated_names)
+            overlapped_names.update(name for name in owner_names if name in node_name_to_config)
+            for node_name in owner_names:
                 node_name_to_config[node_name] = annotation.config
+
+        if overlapped_names:
+            overlapped_configs = []
+            for node_name in sorted(overlapped_names):
+                config = node_name_to_config[node_name]
+                overlapped_configs.append(f"{node_name} ({config.mode.value}, {config.group_size})")
+            nncf_logger.warning(
+                "Several custom annotations match the same nodes. The configuration of the last matched custom "
+                "annotation takes precedence and is used for the following nodes:\n\t" + "\n\t".join(overlapped_configs)
+            )
         return node_name_to_config
 
     def _drop_annotation_configs_that_can_not_be_assigned(
@@ -1217,35 +1247,18 @@ class WeightCompression(Algorithm):
         """
         Validate and drop the annotated configurations that can not be assigned to a weight, i.e. the ones
         matching a node without a weight or a weight with a data type that the annotated mode can not compress.
-        The configuration of a node whose weight is compressed under another node, e.g. a shared weight, is moved
-        to that node, so that the annotation takes effect no matter which of the nodes sharing a weight is
-        matched by it.
         """
         node_names_with_weight = set(node.node_name for node in self.get_nodes_to_compress(graph))
-        node_names_without_weight = node_name_to_config.keys() - node_names_with_weight
+        node_names_without_weight = set(name for name in node_name_to_config if name not in node_names_with_weight)
         if node_names_without_weight:
             nncf_logger.warning(
                 "The following nodes are matched by the custom annotation, but have no weight to compress. "
                 "The annotation has no effect for them:\n\t" + "\n\t".join(sorted(node_names_without_weight))
             )
 
-        # A weight is compressed under a single node, so the annotation of the other nodes sharing this weight,
-        # e.g. the ones matched by the annotation only, is moved to the node under which it is compressed.
-        node_name_by_weight_name = {wp.weight_name: wp.node_with_weight.node_name for wp in all_weight_params}
-        compressed_node_names = set(node_name_by_weight_name.values())
-        moved_configs = {}
-        shared_weight_node_names = set()
-        for node_name in (node_name_to_config.keys() & node_names_with_weight) - compressed_node_names:
-            node = graph.get_node_by_name(node_name)
-            for weight_name, _ in self._backend_entity.get_weight_names_and_port_ids(node, graph):
-                if weight_name in node_name_by_weight_name:
-                    moved_configs[node_name_by_weight_name[weight_name]] = node_name_to_config[node_name]
-                    shared_weight_node_names.add(node_name)
-        # The annotation of the node under which a weight is compressed takes precedence over the moved one
-        node_name_to_config = moved_configs | node_name_to_config
-
         unsupported_node_names = set()
-        for w_params in all_weight_params + skipped_weight_params:
+        weight_params = all_weight_params + skipped_weight_params
+        for w_params in weight_params:
             node_name = w_params.node_with_weight.node_name
             config = node_name_to_config.get(node_name)
             if config is not None and not self.is_weight_compression_supported(w_params.weight_dtype, config.mode):
@@ -1257,7 +1270,8 @@ class WeightCompression(Algorithm):
                 + "\n\t".join(sorted(unsupported_node_names))
             )
 
-        dropped_node_names = unsupported_node_names | node_names_without_weight | shared_weight_node_names
+        dropped_node_names = set()
+        dropped_node_names.update(node_names_without_weight, unsupported_node_names)
         return {
             node_name: config
             for node_name, config in node_name_to_config.items()
@@ -1324,10 +1338,8 @@ class WeightCompression(Algorithm):
         ]
         # Keep the topological order of the weight parameters
         node_name_to_position = {node.node_name: i for i, node in enumerate(graph.topological_sort())}
-        all_weight_params = sorted(
-            all_weight_params + restored_weight_params,
-            key=lambda wp: node_name_to_position[wp.node_with_weight.node_name],
-        )
+        all_weight_params = all_weight_params + restored_weight_params
+        all_weight_params.sort(key=lambda wp: node_name_to_position[wp.node_with_weight.node_name])
         return all_weight_params, skipped_weight_params
 
     def apply_custom_annotation(
@@ -1345,6 +1357,7 @@ class WeightCompression(Algorithm):
         Applies the user-defined weight compression configurations to the parameters matched by the annotation.
         The flow of this function is as follows:
         1. Convert the annotation to a mapping from a node name to the configuration, the last match wins.
+           The nodes sharing a weight are annotated as a single one, since the weight is compressed only once.
         2. Drop the annotated configurations that can not be assigned to a weight.
         3. Move the annotated weight parameters that are not compressed, e.g. the ignored ones, to the
            compressed ones.
@@ -1360,7 +1373,10 @@ class WeightCompression(Algorithm):
         if not self._custom_annotation:
             return all_weight_params, ratio_defining_params, skipped_weight_params
 
-        node_name_to_config = self._get_custom_annotation_configs(self._custom_annotation, graph)
+        node_name_to_owner_name = self._get_node_name_to_owner_name(graph, all_weight_params)
+        node_name_to_config = self._get_custom_annotation_configs(
+            self._custom_annotation, graph, node_name_to_owner_name
+        )
         node_name_to_config = self._drop_annotation_configs_that_can_not_be_assigned(
             node_name_to_config, graph, all_weight_params, skipped_weight_params
         )

@@ -1067,6 +1067,10 @@ class TemplateWeightCompression(ABC):
                         nncf.CustomAnnotationScope(patterns=[".*2$"]),
                         WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=4),
                     ),
+                    (
+                        nncf.CustomAnnotationScope(patterns=[".*2$"]),
+                        WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=2),
+                    ),
                 ],
                 None,
                 id="overlapping_annotations",
@@ -1139,6 +1143,32 @@ class TemplateWeightCompression(ABC):
                 None,
                 id="shared_weight_annotated_by_other_node",
             ),
+            pytest.param(
+                "shared_weight",
+                dict(ratio=1.0, all_layers=True),
+                [
+                    (
+                        nncf.CustomAnnotationScope(patterns=[".*"]),
+                        WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                    ),
+                    (None, WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=2)),
+                ],
+                None,
+                id="shared_weight_other_node_annotated_last",
+            ),
+            pytest.param(
+                "shared_weight",
+                dict(ratio=1.0, all_layers=True),
+                [
+                    (None, WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=2)),
+                    (
+                        nncf.CustomAnnotationScope(patterns=[".*"]),
+                        WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                    ),
+                ],
+                None,
+                id="shared_weight_other_node_annotated_first",
+            ),
         ],
     )
     def test_custom_annotation(self, model_name, kwargs, annotations, ignored_scope, request):
@@ -1173,6 +1203,72 @@ class TemplateWeightCompression(ABC):
             dump_to_json(ref_path, configs)
 
         assert configs == load_json(ref_path)
+
+    @pytest.mark.parametrize(
+        ("custom_annotation", "ignored_scope", "warning"),
+        [
+            pytest.param(
+                [
+                    nncf.CustomAnnotation(
+                        scope=nncf.CustomAnnotationScope(patterns=[".*1$"]),
+                        config=WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                    ),
+                    nncf.CustomAnnotation(
+                        scope=nncf.CustomAnnotationScope(patterns=[".*1$"]),
+                        config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=4),
+                    ),
+                    nncf.CustomAnnotation(
+                        scope=nncf.CustomAnnotationScope(patterns=[".*1$"]),
+                        config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=2),
+                    ),
+                ],
+                None,
+                "Several custom annotations match the same nodes",
+                id="overlapping_annotations",
+            ),
+            pytest.param(
+                [
+                    nncf.CustomAnnotation(
+                        scope=nncf.CustomAnnotationScope(patterns=[".*"]),
+                        config=WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                    )
+                ],
+                None,
+                "have no weight to compress",
+                id="node_without_weight",
+            ),
+            pytest.param(
+                [
+                    nncf.CustomAnnotation(
+                        scope=nncf.CustomAnnotationScope(patterns=[".*1$"]),
+                        config=WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                    )
+                ],
+                IgnoredScope(patterns=[".*1$"]),
+                "excluded from the compression",
+                id="ignored_scope",
+            ),
+        ],
+    )
+    def test_custom_annotation_warning(self, custom_annotation, ignored_scope, warning):
+        """
+        Checks that appropriate warnings are logged when the custom annotation is overridden or has no effect.
+        """
+        with patch.object(nncf_logger, "warning") as mock_warning:
+            compress_weights(
+                model=self.get_sequential_matmul_model(transpose_a=False),
+                mode=CompressWeightsMode.INT4_SYM,
+                ratio=1.0,
+                group_size=-1,
+                all_layers=True,
+                ignored_scope=ignored_scope,
+                custom_annotation=custom_annotation,
+            )
+
+        messages = [args[0] for args, _ in mock_warning.call_args_list]
+        # Check if warning is logged + only 1 warning is logged for a single incident
+        matched = [message for message in messages if warning in message]
+        assert len(matched) == 1, f"Expected a single '{warning}' warning, but got: {messages}"
 
     @pytest.mark.parametrize(
         ("custom_annotation", "error"),
