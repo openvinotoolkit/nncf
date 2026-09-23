@@ -346,15 +346,28 @@ class TemplateWeightCompression(ABC):
     def get_decompressed_weight(compressed_model: TModel, input: TTensor) -> Tensor:
         """Returns decompressed weight"""
 
+    @pytest.mark.parametrize("annotated_mode", [None, CompressWeightsMode.INT4_SYM], ids=["default", "annotated"])
     @pytest.mark.parametrize("transpose_a", [False, True], ids=["no_tr_a", "tr_a"])
-    def test_scale_estimation_act_ch_axis_param(self, mocker, transpose_a):
-        """Checks that act_ch_axis parameter is passed to calculate_quantization_params."""
+    def test_scale_estimation_act_ch_axis_param(self, mocker, transpose_a, annotated_mode):
+        """
+        Checks that act_ch_axis parameter and the config defined by the custom annotation are passed to
+        calculate_quantization_params.
+        """
         calc_q_params_spy = mocker.spy(ScaleEstimation, "calculate_quantization_params")
 
         model = self.get_model_for_test_scale_estimation(transpose_a=transpose_a)
         input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
         input = self.to_tensor(input)
         dataset = Dataset([input], self.get_transform_func())
+
+        custom_annotation = None
+        if annotated_mode is not None:
+            custom_annotation = [
+                nncf.CustomAnnotation(
+                    scope=nncf.CustomAnnotationScope(patterns=[".*"]),
+                    config=WeightCompressionConfig(mode=annotated_mode, group_size=8),
+                )
+            ]
 
         with SpyWeightCompressionStatisticsContext(mocker):
             _ = compress_weights(
@@ -365,6 +378,7 @@ class TemplateWeightCompression(ABC):
                 scale_estimation=True,
                 all_layers=True,
                 dataset=dataset,
+                custom_annotation=custom_annotation,
             )
 
         # Verify calculate_quantization_params was called
@@ -374,6 +388,10 @@ class TemplateWeightCompression(ABC):
         # Signature: calculate_quantization_params(statistics, weight, reduction_axes, config, act_ch_axis, ...)
         call_args = calc_q_params_spy.call_args[0]
         assert len(call_args) >= 5, "calculate_quantization_params should have at least 5 positional arguments"
+
+        # Verify the config is the annotated one, if the custom annotation is given
+        config = call_args[3]
+        assert config.mode == (annotated_mode or CompressWeightsMode.INT4_ASYM)
 
         # Verify act_ch_axis has a valid value (should be an integer)
         act_ch_axis = call_args[4]
@@ -698,10 +716,15 @@ class TemplateWeightCompression(ABC):
     @staticmethod
     @abstractmethod
     def get_ignored_scope_name(is_3d_weights) -> str:
-        "Returns ignored scope name for test_awq_with_ignored_scope."
+        "Returns the name of the node that is excluded from the 4 bit compression in test_awq_with_excluded_node."
 
     @pytest.mark.parametrize("is_3d_weights", [True, False])
-    def test_awq_with_ignored_scope(self, mocker, is_3d_weights):
+    @pytest.mark.parametrize("exclude_by_annotation", [False, True], ids=["ignored_scope", "custom_annotation"])
+    def test_awq_with_excluded_node(self, mocker, is_3d_weights, exclude_by_annotation):
+        """
+        Checks that a node is kept out of the 4 bit compression when AWQ is enabled, either by the ignored scope
+        or by a custom annotation with an 8-bit configuration.
+        """
         model = self.get_awq_model(non_mergable_pattern=False, is_3d_weights=is_3d_weights)
         sz = 8
         n_samples = 10
@@ -713,6 +736,19 @@ class TemplateWeightCompression(ABC):
             self.get_transform_func(),
         )
 
+        excluded_node_name = self.get_ignored_scope_name(is_3d_weights)
+        ignored_scope = None
+        custom_annotation = None
+        if exclude_by_annotation:
+            custom_annotation = [
+                nncf.CustomAnnotation(
+                    scope=nncf.CustomAnnotationScope(names=[excluded_node_name]),
+                    config=WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                )
+            ]
+        else:
+            ignored_scope = IgnoredScope(names=[excluded_node_name])
+
         with SpyWeightCompressionStatisticsContext(mocker):
             compressed_model = compress_weights(
                 model,
@@ -721,10 +757,11 @@ class TemplateWeightCompression(ABC):
                 group_size=-1,
                 dataset=dataset,
                 awq=True,
-                ignored_scope=IgnoredScope(names=[self.get_ignored_scope_name(is_3d_weights)]),
+                ignored_scope=ignored_scope,
+                custom_annotation=custom_annotation,
             )
 
-        int4_ref_num_compressed = 4  # last MatMul is always int8; one - is ignored; total 6 matmuls
+        int4_ref_num_compressed = 4  # last MatMul is always int8; one - is excluded; total 6 matmuls
         int4_num_nodes = self.get_num_int4_nodes(compressed_model)
         assert int4_num_nodes == int4_ref_num_compressed, int4_num_nodes
 
