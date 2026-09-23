@@ -637,7 +637,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
             raise NotImplementedError(msg)
         """
         Builds a model to be used in the following tests:
-            - TemplateWeightCompression.test_awq_with_ignored_scope()
+            - TemplateWeightCompression.test_awq_with_excluded_node()
             - TemplateWeightCompression.test_awq_scale_reference()
             - TemplateWeightCompression.test_error_message_for_invalid_group_size()
         tests.
