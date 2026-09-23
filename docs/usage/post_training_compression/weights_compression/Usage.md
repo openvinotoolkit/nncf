@@ -141,7 +141,7 @@ compressed_model = compress_weights(
   layer. A layer that is matched by both the `ignored_scope` and a custom annotation is compressed with the
   user-defined configuration and a warning is logged. If several annotations match the same layer, the last one takes
   precedence. A weight shared by several layers is compressed once, so annotating any of them applies the
-  configuration to this weight.
+  configuration to this weight. The codebook compression modes are not supported by an annotation.
 
 #### Data-aware methods
 

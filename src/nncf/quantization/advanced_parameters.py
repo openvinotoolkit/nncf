@@ -457,10 +457,9 @@ class AdvancedCompressionParameters:
 @dataclass
 class CustomAnnotation:
     """
-    Binds a user-defined weight compression configuration to a portion of a model.
+    Applies a user-defined weight compression configuration to a portion of a model.
     It overrides the configuration assigned by the weight compression algorithm, including the mixed precision
     algorithm and the `ignored_scope`, `all_layers` and `backup_mode` options.
-    If several annotations match the same node, the last one in the `custom_annotation` list wins.
 
     Example:
 
