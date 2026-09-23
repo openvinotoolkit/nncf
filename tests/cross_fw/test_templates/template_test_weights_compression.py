@@ -1027,6 +1027,13 @@ class TemplateWeightCompression(ABC):
         node sharing it.
         """
 
+    @staticmethod
+    @abstractmethod
+    def get_node_with_shared_weight_name() -> str:
+        """
+        Returns the name of the node from `get_shared_weight_model` that the shared weight is compressed under,
+        """
+
     def _compress_and_get_configs(self, **kwargs) -> dict[str, dict[str, Any]]:
         """
         Compresses a model and returns the compression config assigned to each compressed weight node.
@@ -1234,6 +1241,19 @@ class TemplateWeightCompression(ABC):
                 IgnoredScope(patterns=[".*"]),
                 id="shared_weight_ignored_other_node_annotated_first",
             ),
+            # The weight is compressed under the node that is not ignored, so the ignored one is not restored
+            pytest.param(
+                "shared_weight",
+                dict(ratio=1.0, all_layers=True),
+                [
+                    (
+                        nncf.CustomAnnotationScope(patterns=[".*"]),
+                        WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                    )
+                ],
+                None,
+                id="shared_weight_with_ignored_compressed_node",
+            ),
         ],
     )
     def test_custom_annotation(self, model_name, kwargs, annotations, ignored_scope, request):
@@ -1243,6 +1263,7 @@ class TemplateWeightCompression(ABC):
 
         Set the NNCF_TEST_REGEN_DOT environment variable to regenerate the reference file.
         """
+        test_id = request.node.callspec.id
         if model_name == "sequential_matmul":
             model = self.get_sequential_matmul_model(transpose_a=False)
         else:
@@ -1253,6 +1274,8 @@ class TemplateWeightCompression(ABC):
             nncf.CustomAnnotation(scope=shared_weight_scope if scope is None else scope, config=config)
             for scope, config in annotations
         ]
+        if test_id == "shared_weight_with_ignored_compressed_node":
+            ignored_scope = IgnoredScope(names=[self.get_node_with_shared_weight_name()])
 
         configs = self._compress_and_get_configs(
             model=model,
@@ -1263,7 +1286,7 @@ class TemplateWeightCompression(ABC):
             custom_annotation=custom_annotation,
         )
 
-        ref_path = self.get_custom_annotation_ref_path(request.node.callspec.id)
+        ref_path = self.get_custom_annotation_ref_path(test_id)
         if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
             dump_to_json(ref_path, configs)
 
@@ -1343,13 +1366,20 @@ class TemplateWeightCompression(ABC):
             pytest.param([nncf.CustomAnnotation(scope=nncf.IgnoredScope())], nncf.ValidationError, id="wrong_scope"),
             pytest.param([nncf.CustomAnnotation(config="anything")], nncf.ValidationError, id="wrong_config"),
             pytest.param(
+                [nncf.CustomAnnotation(config=WeightCompressionConfig(mode=CompressWeightsMode.CODEBOOK))],
+                nncf.ParameterNotSupportedError,
+                id="codebook_mode",
+            ),
+            pytest.param(
                 [
                     nncf.CustomAnnotation(
-                        config=WeightCompressionConfig(mode=CompressWeightsMode.CODEBOOK, codebook_values=None)
+                        config=WeightCompressionConfig(
+                            mode=CompressWeightsMode.INT4_SYM, group_size=-1, codebook_values=Tensor(CB4_QUANTILES)
+                        )
                     )
                 ],
-                nncf.ValidationError,
-                id="codebook_without_values",
+                nncf.ParameterNotSupportedError,
+                id="codebook_values",
             ),
             pytest.param(
                 [

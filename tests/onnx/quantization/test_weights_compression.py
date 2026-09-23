@@ -754,6 +754,10 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         return "MatMul_1"
 
     @staticmethod
+    def get_node_with_shared_weight_name() -> str:
+        return "MatMul_0"
+
+    @staticmethod
     def get_custom_annotation_ref_path(ref_name: str) -> Path:
         return CUSTOM_ANNOTATION_REFERENCES_DIR / f"{ref_name}.json"
 

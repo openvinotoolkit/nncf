@@ -179,12 +179,19 @@ def validate_custom_annotation(custom_annotation: list[CustomAnnotation] | None)
             )
             raise nncf.ValidationError(msg)
 
-        if annotation.config.is_codebook and annotation.config.codebook_values is None:
+        if annotation.config.is_codebook:
             msg = (
-                f"Codebook values must be provided in the custom annotation config for the "
-                f"{annotation.config.mode.value} compression mode."
+                "Codebook compression modes are not supported by the custom annotation, but the "
+                f"{annotation.config.mode.value} mode is given."
             )
-            raise nncf.ValidationError(msg)
+            raise nncf.ParameterNotSupportedError(msg)
+
+        if annotation.config.codebook_values is not None:
+            msg = (
+                "Codebook values are not supported by the custom annotation, but they are given for the "
+                f"{annotation.config.mode.value} mode."
+            )
+            raise nncf.ParameterNotSupportedError(msg)
 
         if annotation.config.mode in INT8_MODES and annotation.config.group_size != -1:
             msg = (
@@ -1347,13 +1354,12 @@ class WeightCompression(Algorithm):
         :param skipped_weight_params: List of weight compression parameters that are not compressed.
         :return: The updated tuple of all and skipped weight compression parameters.
         """
-        restored_weight_names = set()
+        compressed_weight_names = {w_params.weight_name for w_params in all_weight_params}
         restored_weight_params = []
         for w_params in skipped_weight_params:
-            # A weight is compressed under a single node, so a shared weight is restored only once
             is_annotated = w_params.weight_name in weight_name_to_config_mapping
-            if is_annotated and w_params.weight_name not in restored_weight_names:
-                restored_weight_names.add(w_params.weight_name)
+            if is_annotated and w_params.weight_name not in compressed_weight_names:
+                compressed_weight_names.add(w_params.weight_name)
                 restored_weight_params.append(w_params)
 
         if not restored_weight_params:
@@ -1364,6 +1370,7 @@ class WeightCompression(Algorithm):
             "by the custom annotation. They will be compressed with the user-defined configuration:\n\t"
             + "\n\t".join(sorted(w_params.node_with_weight.node_name for w_params in restored_weight_params))
         )
+        restored_weight_names = {w_params.weight_name for w_params in restored_weight_params}
         skipped_weight_params = [
             w_params for w_params in skipped_weight_params if w_params.weight_name not in restored_weight_names
         ]
