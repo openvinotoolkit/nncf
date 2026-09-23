@@ -1328,8 +1328,7 @@ class WeightCompression(Algorithm):
         for w_params in all_weight_params:
             config = weight_name_to_config_mapping.get(w_params.weight_name)
             if config is not None:
-                # A deep copy is required since some algorithms, e.g. codebook estimation, update the compression
-                # config of a weight parameter in place.
+                # A deep copy is required for some methods/modes like codebook
                 w_params.compression_config = copy.deepcopy(config)
                 annotated_weight_names.add(w_params.weight_name)
 
