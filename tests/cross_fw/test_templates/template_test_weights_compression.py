@@ -1206,6 +1206,34 @@ class TemplateWeightCompression(ABC):
                 None,
                 id="shared_weight_other_node_annotated_first",
             ),
+            # The nodes sharing a weight are annotated as a single one even if none of them is compressed,
+            # so that the last annotation takes precedence no matter which of the nodes it matches
+            pytest.param(
+                "shared_weight",
+                dict(ratio=1.0, all_layers=True),
+                [
+                    (
+                        nncf.CustomAnnotationScope(patterns=[".*"]),
+                        WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                    ),
+                    (None, WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=2)),
+                ],
+                IgnoredScope(patterns=[".*"]),
+                id="shared_weight_ignored_other_node_annotated_last",
+            ),
+            pytest.param(
+                "shared_weight",
+                dict(ratio=1.0, all_layers=True),
+                [
+                    (None, WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=2)),
+                    (
+                        nncf.CustomAnnotationScope(patterns=[".*"]),
+                        WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                    ),
+                ],
+                IgnoredScope(patterns=[".*"]),
+                id="shared_weight_ignored_other_node_annotated_first",
+            ),
         ],
     )
     def test_custom_annotation(self, model_name, kwargs, annotations, ignored_scope, request):
