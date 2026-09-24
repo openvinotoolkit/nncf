@@ -25,6 +25,7 @@ import pytest
 
 import nncf
 import nncf.tensor.functions as fns
+from nncf import BackupMode
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf import nncf_logger
@@ -346,9 +347,10 @@ class TemplateWeightCompression(ABC):
     def get_decompressed_weight(compressed_model: TModel, input: TTensor) -> Tensor:
         """Returns decompressed weight"""
 
+    @pytest.mark.parametrize("backup_mode", [BackupMode.INT8_ASYM, BackupMode.NONE], ids=["int8_backup", "no_backup"])
     @pytest.mark.parametrize("annotated_mode", [None, CompressWeightsMode.INT4_SYM], ids=["default", "annotated"])
     @pytest.mark.parametrize("transpose_a", [False, True], ids=["no_tr_a", "tr_a"])
-    def test_scale_estimation_act_ch_axis_param(self, mocker, transpose_a, annotated_mode):
+    def test_scale_estimation_act_ch_axis_param(self, mocker, transpose_a, annotated_mode, backup_mode):
         """
         Checks that act_ch_axis parameter and the config defined by the custom annotation are passed to
         calculate_quantization_params.
@@ -377,6 +379,7 @@ class TemplateWeightCompression(ABC):
                 group_size=8,
                 scale_estimation=True,
                 all_layers=True,
+                backup_mode=backup_mode,
                 dataset=dataset,
                 custom_annotation=custom_annotation,
             )
@@ -668,17 +671,36 @@ class TemplateWeightCompression(ABC):
 
     @pytest.mark.parametrize("is_3d_weights", [True, False])
     @pytest.mark.parametrize("with_multiply", (True, False))
+    @pytest.mark.parametrize("annotate_all", [False, True], ids=["default", "annotated"])
     def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(
-        self, int4_mode, with_multiply, is_3d_weights, mocker
+        self, int4_mode, with_multiply, is_3d_weights, annotate_all, mocker
     ):
         n_layers = 8
-        n_awq_target = n_layers - 1  # first MatMul is always int8
+        # The first MatMul is always int8, unless the custom annotation assigns 4 bits to it
+        n_awq_target = n_layers if annotate_all else n_layers - 1
         model = self.get_awq_act_model(is_3d_weights, with_multiply, n_layers)
 
         dataset = Dataset([self.to_tensor(np.ones([2, 8, 8], dtype=np.float32))], self.get_transform_func())
 
+        custom_annotation = None
+        if annotate_all:
+            custom_annotation = [
+                nncf.CustomAnnotation(
+                    scope=nncf.CustomAnnotationScope(patterns=[".*"]),
+                    config=WeightCompressionConfig(mode=int4_mode, group_size=2),
+                )
+            ]
+
         with SpyWeightCompressionStatisticsContext(mocker):
-            model = compress_weights(model, mode=int4_mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
+            model = compress_weights(
+                model,
+                mode=int4_mode,
+                ratio=1.0,
+                group_size=2,
+                dataset=dataset,
+                awq=True,
+                custom_annotation=custom_annotation,
+            )
 
         awq_num = self.get_num_multiply_from_awq(model)
         assert awq_num == n_awq_target

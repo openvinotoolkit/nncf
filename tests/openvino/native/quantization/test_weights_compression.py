@@ -1961,6 +1961,7 @@ def test_data_free_compression_with_backup_mode(backup_mode):
     assert act_num == num_compressed
 
 
+@pytest.mark.parametrize("annotate", [False, True], ids=["default", "annotated"])
 @pytest.mark.parametrize("backup_mode", [BackupMode.NONE, BackupMode.INT8_ASYM, BackupMode.INT8_SYM])
 @pytest.mark.parametrize(
     ("params", "num_compressed"),
@@ -1977,11 +1978,21 @@ def test_data_free_compression_with_backup_mode(backup_mode):
         ({"awq": True}, 6),
     ),
 )
-def test_data_based_compression_with_backup_mode(backup_mode, params, num_compressed):
+def test_data_based_compression_with_backup_mode(backup_mode, params, num_compressed, annotate):
     model = AWQMatmulModel().ov_model
     sz = 8
     n_samples = 10
     dataset = Dataset([np.ones([1, i + 1, sz]) for i in range(n_samples)])
+
+    custom_annotation = None
+    if annotate:
+        custom_annotation = [
+            nncf.CustomAnnotation(
+                scope=nncf.CustomAnnotationScope(names=["MatMul_1"]),
+                config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=-1),
+            )
+        ]
+        num_compressed = 6
 
     compressed_model = compress_weights(
         model,
@@ -1990,9 +2001,11 @@ def test_data_based_compression_with_backup_mode(backup_mode, params, num_compre
         group_size=-1,
         dataset=dataset,
         backup_mode=backup_mode,
+        custom_annotation=custom_annotation,
         **params,
     )
     act_num = 0
+    annotated_num = 0
     if backup_mode == BackupMode.INT8_ASYM:
         backup_ov_mode = ov.Type.u8
     elif backup_mode == BackupMode.INT8_SYM:
@@ -2003,6 +2016,8 @@ def test_data_based_compression_with_backup_mode(backup_mode, params, num_compre
         if op.get_type_name() == "Constant":
             if op.get_element_type() == ov.Type.u4:
                 act_num += 1
+            elif op.get_element_type() == ov.Type.i4:
+                annotated_num += 1
             elif "/scale" in op.get_friendly_name():
                 assert op.get_element_type() == ov.Type.f16
             elif "_lora_" in op.get_friendly_name():
@@ -2010,6 +2025,7 @@ def test_data_based_compression_with_backup_mode(backup_mode, params, num_compre
             else:
                 assert op.get_element_type() == backup_ov_mode
     assert act_num == num_compressed
+    assert annotated_num == (1 if annotate else 0)
 
 
 @pytest.mark.parametrize(

@@ -1019,7 +1019,18 @@ class WeightCompression(Algorithm):
         """
         if not dataset or not (self._data_aware_mixed_precision or self._data_aware_compression):
             return None, statistic_points
-        weight_params = ratio_defining_params if self._backup_mode == BackupMode.NONE else all_weight_params
+        weight_params = all_weight_params
+        if self._backup_mode == BackupMode.NONE:
+            # Only the compressed weights need statistics. When backup mode is none, only ratio defining params are
+            # considered. In the case of custom annotation, some weights may be considered backup nodes, but they
+            # may also be annotated. This ensures that such annotated nodes are also considered for statistics
+            # collection.
+            ratio_defining_weight_names = set(wp.weight_name for wp in ratio_defining_params)
+            weight_params = ratio_defining_params + [
+                wp
+                for wp in all_weight_params
+                if wp.weight_name not in ratio_defining_weight_names and wp.compression_config is not None
+            ]
         matmul_nodes_to_compress = [
             wp.node_with_weight
             for wp in weight_params
