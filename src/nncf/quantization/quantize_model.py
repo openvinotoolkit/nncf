@@ -535,7 +535,7 @@ def compress_weights(
     :type custom_annotation: list[nncf.CustomAnnotation]
     :return: The non-trainable model with compressed weights.
     """
-    validate_custom_annotation(custom_annotation)
+    validate_custom_annotation(custom_annotation, advanced_parameters)
 
     backend = get_backend(model)
     compression_weights_impl: Callable[..., Any] | None = None

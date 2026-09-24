@@ -145,23 +145,27 @@ def validate_fixed_group_size(
         msg = f"{mode.value} type only supports group size of {fixed_group_size}, group size of {group_size} is given"
         raise nncf.ValidationError(msg)
     if (
-        mode in FIXED_GROUP_SIZE_MODES
+        fixed_group_size is not None
         and advanced_parameters
         and advanced_parameters.group_size_fallback_mode is GroupSizeFallbackMode.ADJUST
     ):
         msg = (
-            "MXFP4, MXFP8_E4M3 and NVFP4 types do not support the group size"
+            f"{mode.value} type only supports group size of {fixed_group_size}, so it does not support the group size"
             f" fallback mode {advanced_parameters.group_size_fallback_mode.value}."
             " Please use other group size fallback mode."
         )
         raise nncf.ValidationError(msg)
 
 
-def validate_custom_annotation(custom_annotation: list[CustomAnnotation] | None) -> None:
+def validate_custom_annotation(
+    custom_annotation: list[CustomAnnotation] | None,
+    advanced_parameters: AdvancedCompressionParameters | None = None,
+) -> None:
     """
     Validates the user-defined custom annotation.
 
     :param custom_annotation: List of custom annotations to validate.
+    :param advanced_parameters: Advanced compression parameters that may affect the validation.
     """
     if custom_annotation is None:
         return
@@ -217,7 +221,7 @@ def validate_custom_annotation(custom_annotation: list[CustomAnnotation] | None)
             )
             raise nncf.ParameterNotSupportedError(msg)
 
-        validate_fixed_group_size(annotation.config.mode, annotation.config.group_size)
+        validate_fixed_group_size(annotation.config.mode, annotation.config.group_size, advanced_parameters)
 
 
 def check_user_compression_configuration(
