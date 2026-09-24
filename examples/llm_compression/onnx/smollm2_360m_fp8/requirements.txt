@@ -7,4 +7,4 @@ transformers==5.5.0
 onnx==1.23.0
 onnxruntime==1.23.2; python_version < '3.11'
 onnxruntime==1.30.0; python_version >= '3.11'
-torch==2.13.0
+torch==2.14.0
