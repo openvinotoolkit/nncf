@@ -22,6 +22,9 @@ on:
         type: string
         required: false
 
+env:
+  UV_SYSTEM_PYTHON: 'true'
+
 jobs:
   common:
     timeout-minutes: 40
@@ -46,7 +49,7 @@ jobs:
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: uv pip install --system . -r tests/common/requirements.txt
+        run: make install-common
       - name: Print installed modules
         run: pip list
       - name: Run common precommit test scope
@@ -77,7 +80,7 @@ jobs:
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: uv pip install --system . -r tests/onnx/requirements.txt
+        run: make install-onnx
       - name: Print installed modules
         run: pip list
       - name: Run ONNX precommit test scope
@@ -108,7 +111,7 @@ jobs:
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: uv pip install --system . -r tests/openvino/requirements.txt
+        run: make install-openvino
       - name: Print installed modules
         run: pip list
       - name: Run OV precommit test scope
@@ -135,11 +138,11 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
       - name: Install test requirements
-        run: uv pip install --system . -r tests/tools/requirements.txt
+        run: make install-tools
       - name: Print installed modules
         run: pip list
       - name: Run tools precommit test scope
-        run: pytest -ra tests/tools
+        run: make test-tools
 
   pytorch-cpu:
     timeout-minutes: 40
@@ -164,11 +167,13 @@ jobs:
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: uv pip install --system . -r tests/torch/requirements.txt
+        run: make install-torch
       - name: Print installed modules
         run: pip list
       - name: Run torch precommit test scope
-        run: pytest -ra -n2 --durations=30 tests/torch -m "not cuda and not long"
+        run: make test-torch-cpu
+        env:
+          NUM_WORKERS: 2
 
   pytorch-cuda:
     timeout-minutes: 40
@@ -206,16 +211,16 @@ jobs:
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
         shell: bash
       - name: Install NNCF and test requirements
-        run: uv pip install --system . -r tests/torch/requirements.txt --index-strategy unsafe-best-match
+        run: make install-torch
         env:
           UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cu126  # TODO(AlexanderDokuchaev): Remove when update ci to use cuda13
+          # CMD_INSTALL: uv pip install --index-strategy unsafe-best-match
       - name: Print installed modules
         run: pip list
       - name: Check CUDA
         run: |
           python -c "import torch; print(torch.cuda.is_available())"
       - name: Run PyTorch precommit test scope
-        run: |
-          pytest -ra --durations=30 tests/torch -m "cuda and not long"
+        run: make test-torch-gpu
         env:
           PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cu126  # TODO(AlexanderDokuchaev): Remove when update ci to use cuda13
