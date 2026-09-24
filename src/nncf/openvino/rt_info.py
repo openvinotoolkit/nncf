@@ -38,15 +38,11 @@ def exclude_empty_fields(value: dict[str, Any]) -> dict[str, Any]:
 def compression_config_to_dict(config: WeightCompressionConfig) -> dict[str, Any]:
     """
     Converts a weight compression config into a dictionary suitable for dumping into Model's meta section.
-    Codebook values are saved as their size since the values themselves are too large to be dumped.
 
     :param config: Weight compression config.
     :return: Dictionary with the compression config parameters.
     """
-    value: dict[str, Any] = {"mode": config.mode.value, "group_size": config.group_size}
-    if config.codebook_values is not None:
-        value["codebook_size"] = config.codebook_values.size
-    return value
+    return {"mode": config.mode.value, "group_size": config.group_size}
 
 
 def dump_parameters(
