@@ -1,165 +1,111 @@
-JUNITXML_PATH ?= nncf-tests.xml
-
-ifdef NNCF_COVERAGE
-	COVERAGE_ARGS ?= --cov=./ --cov-report=xml
-else
-	COVERAGE_ARGS :=
-endif
-
-ifdef DATA
-	DATA_ARG := --data $(DATA)
-endif
-
-ifdef WEEKLY_MODELS
-	WEEKLY_MODELS_ARG := --weekly-models $(WEEKLY_MODELS)
-endif
+ARGS := $(wordlist 2, $(words $(MAKECMDGOALS)), $(MAKECMDGOALS))
 
 ifdef NUM_WORKERS
 	NUM_WORKERS_ARG := -n${NUM_WORKERS}
 endif
 
-install-pre-commit:
-	pip install pre-commit==4.3.0
+GENERAL_PYTEST_ARGS := $(NUM_WORKERS_ARG) -ra --durations=30
+CMD_INSTALL := uv pip install
+CMD_PYTEST := python -m pytest
 
-
-###############################################################################
-# ONNX backend
-install-onnx-test:
-	pip install -U pip
-	pip install -e .
-	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@e7df86da686d2e1600282422e54f66c2fecea160#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
-	pip install -r tests/onnx/requirements.txt
-	pip install -r tests/cross_fw/install/requirements.txt
-	pip install -r tests/cross_fw/examples/requirements.txt
-	pip install -r tests/onnx/benchmarking/requirements.txt
-
-install-onnx-dev: install-onnx-test install-pre-commit
-	pip install -r examples/post_training_quantization/onnx/mobilenet_v2/requirements.txt
-
-test-onnx:
-	pytest ${COVERAGE_ARGS} ${NUM_WORKERS_ARG} -ra tests/onnx $(DATA_ARG) --junitxml ${JUNITXML_PATH}
-
-
-test-install-onnx:
-	pytest tests/cross_fw/install -s       \
-		--backend onnx                      \
-		--junitxml ${JUNITXML_PATH}
-
-test-examples-onnx:
-	pytest tests/cross_fw/examples -s       \
-		--backend onnx                      \
-		--junitxml ${JUNITXML_PATH}
-
-###############################################################################
-# OpenVino backend
-install-openvino-test:
-	pip install -U pip
-	pip install -e .
-	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@e7df86da686d2e1600282422e54f66c2fecea160#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
-	pip install -r tests/openvino/requirements.txt
-	pip install -r tests/cross_fw/install/requirements.txt
-	pip install -r tests/cross_fw/examples/requirements.txt
-
-install-openvino-dev: install-openvino-test install-pre-commit
-	pip install -r examples/post_training_quantization/openvino/mobilenet_v2/requirements.txt
-	pip install -r examples/post_training_quantization/openvino/yolov8/requirements.txt
-	pip install -r examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/requirements.txt
-
-test-openvino:
-	ONEDNN_MAX_CPU_ISA=AVX2 pytest ${COVERAGE_ARGS} ${NUM_WORKERS_ARG} -ra tests/openvino $(DATA_ARG) \
-		--junitxml ${JUNITXML_PATH} --dist loadscope
-
-test-install-openvino:
-	pytest tests/cross_fw/install -s        \
-		--backend openvino                  \
-		--junitxml ${JUNITXML_PATH}
-
-test-examples-openvino:
-	pytest tests/cross_fw/examples -s        \
-		--backend openvino                  \
-		--junitxml ${JUNITXML_PATH}
-
-
-###############################################################################
-# PyTorch backend
-install-torch-test:
-	pip install -U pip
-	pip install -e .
-	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@e7df86da686d2e1600282422e54f66c2fecea160#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
-	pip install -r tests/torch/requirements.txt
-	pip install -r tests/cross_fw/install/requirements.txt
-	pip install -r tests/cross_fw/examples/requirements.txt
-
-install-torch-dev: install-torch-test install-pre-commit
-	pip install -r examples/post_training_quantization/torch/mobilenet_v2/requirements.txt
-	pip install -r examples/post_training_quantization/torch/ssd300_vgg16/requirements.txt
-
-install-models-hub-torch:
-	pip install -U pip
-	pip install -e .
-	pip install -r tests/torch/models_hub_test/requirements.txt
-	# Install wheel to run pip with --no-build-isolation
-	pip install wheel
-	pip install --no-build-isolation -r tests/torch/models_hub_test/requirements_secondary.txt
-
-
-test-torch:
-	pytest ${COVERAGE_ARGS} tests/torch -m "not weekly and not nightly and not models_hub and not legacy" --junitxml ${JUNITXML_PATH} $(DATA_ARG)
-
-test-torch-cpu:
-	pytest ${COVERAGE_ARGS} ${NUM_WORKERS_ARG} tests/torch -ra -m "not cuda and not weekly and not nightly and not models_hub and not legacy" --junitxml ${JUNITXML_PATH}
-
-test-torch-cuda:
-	pytest ${COVERAGE_ARGS} tests/torch -ra -m "cuda and not weekly and not nightly and not models_hub and not legacy" --junitxml ${JUNITXML_PATH}
-
-test-torch-nightly:
-	pytest ${COVERAGE_ARGS} tests/torch -m "long or legacy" --junitxml ${JUNITXML_PATH} $(DATA_ARG)
-
-test-torch-weekly:
-	pytest ${COVERAGE_ARGS} tests/torch -m weekly \
-	    --junitxml ${JUNITXML_PATH} $(DATA_ARG)  ${WEEKLY_MODELS_ARG}
-
-test-install-torch-cpu:
-	pytest tests/cross_fw/install -s       \
-		--backend torch                     \
-		--host-configuration cpu            \
-		--junitxml ${JUNITXML_PATH}
-
-test-install-torch-gpu:
-	pytest tests/cross_fw/install -s        \
-		--backend torch                     \
-		--junitxml ${JUNITXML_PATH}
-
-test-examples-torch:
-	pytest tests/cross_fw/examples -s        \
-		--backend torch                     \
-		--junitxml ${JUNITXML_PATH}
 
 ###############################################################################
 # Common part
-install-common-test:
-	pip install -U pip
-	pip install -e .
-	pip install -r tests/common/requirements.txt
-	pip install -r tests/cross_fw/install/requirements.txt
-	pip install -r tests/cross_fw/examples/requirements.txt
+###############################################################################
+install-common:
+	$(CMD_INSTALL) -e . -r tests/common/requirements.txt
 
 test-common:
-	pytest ${COVERAGE_ARGS} ${NUM_WORKERS_ARG} -ra tests/common $(DATA_ARG) --junitxml ${JUNITXML_PATH}
+	$(CMD_PYTEST) tests/common $(GENERAL_PYTEST_ARGS) $(ARGS)
+
+
+###############################################################################
+# OpenVINO
+###############################################################################
+install-openvino:
+	$(CMD_INSTALL) -e . -r tests/openvino/requirements.txt
+
+test-openvino:
+	$(CMD_PYTEST) tests/openvino $(GENERAL_PYTEST_ARGS) $(ARGS)
+
+
+###############################################################################
+# PyTorch
+###############################################################################
+install-torch:
+	$(CMD_INSTALL) -e . -r tests/torch/requirements.txt
+
+test-torch:
+	$(CMD_PYTEST) tests/torch $(GENERAL_PYTEST_ARGS) $(ARGS)
+
+test-torch-cpu:
+	$(CMD_PYTEST) tests/torch -m "not cuda and not long" $(GENERAL_PYTEST_ARGS) $(ARGS)
+
+test-torch-gpu:
+	$(CMD_PYTEST) tests/torch -m "cuda and not long" $(GENERAL_PYTEST_ARGS) $(ARGS)
+
+test-torch-long:
+	$(CMD_PYTEST) tests/torch -m "long" $(GENERAL_PYTEST_ARGS) $(ARGS)
+
+
+###############################################################################
+# ONNX
+###############################################################################
+install-onnx:
+	$(CMD_INSTALL) -e . -r tests/onnx/requirements.txt
+
+test-onnx:
+	$(CMD_PYTEST) tests/onnx $(GENERAL_PYTEST_ARGS) $(ARGS)
+
+
+###############################################################################
+# Examples
+###############################################################################
+install-examples:
+	$(CMD_INSTALL) -r tests/cross_fw/examples/requirements.txt
 
 test-examples:
-	pytest tests/cross_fw/examples -s --junitxml ${JUNITXML_PATH}
+	$(CMD_PYTEST) $(GENERAL_PYTEST_ARGS) -s tests/cross_fw/examples $(ARGS)
+
 
 ###############################################################################
-# Pre commit check
-pre-commit:
+# Conformance
+###############################################################################
+install-conformance:
+	$(CMD_INSTALL) -e . -r tests/post_training/requirements.txt
+
+test-conformance-ptq:
+	$(CMD_PYTEST) $(GENERAL_PYTEST_ARGS) -s tests/post_training/test_quantize_conformance.py::test_ptq_quantization $(ARGS)
+
+test-conformance-wc:
+	$(CMD_PYTEST) $(GENERAL_PYTEST_ARGS) -s tests/post_training/test_quantize_conformance.py::test_weight_compression $(ARGS)
+
+
+###############################################################################
+# Docs
+###############################################################################
+install-docs:
+	$(CMD_INSTALL) -r tests/docs/requirements.txt
+
+test-docs:
+	$(CMD_PYTEST) tests/docs $(GENERAL_PYTEST_ARGS) $(ARGS)
+
+
+###############################################################################
+# Tools
+###############################################################################
+install-tools:
+	$(CMD_INSTALL) -e . -r tests/tools/requirements.txt
+
+test-tools:
+	$(CMD_PYTEST) tests/tools $(GENERAL_PYTEST_ARGS) $(ARGS)
+
+
+###############################################################################
+# Linters
+###############################################################################
+install-lint:
+	$(CMD_INSTALL) pre-commit
+
+lint:
 	pre-commit run -a
-
-
-###############################################################################
-# Fuzzing tests
-install-fuzz-test: install-common-test
-	pip install -r tests/cross_fw/sdl/fuzz/requirements.txt
-
-test-fuzz:
-	python tests/cross_fw/sdl/fuzz/quantize_api.py
