@@ -126,7 +126,7 @@ jobs:
         run: make install-torch
         env:
           UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cu126  # TODO(AlexanderDokuchaev): Remove when update ci to use cuda13
-          # CMD_INSTALL: uv pip install --index-strategy unsafe-best-match
+          UV_INDEX_STRATEGY: unsafe-best-match
       - name: Print installed modules
         run: pip list
       - name: Check CUDA
