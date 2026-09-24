@@ -979,7 +979,7 @@ def test_nvfp4_optimized_scale_compression():
     The optimized path is forced via patching to avoid needing a large weight tensor.
     """
     weight = Tensor(np.random.randn(2, 16).astype(np.float32))
-    config = WeightCompressionConfig(mode=CompressWeightsMode.NVFP4)
+    config = WeightCompressionConfig(mode=CompressWeightsMode.NVFP4, group_size=-1)
     reduction_axes = -1
 
     # Force the optimized OV path for all tensors regardless of size
@@ -1510,7 +1510,7 @@ def test_int_compressed_weighs_range(mode, data):
     data = np.array(data).astype(np.float32)
     w = Tensor(data)
 
-    config = WeightCompressionConfig(mode=mode)
+    config = WeightCompressionConfig(mode=mode, group_size=-1)
     compressed_weight = do_integer_quantization(w, config, -1)
 
     assert np.allclose(np.abs(compressed_weight.tensor.data), np.abs(w.data))
@@ -1614,7 +1614,7 @@ def test_float_compressed_weighs_range(mode, id_, data):
     data = np.array(data).astype(np.float32)
     w = Tensor(data)
 
-    config = WeightCompressionConfig(mode=mode)
+    config = WeightCompressionConfig(mode=mode, group_size=-1)
     cw = do_float_quantization(w, config, -1)
 
     decompressed_weight = do_float_dequantization(cw, -1).data
@@ -1659,18 +1659,18 @@ def test_codebook_weights_range(data):
         (WeightCompressionConfig(CompressWeightsMode.INT8_ASYM), True, True, False),
         (WeightCompressionConfig(CompressWeightsMode.INT8_ASYM), True, False, True),
         (WeightCompressionConfig(CompressWeightsMode.INT8_ASYM), False, True, True),
-        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM), False, False, False),
-        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM), True, True, False),
-        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM), True, False, True),
-        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM), False, True, True),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, group_size=-1), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, group_size=-1), True, True, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, group_size=-1), True, False, True),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, group_size=-1), False, True, True),
         (WeightCompressionConfig(CompressWeightsMode.INT8_SYM), True, False, False),
         (WeightCompressionConfig(CompressWeightsMode.INT8_SYM), False, False, False),
-        (WeightCompressionConfig(CompressWeightsMode.INT4_SYM), True, False, False),
-        (WeightCompressionConfig(CompressWeightsMode.INT4_SYM), False, False, False),
-        (WeightCompressionConfig(CompressWeightsMode.INT3_SYM), True, False, False),
-        (WeightCompressionConfig(CompressWeightsMode.INT3_SYM), False, False, False),
-        (WeightCompressionConfig(CompressWeightsMode.INT2_SYM), True, False, False),
-        (WeightCompressionConfig(CompressWeightsMode.INT2_SYM), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_SYM, group_size=-1), True, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_SYM, group_size=-1), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT3_SYM, group_size=-1), True, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT3_SYM, group_size=-1), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT2_SYM, group_size=-1), True, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT2_SYM, group_size=-1), False, False, False),
     ],
 )
 def test_int_quantization_with_precomputed_parameters(config, precompute_scale, precompute_zero_point, raises):

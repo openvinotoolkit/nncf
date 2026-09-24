@@ -61,22 +61,22 @@ INT8_COMPRESSION_CONFIGS = [
 ]
 
 INT4_COMPRESSION_CONFIGS = [
-    WeightCompressionConfig(CompressWeightsMode.INT4_ASYM),
-    WeightCompressionConfig(CompressWeightsMode.INT4_SYM),
+    WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, group_size=-1),
+    WeightCompressionConfig(CompressWeightsMode.INT4_SYM, group_size=-1),
     WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, group_size=2),
     WeightCompressionConfig(CompressWeightsMode.INT4_SYM, group_size=2),
 ]
 
 FP4_COMPRESSION_CONFIGS = [
-    WeightCompressionConfig(CompressWeightsMode.NF4),
-    WeightCompressionConfig(CompressWeightsMode.FP4),
+    WeightCompressionConfig(CompressWeightsMode.NF4, group_size=-1),
+    WeightCompressionConfig(CompressWeightsMode.FP4, group_size=-1),
     WeightCompressionConfig(CompressWeightsMode.NF4, group_size=2),
     WeightCompressionConfig(CompressWeightsMode.FP4, group_size=2),
     WeightCompressionConfig(CompressWeightsMode.MXFP4, group_size=32),
 ]
 
 FP8_COMPRESSION_CONFIGS = [
-    WeightCompressionConfig(CompressWeightsMode.FP8_E4M3),
+    WeightCompressionConfig(CompressWeightsMode.FP8_E4M3, group_size=-1),
     WeightCompressionConfig(CompressWeightsMode.FP8_E4M3, group_size=2),
     WeightCompressionConfig(CompressWeightsMode.MXFP8_E4M3, group_size=32),
 ]

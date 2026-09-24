@@ -180,7 +180,7 @@ def do_float_quantization(
     weight_config.mode = CompressWeightsMode.FP4
     compressed_weight = _do_float_quantization_single_scale(weight, weight_config, reduction_axes)
 
-    scale_config = WeightCompressionConfig(mode=CompressWeightsMode.FP8_E4M3)
+    scale_config = WeightCompressionConfig(mode=CompressWeightsMode.FP8_E4M3, group_size=-1)
     # Explicit reduction_axes are required for the optimized OV path,
     # which does not support reduction_axes=None.
     scale_reduction_axes = tuple(range(compressed_weight.scale.ndim))

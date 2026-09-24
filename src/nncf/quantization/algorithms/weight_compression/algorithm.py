@@ -43,7 +43,9 @@ from nncf.quantization.advanced_parameters import GroupSizeFallbackMode
 from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
+from nncf.quantization.algorithms.weight_compression.config import FIXED_GROUP_SIZE_MODES
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.config import get_default_group_size
 from nncf.quantization.algorithms.weight_compression.constants import CB4_QUANTILES
 from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
@@ -63,11 +65,6 @@ TTensor = TypeVar("TTensor")
 
 INT8_MODES = [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]
 NON_INT8_MODES = [mode for mode in CompressWeightsMode if mode not in INT8_MODES]
-FIXED_GROUP_SIZE_MODES = {
-    CompressWeightsMode.MXFP4: 32,
-    CompressWeightsMode.MXFP8_E4M3: 32,
-    CompressWeightsMode.NVFP4: 16,
-}
 SUPPORTED_DATA_TYPES = [
     TensorDataType.float16,
     TensorDataType.bfloat16,
@@ -97,21 +94,8 @@ def get_weight_compression_configuration(
     """
     Generates a configuration dictionary for weight compression based on the provided parameters.
     """
-    if group_size is None and mode in INT8_MODES:
-        group_size = -1
-    elif group_size is None and mode in NON_INT8_MODES:
-        if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
-            group_size = 32
-        elif mode == CompressWeightsMode.NVFP4:
-            group_size = 16
-        elif mode in [
-            CompressWeightsMode.CODEBOOK,
-            CompressWeightsMode.CB4,
-            CompressWeightsMode.ADAPTIVE_CODEBOOK,
-        ]:
-            group_size = -1
-        else:
-            group_size = 128
+    if group_size is None:
+        group_size = get_default_group_size(mode)
 
     if backup_mode is None:
         if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
