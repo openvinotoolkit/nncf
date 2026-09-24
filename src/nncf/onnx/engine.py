@@ -36,7 +36,7 @@ class ONNXEngine(Engine):
             )
 
         rt_session_options["providers"] = ["CPUExecutionProvider"]
-        rt_session_options["graph_optimization_level"] = rt.GraphOptimizationLevel.ORT_ENABLE_BASIC
+        rt_session_options["graph_optimization_level"] = rt.GraphOptimizationLevel.ORT_DISABLE_ALL
 
         serialized_model = model.SerializeToString()
         self.sess = rt.InferenceSession(serialized_model, sees_options, **rt_session_options)
