@@ -400,6 +400,7 @@ def _validate_compression_modes_supported_by_backend(
     not_supported_modes: list[CompressWeightsMode],
     mode: CompressWeightsMode,
     custom_annotation: list[CustomAnnotation] | None,
+    msg: str | None = None,
 ) -> None:
     """
     Checks that neither the compression mode nor the mode defined by the custom annotation
@@ -409,14 +410,16 @@ def _validate_compression_modes_supported_by_backend(
     :param not_supported_modes: List of the compression modes that are not supported by the backend.
     :param mode: Compression mode of the algorithm.
     :param custom_annotation: List of the user-defined weight compression configurations, if given.
+    :param msg: Error message to use instead of the default one
     :raises nncf.ParameterNotSupportedError: If any of the given modes is not supported by the backend.
     """
     given_modes = [mode] + [annotation.config.mode for annotation in custom_annotation or []]
     if any(given_mode in not_supported_modes for given_mode in given_modes):
-        msg = (
-            f"{backend_name} backend does not support {[m.value for m in not_supported_modes]} modes "
-            "for weight compression."
-        )
+        if msg is None:
+            msg = (
+                f"{backend_name} backend does not support {[m.value for m in not_supported_modes]} modes "
+                "for weight compression."
+            )
         raise nncf.ParameterNotSupportedError(msg)
 
 
@@ -637,12 +640,18 @@ def compress_weights(
                 CompressWeightsMode.FP4,
                 CompressWeightsMode.NVFP4,
             ]
-            if mode in not_supported_modes:
-                msg = (
-                    "AWQ, Scale estimation, GPTQ or Lora Correction algorithm is defined,"
-                    f" but mode in {[m.value for m in not_supported_modes]}."
-                )
-                raise nncf.ParameterNotSupportedError(msg)
+            msg = (
+                "AWQ, Scale estimation, GPTQ or Lora Correction algorithm is defined,"
+                f" but mode in {[m.value for m in not_supported_modes]}."
+            )
+
+            _validate_compression_modes_supported_by_backend(
+                "OpenVINO",
+                not_supported_modes,
+                mode,
+                custom_annotation,
+                msg=msg,
+            )
 
         if gptq and lora_correction:
             msg = "Simultaneous use of Lora correction and GPTQ algorithms is not supported. Select one of them."
