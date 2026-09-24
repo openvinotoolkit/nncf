@@ -63,6 +63,11 @@ TTensor = TypeVar("TTensor")
 
 INT8_MODES = [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]
 NON_INT8_MODES = [mode for mode in CompressWeightsMode if mode not in INT8_MODES]
+FIXED_GROUP_SIZE_MODES = {
+    CompressWeightsMode.MXFP4: 32,
+    CompressWeightsMode.MXFP8_E4M3: 32,
+    CompressWeightsMode.NVFP4: 16,
+}
 SUPPORTED_DATA_TYPES = [
     TensorDataType.float16,
     TensorDataType.bfloat16,
@@ -141,6 +146,19 @@ def get_weight_compression_configuration(
     }
 
 
+def validate_fixed_group_size(mode: CompressWeightsMode, group_size: int | None) -> None:
+    """
+    Validates the group size requested for a mode which accepts only specific group sizes.
+
+    :param mode: Compression mode to validate.
+    :param group_size: Group size requested for the given mode. None means that the default value is used.
+    """
+    fixed_group_size = FIXED_GROUP_SIZE_MODES.get(mode)
+    if fixed_group_size is not None and group_size not in [None, fixed_group_size]:
+        msg = f"{mode.value} type only supports group size of {fixed_group_size}, group size of {group_size} is given"
+        raise nncf.ValidationError(msg)
+
+
 def validate_custom_annotation(custom_annotation: list[CustomAnnotation] | None) -> None:
     """
     Validates the user-defined custom annotation.
@@ -200,6 +218,8 @@ def validate_custom_annotation(custom_annotation: list[CustomAnnotation] | None)
                 f"group_size={annotation.config.group_size} is given."
             )
             raise nncf.ParameterNotSupportedError(msg)
+
+        validate_fixed_group_size(annotation.config.mode, annotation.config.group_size)
 
 
 def check_user_compression_configuration(
@@ -342,22 +362,19 @@ def check_user_compression_configuration(
             f"Supported modes are: {[e.value for e in GroupSizeFallbackMode]}."
         )
         raise nncf.ValidationError(msg)
-    if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3, CompressWeightsMode.NVFP4]:
-        if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3] and group_size not in [None, 32]:
-            msg = f"MXFP4 and MXFP8_E4M3 types only support group size of 32, group size of {group_size} is given"
-            raise nncf.ValidationError(msg)
 
-        if mode == CompressWeightsMode.NVFP4 and group_size not in [None, 16]:
-            msg = f"NVFP4 type only supports group size of 16, group size of {group_size} is given"
-            raise nncf.ValidationError(msg)
-
-        if advanced_parameters and advanced_parameters.group_size_fallback_mode is GroupSizeFallbackMode.ADJUST:
-            msg = (
-                "MXFP4, MXFP8_E4M3 and NVFP4 types do not support the group size"
-                f" fallback mode {advanced_parameters.group_size_fallback_mode.value}."
-                " Please use other group size fallback mode."
-            )
-            raise nncf.ValidationError(msg)
+    validate_fixed_group_size(mode, group_size)
+    if (
+        mode in FIXED_GROUP_SIZE_MODES
+        and advanced_parameters
+        and advanced_parameters.group_size_fallback_mode is GroupSizeFallbackMode.ADJUST
+    ):
+        msg = (
+            "MXFP4, MXFP8_E4M3 and NVFP4 types do not support the group size"
+            f" fallback mode {advanced_parameters.group_size_fallback_mode.value}."
+            " Please use other group size fallback mode."
+        )
+        raise nncf.ValidationError(msg)
 
 
 class WeightCompression(Algorithm):
@@ -745,7 +762,7 @@ class WeightCompression(Algorithm):
                 for name, channel_size, group_size in failed_nodes
             )
             msg = (
-                f"Failed to apply group-wise quantization with group size value {self._group_size}.\n"
+                "Failed to apply group-wise quantization with the requested group size value.\n"
                 "Ensure that the group size is divisible by the channel size, "
                 "or consider setting `group_size_fallback_mode` to IGNORE or ADJUST. Failed nodes:\n\t" + names
             )

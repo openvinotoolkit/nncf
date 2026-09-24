@@ -950,7 +950,7 @@ class TemplateWeightCompression(ABC):
             with pytest.raises(InvalidGroupSizeError) as exc_info:
                 compress_weights(**kwargs)
 
-            assert "Failed to apply group-wise quantization with group size value" in str(exc_info.value)
+            assert "Failed to apply group-wise quantization with the requested group size value" in str(exc_info.value)
         elif expected_outcome == "warn_ignored":
             with patch.object(nncf_logger, "warning") as mock_warning:
                 compress_weights(**kwargs)
