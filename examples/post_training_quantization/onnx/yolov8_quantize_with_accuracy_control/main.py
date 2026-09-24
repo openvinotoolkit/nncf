@@ -50,7 +50,7 @@ def validate(
     serialized_model = model.SerializeToString()
 
     session_options = onnxruntime.SessionOptions()
-    session_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_DISABLE_ALL
+    session_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_BASIC
     session = onnxruntime.InferenceSession(
         serialized_model, sess_options=session_options, providers=["CPUExecutionProvider"]
     )
@@ -156,7 +156,7 @@ def quantize_ac(
         validator.confusion_matrix = ConfusionMatrix(names=validator.names)
 
         session_options = onnxruntime.SessionOptions()
-        session_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_DISABLE_ALL
+        session_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_BASIC
         serialized_model = val_model.SerializeToString()
         session = onnxruntime.InferenceSession(
             serialized_model, sess_options=session_options, providers=["CPUExecutionProvider"]
