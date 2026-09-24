@@ -28,18 +28,18 @@ class ONNXEngine(Engine):
     def __init__(self, model: ModelProto, **rt_session_options: Any):
         self.input_names = set()
 
-        sees_options = rt.SessionOptions()
+        session_options = rt.SessionOptions()
         external_data_dir = get_metadata(model, MetadataKey.EXTERNAL_DATA_DIR)
         if external_data_dir:
-            sees_options.add_session_config_entry(
+            session_options.add_session_config_entry(
                 "session.model_external_initializers_file_folder_path", external_data_dir
             )
 
         rt_session_options["providers"] = ["CPUExecutionProvider"]
-        rt_session_options["graph_optimization_level"] = rt.GraphOptimizationLevel.ORT_DISABLE_ALL
+        session_options.graph_optimization_level = rt.GraphOptimizationLevel.ORT_DISABLE_ALL
 
         serialized_model = model.SerializeToString()
-        self.sess = rt.InferenceSession(serialized_model, sees_options, **rt_session_options)
+        self.sess = rt.InferenceSession(serialized_model, session_options, **rt_session_options)
 
         for inp in self.sess.get_inputs():
             self.input_names.add(inp.name)
