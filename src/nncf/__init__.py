@@ -65,8 +65,11 @@ from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParamete
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters as AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedScaleEstimationParameters as AdvancedScaleEstimationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters as AdvancedSmoothQuantParameters
+from nncf.quantization.advanced_parameters import CustomAnnotation as CustomAnnotation
 from nncf.quantization.advanced_parameters import GroupSizeFallbackMode as GroupSizeFallbackMode
 from nncf.quantization.advanced_parameters import OverflowFix as OverflowFix
+from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig as WeightCompressionConfig
+from nncf.scopes import CustomAnnotationScope as CustomAnnotationScope
 from nncf.scopes import IgnoredScope as IgnoredScope
 from nncf.scopes import Subgraph as Subgraph
 from nncf.version import __version__ as __version__

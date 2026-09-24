@@ -60,6 +60,7 @@ from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
 
 REFERENCE_SCALES_DIR = TEST_ROOT / "torch" / "data" / "fx" / "reference_scales"
+CUSTOM_ANNOTATION_REFERENCES_DIR = TEST_ROOT / "torch" / "data" / "fx" / "references_custom_annotation"
 
 DATA_BASED_SENSITIVITY_METRICS = (
     SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
@@ -512,6 +513,27 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_awq_scale_ref_path() -> Path:
         return REFERENCE_SCALES_DIR / "awq_scale_ref.json"
+
+    @staticmethod
+    def get_shared_weight_model() -> torch.fx.GraphModule:
+        model = ShortTransformer(8, 16, share_weights=True)
+        return get_torch_fx_model(model, torch.randint(0, 10, (8,)))
+
+    @staticmethod
+    def get_shared_weight_node_name() -> str:
+        return "linear_1"
+
+    @staticmethod
+    def get_node_with_shared_weight_name() -> str:
+        return "embedding"
+
+    @staticmethod
+    def get_mode_not_supported_by_backend() -> CompressWeightsMode | None:
+        return CompressWeightsMode.NF4
+
+    @staticmethod
+    def get_custom_annotation_ref_path(ref_name: str) -> Path:
+        return CUSTOM_ANNOTATION_REFERENCES_DIR / f"{ref_name}.json"
 
     @staticmethod
     def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, input_shape=None, is_3d_weights: bool = False):

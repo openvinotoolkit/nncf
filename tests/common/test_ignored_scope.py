@@ -16,7 +16,7 @@ from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.scopes import IgnoredScope
 from nncf.scopes import Subgraph
-from nncf.scopes import get_ignored_node_names_from_ignored_scope
+from nncf.scopes import get_node_names_from_scope
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.mock_graphs import NodeWithType
@@ -74,7 +74,7 @@ IGNORED_SCOPES_TEST_DATA = [
 @pytest.mark.parametrize("ignored_scope,ref_ignored_names", IGNORED_SCOPES_TEST_DATA)
 def test_ignored_scopes(ignored_scope, ref_ignored_names):
     nncf_graph = NNCFGraphToTestIgnoredScope(CONV_TYPE, LINEAR_TYPE).nncf_graph
-    ignored_names = get_ignored_node_names_from_ignored_scope(ignored_scope, nncf_graph)
+    ignored_names = get_node_names_from_scope(ignored_scope, nncf_graph)
     assert sorted(ignored_names) == ref_ignored_names
 
 
@@ -90,4 +90,4 @@ WRONG_IGNORED_SCOPES_TEST_DATA = [
 def test_wrong_ignored_scopes(ignored_scope):
     nncf_graph = NNCFGraphToTestIgnoredScope(CONV_TYPE, LINEAR_TYPE).nncf_graph
     with pytest.raises(nncf.ValidationError):
-        get_ignored_node_names_from_ignored_scope(ignored_scope, nncf_graph)
+        get_node_names_from_scope(ignored_scope, nncf_graph)

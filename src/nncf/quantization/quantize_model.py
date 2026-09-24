@@ -30,12 +30,14 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import CustomAnnotation
 from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
 from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_quantization_param_grids
 from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipeline
 from nncf.quantization.algorithms.weight_compression.algorithm import check_user_compression_configuration
 from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
+from nncf.quantization.algorithms.weight_compression.algorithm import validate_custom_annotation
 from nncf.quantization.telemetry_extractors import CompressionStartedWithCompressWeightsApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeWithAccuracyControlApi
@@ -393,6 +395,34 @@ def quantize_with_accuracy_control(
     raise nncf.UnsupportedBackendError(msg)
 
 
+def _validate_compression_modes_supported_by_backend(
+    backend_name: str,
+    not_supported_modes: list[CompressWeightsMode],
+    mode: CompressWeightsMode,
+    custom_annotation: list[CustomAnnotation] | None,
+    msg: str | None = None,
+) -> None:
+    """
+    Checks that neither the compression mode nor the mode defined by the custom annotation
+    are unsupported by the backend.
+
+    :param backend_name: Name of the backend to use in the error message.
+    :param not_supported_modes: List of the compression modes that are not supported by the backend.
+    :param mode: Compression mode of the algorithm.
+    :param custom_annotation: List of the user-defined weight compression configurations, if given.
+    :param msg: Error message to use instead of the default one
+    :raises nncf.ParameterNotSupportedError: If any of the given modes is not supported by the backend.
+    """
+    given_modes = [mode] + [annotation.config.mode for annotation in custom_annotation or []]
+    if any(given_mode in not_supported_modes for given_mode in given_modes):
+        if msg is None:
+            msg = (
+                f"{backend_name} backend does not support {[m.value for m in not_supported_modes]} modes "
+                "for weight compression."
+            )
+        raise nncf.ParameterNotSupportedError(msg)
+
+
 @api(canonical_alias="nncf.compress_weights")
 @tracked_function(
     MODEL_BASED_CATEGORY,
@@ -424,6 +454,7 @@ def compress_weights(
     backup_mode: BackupMode | None = None,
     compression_format: CompressionFormat = CompressionFormat.DQ,
     advanced_parameters: AdvancedCompressionParameters | None = None,
+    custom_annotation: list[CustomAnnotation] | None = None,
 ) -> TModel:
     """
     Compress model weights.
@@ -492,8 +523,20 @@ def compress_weights(
     :type compression_format: nncf.CompressionFormat
     :param advanced_parameters: Advanced parameters for compression algorithms.
     :type advanced_parameters: nncf.AdvancedCompressionParameters
+    :param custom_annotation: A list of user-defined weight compression configurations bound to portions of the
+        model. For all the matched nodes the given configuration is used instead of the one assigned by the
+        algorithm, which makes it possible to compress certain layers, e.g. attention or MoE router layers, to a
+        precision different from the one defined by `mode`, `ratio` and `backup_mode`. The custom annotation
+        takes precedence over the mixed precision assignment, the `ignored_scope` and the `all_layers` options.
+        If several annotations match the same node, the last one in the list takes precedence. For example, an
+        annotation of a whole block followed by an annotation of a single layer of this block compresses the block
+        with the first configuration, except for this layer, while the opposite order compresses the whole block
+        with the second configuration.
+    :type custom_annotation: list[nncf.CustomAnnotation]
     :return: The non-trainable model with compressed weights.
     """
+    validate_custom_annotation(custom_annotation, advanced_parameters)
+
     backend = get_backend(model)
     compression_weights_impl: Callable[..., Any] | None = None
 
@@ -514,11 +557,7 @@ def compress_weights(
             CompressWeightsMode.ADAPTIVE_CODEBOOK,
             CompressWeightsMode.CB4,
         ]
-        if mode in not_supported_modes:
-            msg = (
-                f"Torch backend does not support {[m.value for m in not_supported_modes]} modes for weight compression."
-            )
-            raise nncf.ParameterNotSupportedError(msg)
+        _validate_compression_modes_supported_by_backend("Torch", not_supported_modes, mode, custom_annotation)
 
         options = {"gptq": gptq, "lora_correction": lora_correction}
         unsupported_options = [name for name, value in options.items() if value is not None]
@@ -564,11 +603,7 @@ def compress_weights(
             CompressWeightsMode.ADAPTIVE_CODEBOOK,
             CompressWeightsMode.CB4,
         ]
-        if mode in not_supported_modes:
-            msg = (
-                f"Torch backend does not support {[m.value for m in not_supported_modes]} modes for weight compression."
-            )
-            raise nncf.ParameterNotSupportedError(msg)
+        _validate_compression_modes_supported_by_backend("Torch", not_supported_modes, mode, custom_annotation)
 
         options = {"gptq": gptq, "lora_correction": lora_correction}
         unsupported_options = [name for name, value in options.items() if value is not None]
@@ -605,12 +640,18 @@ def compress_weights(
                 CompressWeightsMode.FP4,
                 CompressWeightsMode.NVFP4,
             ]
-            if mode in not_supported_modes:
-                msg = (
-                    "AWQ, Scale estimation, GPTQ or Lora Correction algorithm is defined,"
-                    f" but mode in {[m.value for m in not_supported_modes]}."
-                )
-                raise nncf.ParameterNotSupportedError(msg)
+            msg = (
+                "AWQ, Scale estimation, GPTQ or Lora Correction algorithm is defined,"
+                f" but mode in {[m.value for m in not_supported_modes]}."
+            )
+
+            _validate_compression_modes_supported_by_backend(
+                "OpenVINO",
+                not_supported_modes,
+                mode,
+                custom_annotation,
+                msg=msg,
+            )
 
         if gptq and lora_correction:
             msg = "Simultaneous use of Lora correction and GPTQ algorithms is not supported. Select one of them."
@@ -635,11 +676,7 @@ def compress_weights(
             CompressWeightsMode.ADAPTIVE_CODEBOOK,
             CompressWeightsMode.CB4,
         ]
-        if mode in not_supported_modes:
-            msg = (
-                f"ONNX backend does not support {[m.value for m in not_supported_modes]} modes for weight compression."
-            )
-            raise nncf.ParameterNotSupportedError(msg)
+        _validate_compression_modes_supported_by_backend("ONNX", not_supported_modes, mode, custom_annotation)
 
         options = {"gptq": gptq, "lora_correction": lora_correction}
         unsupported_options = [name for name, value in options.items() if value is not None]
@@ -686,6 +723,7 @@ def compress_weights(
         sensitivity_metric,
         backup_mode,
         advanced_parameters,
+        custom_annotation,
     )
 
     return compression_weights_impl(
