@@ -14,7 +14,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.scopes import get_not_matched_scopes
 from nncf.scopes import IgnoredScope
 from nncf.scopes import Subgraph
-from nncf.scopes import get_difference_ignored_scope
+from nncf.scopes import get_difference_scope
 
 
 @pytest.mark.parametrize(
@@ -74,4 +74,4 @@ def test_get_not_matched_scopes(scope, ref):
     ),
 )
 def test_ignored_scope_diff(scope_1, scope_2, ref):
-    assert get_difference_ignored_scope(scope_1, scope_2) == ref
+    assert get_difference_scope(scope_1, scope_2) == ref

@@ -55,7 +55,7 @@ from nncf.quantization.quantize_model import warning_model_no_batchwise_support
 from nncf.quantization.statistics_caching import cache_weight_compression_statistics
 from nncf.quantization.statistics_caching import register_statistics_for_algorithm
 from nncf.scopes import IgnoredScope
-from nncf.scopes import validate_ignored_scope
+from nncf.scopes import validate_scope
 
 TTensor = TypeVar("TTensor")
 
@@ -96,7 +96,7 @@ def native_quantize_if_op_impl(
     main_model_graph_id = "main_model_graph"
     _extract_all_subgraphs(model, main_model_graph_id)
     if ignored_scope and ignored_scope.validate:
-        validate_ignored_scope(ignored_scope, graphs.values())
+        validate_scope(ignored_scope, graphs.values())
         ignored_scope = IgnoredScope(
             ignored_scope.names, ignored_scope.patterns, ignored_scope.types, ignored_scope.subgraphs, validate=False
         )
