@@ -1346,17 +1346,6 @@ class TemplateWeightCompression(ABC):
             pytest.param(
                 [
                     nncf.CustomAnnotation(
-                        scope=nncf.CustomAnnotationScope(patterns=[".*"]),
-                        config=WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
-                    )
-                ],
-                None,
-                "have no weight to compress",
-                id="node_without_weight",
-            ),
-            pytest.param(
-                [
-                    nncf.CustomAnnotation(
                         scope=nncf.CustomAnnotationScope(patterns=[".*1$"]),
                         config=WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1),
                     )

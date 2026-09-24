@@ -1217,29 +1217,25 @@ class WeightCompression(Algorithm):
         custom_annotation: list[CustomAnnotation],
         graph: NNCFGraph,
         node_name_to_weight_names_mapping: dict[str, list[str]],
-    ) -> tuple[dict[str, WeightCompressionConfig], set[str], set[str]]:
+    ) -> tuple[dict[str, WeightCompressionConfig], set[str]]:
         """
-        Matches the custom annotation against the weights of the nodes that can be compressed. Keying by a weight
-        name annotates the nodes sharing a weight as a single one.
+        Matches the custom annotation against the weights of the nodes that can be compressed.
 
         :param custom_annotation: List of user-defined custom annotations.
         :param graph: NNCFGraph instance.
         :param node_name_to_weight_names_mapping: A mapping from a node name to the names of the weights of that node.
-        :return: A tuple of the mapping from a weight name to the annotated configuration, the matched node names
-            with no weight to compress and the weight names matched by several annotations.
+        :return: A tuple of the mapping from a weight name to the annotated configuration and the weight names
+            matched by several annotations.
         """
         weight_name_to_config_mapping: dict[str, WeightCompressionConfig] = {}
         overlapped_annotation_weight_names = set()
-        node_names_without_weight = set()
         for annotation in custom_annotation:
             annotated_names = get_node_names_from_scope(annotation.scope, graph, strict=annotation.scope.validate)
             annotated_weight_names = set()
             for node_name in annotated_names:
                 weight_names = node_name_to_weight_names_mapping.get(node_name)
-                if not weight_names:
-                    node_names_without_weight.add(node_name)
-                    continue
-                annotated_weight_names.update(weight_names)
+                if weight_names is not None:
+                    annotated_weight_names.update(weight_names)
             # The weights annotated by the current annotation overlap with the ones annotated before it
             overlapped_annotation_weight_names.update(
                 name for name in annotated_weight_names if name in weight_name_to_config_mapping
@@ -1247,7 +1243,7 @@ class WeightCompression(Algorithm):
             for weight_name in annotated_weight_names:
                 weight_name_to_config_mapping[weight_name] = annotation.config
 
-        return weight_name_to_config_mapping, node_names_without_weight, overlapped_annotation_weight_names
+        return weight_name_to_config_mapping, overlapped_annotation_weight_names
 
     def _get_custom_annotation_configs(
         self, custom_annotation: list[CustomAnnotation], graph: NNCFGraph
@@ -1261,15 +1257,10 @@ class WeightCompression(Algorithm):
         """
         node_name_to_weight_names_mapping = self._get_node_name_to_weight_names_mapping(graph)
 
-        weight_name_to_config_mapping, node_names_without_weight, overlapped_annotation_weight_names = (
-            self._get_weight_name_to_config_mapping(custom_annotation, graph, node_name_to_weight_names_mapping)
+        weight_name_to_config_mapping, overlapped_annotation_weight_names = self._get_weight_name_to_config_mapping(
+            custom_annotation, graph, node_name_to_weight_names_mapping
         )
 
-        if node_names_without_weight:
-            nncf_logger.warning(
-                "The following nodes are matched by the custom annotation, but have no weight to compress. "
-                "The annotation has no effect for them:\n\t" + "\n\t".join(sorted(node_names_without_weight))
-            )
         if overlapped_annotation_weight_names:
             overlapped_configs = []
             for weight_name in sorted(overlapped_annotation_weight_names):
