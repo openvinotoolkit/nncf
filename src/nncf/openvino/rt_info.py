@@ -63,7 +63,7 @@ def dump_parameters(
             if isinstance(value, BaseScope):
                 value = exclude_empty_fields(asdict(value))
                 if bool(value):
-                    dump_parameters(model, value, algo_name, path + [key])
+                    dump_parameters(model, value, algo_name, [key])
                     continue
                 # The default value in case empty ignored_scope parameter passed
                 value = []
