@@ -18,6 +18,7 @@ on:
   pull_request: # TOREMOVE
 
 env:
+  UV_SYSTEM_PYTHON: 'true'
   PYTHON_VERSION: "3.12"
 
 jobs:
