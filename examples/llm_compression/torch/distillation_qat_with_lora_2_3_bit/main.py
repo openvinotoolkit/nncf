@@ -412,6 +412,11 @@ def get_argument_parser() -> argparse.ArgumentParser:
         default=8,
         help="Size of each training microbatch. Gradients will be accumulated until the batch size is reached.",
     )
+    parser.add_argument(
+        "--full_determinism",
+        action="store_true",
+        help="Use deterministic CUDA kernels for reproducible QAT. This can reduce training throughput.",
+    )
     return parser
 
 
@@ -722,7 +727,10 @@ def main(argv) -> float:
     parser = get_argument_parser()
     args = parser.parse_args(argv)
     assert torch.cuda.is_available()
-    transformers.set_seed(42)
+    if args.full_determinism:
+        transformers.enable_full_determinism(42)
+    else:
+        transformers.set_seed(42)
     device = "cuda"
     torch_dtype = torch.bfloat16
     compression_config = dict(

@@ -1457,7 +1457,9 @@ class WeightCompression(Algorithm):
                 n_repacked_tensors += 1
                 bits_before += bits_before_node
                 bits_after += bits_after_node
-        print(f"Total repacked tensors: {n_repacked_tensors}")
-        print(f"Total MB before: {bits_before / 8 / 1024 / 1024}")
-        print(f"Total MB after: {bits_after / 8 / 1024 / 1024}")
+        nncf_logger.info(
+            f"\nTotal repacked tensors: {n_repacked_tensors}; "
+            f"\ntotal MB before: {bits_before / 8 / 1024 / 1024}; "
+            f"\ntotal MB after: {bits_after / 8 / 1024 / 1024}"
+        )
         return model
