@@ -105,7 +105,7 @@ test-tools:
 # Linters
 ###############################################################################
 install-pre-commit:
-	$(CMD_INSTALL) pre-commit
+	pip install pre-commit
 
 pre-commit:
 	pre-commit run -a
