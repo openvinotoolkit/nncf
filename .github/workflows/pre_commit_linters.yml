@@ -1,8 +1,12 @@
 name: pre-commit-linters
+run-name: "pre-commit-linters PR#${{ github.event.pull_request.number }}"
 permissions: read-all
 
 on:
   pull_request:
+
+env:
+  PYTHON_VERSION: "3.12"
 
 jobs:
   pre-commit:
@@ -12,13 +16,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.12"
+          python-version: ${{ env.PYTHON_VERSION }}
       - name: Install pre-commit package
         run: make install-pre-commit
       - name: Print installed modules
         run: pip list
       - name: Run pre-commit linter suite
         run: make pre-commit
+
   md-dead-link-check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
