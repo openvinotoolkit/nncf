@@ -26,7 +26,7 @@ install-openvino:
 	$(CMD_INSTALL) -e . -r tests/openvino/requirements.txt
 
 test-openvino:
-	$(CMD_PYTEST) tests/openvino $(GENERAL_PYTEST_ARGS) $(ARGS)
+	ONEDNN_MAX_CPU_ISA=AVX2 $(CMD_PYTEST) tests/openvino $(GENERAL_PYTEST_ARGS) $(ARGS)
 
 
 ###############################################################################
