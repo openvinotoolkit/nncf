@@ -782,3 +782,26 @@ def quantize_with_tune_hyperparams(
     quantized_model = hyperparameter_tuner.apply(model, validation_dataset)
 
     return quantized_model
+
+
+@api(canonical_alias="nncf.repack_weights")
+def repack_weights(
+    model: TModel,
+) -> TModel:
+    """
+    Looking for 4 and 8 bit weights in OV model and repack them if maximal absolute value corresponds
+    to the supported type with lower bits.
+
+    :param model: A model to be repacked.
+    :type model: TModel
+    :return: The non-trainable model with repacked weights or the same model.
+    """
+    backend = get_backend(model)
+
+    if backend != BackendType.OPENVINO:
+        msg = f"Unsupported type of backend: {backend}"
+        raise nncf.UnsupportedBackendError(msg)
+
+    from nncf.openvino.quantization.quantize_model import repack_weights_impl
+
+    return repack_weights_impl(model)  # type: ignore

@@ -101,6 +101,77 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def is_node_with_weights(node: NNCFNode, graph: NNCFGraph) -> bool:
         return node.layer_attributes and node.layer_attributes.constant_attributes
 
+    def is_compressed_constant(self, node: NNCFNode) -> bool:
+        res = node.metatype == om.OVConstantMetatype and node.node_name in self.name_to_node_mapping
+
+        if res:
+            ov_node = self.name_to_node_mapping[node.node_name]
+            res = ov_node.tensor_view.element_type in [ov.Type.i8, ov.Type.u8, ov.Type.i4, ov.Type.u4]
+        return res
+
+    def try_repack(self, node: NNCFNode, graph: NNCFGraph) -> tuple[bool, int, int]:
+        if not self.is_compressed_constant(node):
+            return False, 0, 0
+
+        next_nodes = graph.get_next_nodes(node)
+        if len(next_nodes) != 1 or next_nodes[0].metatype != om.OVConvertMetatype:
+            return False, 0, 0
+
+        ov_node = self.name_to_node_mapping[node.node_name]
+
+        supported_src_types = {ov.Type.u4: 4, ov.Type.i4: 4, ov.Type.u8: 8, ov.Type.i8: 8}
+        if ov_node.tensor_view.element_type not in supported_src_types:
+            return False, 0, 0
+        bits = supported_src_types[ov_node.tensor_view.element_type]
+        asym = ov_node.tensor_view.element_type in [ov.Type.u8, ov.Type.u4]
+
+        # only repack for sym types are supported for now: i3, i2
+        if asym:
+            return False, 0, 0
+
+        weight_tensor = Tensor(get_const_value_as_ov_tensor(ov_node))
+        weight_tensor = weight_tensor.as_numpy_tensor().astype(TensorDataType.int32)
+        shape = list(ov_node.tensor_view.shape)
+
+        if len(shape) == 1 or shape[-1] == 1:
+            # Probably zero point
+            return False, 0, 0
+
+        max_val = max(int(weight_tensor.max().item()), abs(int(weight_tensor.min().item())))
+        optimal_bits = int(max_val).bit_length()
+
+        supported_optimal_bits = {2: ov.Type.u2, 3: ov.Type.u3}
+
+        # If the optimal bits is equal to the current bits, no need to repack
+        if optimal_bits == bits or optimal_bits not in supported_optimal_bits:
+            return False, 0, 0
+
+        const_node_name = node.node_name
+        compression_dtype = supported_optimal_bits[optimal_bits]
+
+        # Repack the weight tensor to the optimal bits and change constant node with new
+        # representation [u2/u3] - zero_point per tensor
+        offset = 2 ** (optimal_bits - 1)
+        compressed_tensor = weight_tensor + offset
+        compressed_const = create_ov_const_from_tensor(compressed_tensor, compression_dtype, name=const_node_name)
+        converted_const = opset.convert(compressed_const, ov.Type.f16)
+
+        zero_point_const = opset.constant(offset, dtype=ov.Type.i8, name=f"{const_node_name}/zero_point")
+        zero_point_const = opset.convert(zero_point_const, ov.Type.f16)
+
+        converted_const = opset.subtract(
+            converted_const, zero_point_const, name=f"{const_node_name}/zero_point/subtract"
+        )
+
+        # replace the convert after old const value with the new converted_const
+        ov_node = self.name_to_node_mapping[next_nodes[0].node_name]
+        self._replace_node(ov_node, converted_const)
+
+        bits_before = bits * weight_tensor.size
+        bits_after = optimal_bits * weight_tensor.size
+
+        return True, bits_before, bits_after
+
     @staticmethod
     def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> tuple[int] | None:
         channel_axes = get_weight_channel_axes(node_with_weight)

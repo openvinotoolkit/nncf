@@ -1424,3 +1424,42 @@ class WeightCompression(Algorithm):
                 for node in matmul_nodes:
                     statistics[node.node_name] = copy.deepcopy(stats)
         return statistics
+
+    @staticmethod
+    def repack_weights(model: TModel, graph: NNCFGraph) -> TModel:
+        """
+        Repacks compressed weight constants to a lower-bit representation when possible.
+
+        Iterates over all nodes in the graph and attempts to replace compressed constants
+        (i8, u8, i4, u4) with a more compact symmetric representation (i2, i3) if the
+        actual value range allows it.
+
+        :param model: Backend-specific model with compressed weights.
+        :param graph: NNCFGraph instance corresponding to the model.
+        :return: The model with repacked weight constants.
+        """
+        backend = get_backend(model)
+        if backend != BackendType.OPENVINO:
+            msg = f"Unsupported type of backend: {backend}"
+            raise nncf.UnsupportedBackendError(msg)
+
+        from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
+
+        backend_entity = OVWeightCompressionAlgoBackend(model)
+
+        n_repacked_tensors = 0
+        bits_before = 0
+        bits_after = 0
+
+        for node in graph.topological_sort():
+            is_repacked, bits_before_node, bits_after_node = backend_entity.try_repack(node, graph)
+            if is_repacked:
+                n_repacked_tensors += 1
+                bits_before += bits_before_node
+                bits_after += bits_after_node
+        nncf_logger.info(
+            f"\nTotal repacked tensors: {n_repacked_tensors}; "
+            f"\ntotal MB before: {bits_before / 8 / 1024 / 1024}; "
+            f"\ntotal MB after: {bits_after / 8 / 1024 / 1024}"
+        )
+        return model
