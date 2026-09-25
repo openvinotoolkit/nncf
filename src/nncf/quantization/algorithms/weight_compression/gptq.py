@@ -288,7 +288,9 @@ class GPTQ:
         )
         reduction_axes = wc_params.reduction_axes
         block_compression_config = WeightCompressionConfig(
-            mode=wc_params.compression_config.mode, codebook_values=wc_params.compression_config.codebook_values
+            mode=wc_params.compression_config.mode,
+            group_size=-1,
+            codebook_values=wc_params.compression_config.codebook_values,
         )
 
         damp = self._damp_percent * fns.mean(fns.diag(hessian))

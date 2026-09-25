@@ -42,7 +42,9 @@ from nncf.quantization.advanced_parameters import GroupSizeFallbackMode
 from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
+from nncf.quantization.algorithms.weight_compression.config import FIXED_GROUP_SIZE_MODES
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.config import get_default_group_size
 from nncf.quantization.algorithms.weight_compression.constants import CB4_QUANTILES
 from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
@@ -89,21 +91,8 @@ def get_weight_compression_configuration(
     """
     Generates a configuration dictionary for weight compression based on the provided parameters.
     """
-    if group_size is None and mode in INT8_MODES:
-        group_size = -1
-    elif group_size is None and mode in NON_INT8_MODES:
-        if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
-            group_size = 32
-        elif mode == CompressWeightsMode.NVFP4:
-            group_size = 16
-        elif mode in [
-            CompressWeightsMode.CODEBOOK,
-            CompressWeightsMode.CB4,
-            CompressWeightsMode.ADAPTIVE_CODEBOOK,
-        ]:
-            group_size = -1
-        else:
-            group_size = 128
+    if group_size is None:
+        group_size = get_default_group_size(mode)
 
     if backup_mode is None:
         if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
@@ -135,6 +124,33 @@ def get_weight_compression_configuration(
         "backup_mode": backup_mode,
         "advanced_parameters": advanced_parameters or AdvancedCompressionParameters(),
     }
+
+
+def validate_fixed_group_size(
+    mode: CompressWeightsMode, group_size: int | None, advanced_parameters: AdvancedCompressionParameters | None = None
+) -> None:
+    """
+    Validates the group size requested for a mode which accepts only specific group sizes.
+
+    :param mode: Compression mode to validate.
+    :param group_size: Group size requested for the given mode. None means that the default value is used.
+    :param advanced_parameters: Advanced compression parameters that may affect the validation.
+    """
+    fixed_group_size = FIXED_GROUP_SIZE_MODES.get(mode)
+    if fixed_group_size is not None and group_size not in [None, fixed_group_size]:
+        msg = f"{mode.value} type only supports group size of {fixed_group_size}, group size of {group_size} is given"
+        raise nncf.ValidationError(msg)
+    if (
+        fixed_group_size is not None
+        and advanced_parameters
+        and advanced_parameters.group_size_fallback_mode is GroupSizeFallbackMode.ADJUST
+    ):
+        msg = (
+            f"{mode.value} type only supports group size of {fixed_group_size}, so it does not support the group size"
+            f" fallback mode {advanced_parameters.group_size_fallback_mode.value}."
+            " Please use other group size fallback mode."
+        )
+        raise nncf.ValidationError(msg)
 
 
 def check_user_compression_configuration(
@@ -277,22 +293,7 @@ def check_user_compression_configuration(
             f"Supported modes are: {[e.value for e in GroupSizeFallbackMode]}."
         )
         raise nncf.ValidationError(msg)
-    if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3, CompressWeightsMode.NVFP4]:
-        if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3] and group_size not in [None, 32]:
-            msg = f"MXFP4 and MXFP8_E4M3 types only support group size of 32, group size of {group_size} is given"
-            raise nncf.ValidationError(msg)
-
-        if mode == CompressWeightsMode.NVFP4 and group_size not in [None, 16]:
-            msg = f"NVFP4 type only supports group size of 16, group size of {group_size} is given"
-            raise nncf.ValidationError(msg)
-
-        if advanced_parameters and advanced_parameters.group_size_fallback_mode is GroupSizeFallbackMode.ADJUST:
-            msg = (
-                "MXFP4, MXFP8_E4M3 and NVFP4 types do not support the group size"
-                f" fallback mode {advanced_parameters.group_size_fallback_mode.value}."
-                " Please use other group size fallback mode."
-            )
-            raise nncf.ValidationError(msg)
+    validate_fixed_group_size(mode, group_size, advanced_parameters)
 
 
 class WeightCompression(Algorithm):
