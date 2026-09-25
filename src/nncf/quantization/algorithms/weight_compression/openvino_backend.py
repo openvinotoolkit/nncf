@@ -214,7 +214,8 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             A_W = opset.constant(lora_A.data)
             B_W = opset.constant(lora_B.data)
 
-        A_MM = opset.matmul(input_node, A_W, transpose_a=False, transpose_b=True)
+        transpose_a = self.matmul_has_transposed_activations(wc_params.node_with_weight, graph=None)
+        A_MM = opset.matmul(input_node, A_W, transpose_a=transpose_a, transpose_b=True)
         B_MM = opset.matmul(A_MM, B_W, transpose_a=False, transpose_b=True)
 
         node_output_port = mm_node.output(0)
@@ -383,7 +384,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 compressed_weight.tensor = compressed_weight.tensor.as_numpy_tensor()
                 if compressed_weight.zero_point is not None:
                     compressed_weight.zero_point = compressed_weight.zero_point.as_numpy_tensor()
-                adapters = lora_correction_algo.calculate_adapters(weight, compressed_weight, wc_params)
+
+                act_ch_axis, _ = self.get_activation_channel_axis_and_shape(graph, wc_params.node_with_weight)
+                adapters = lora_correction_algo.calculate_adapters(weight, compressed_weight, wc_params, act_ch_axis)
                 self.insert_adapters(wc_params, *adapters, int8_lora=lora_correction_algo.use_int8_adapters)
         self.name_to_node_mapping = None
 
