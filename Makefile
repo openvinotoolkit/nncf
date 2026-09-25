@@ -104,8 +104,8 @@ test-tools:
 ###############################################################################
 # Linters
 ###############################################################################
-install-lint:
+install-pre-commit:
 	$(CMD_INSTALL) pre-commit
 
-lint:
+pre-commit:
 	pre-commit run -a
