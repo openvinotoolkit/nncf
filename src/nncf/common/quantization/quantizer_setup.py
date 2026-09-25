@@ -72,8 +72,19 @@ class QuantizationInsertionPointBase(ABC):  # noqa: B024
         return cls(**state)
 
 
+class WQIPointStateNames:
+    INPUT_PORT_ID = "input_port_id"
+    TARGET_NODE_NAME = "target_node_name"
+
+
 @CommonStatefulClassesRegistry.register()
 class WeightQuantizationInsertionPoint(QuantizationInsertionPointBase):
+    _state_names = WQIPointStateNames  # type: ignore[assignment]
+
+    def __init__(self, target_node_name: NNCFNodeName, input_port_id: int | None = None):
+        super().__init__(target_node_name)
+        self.input_port_id = input_port_id
+
     def __eq__(self, other: object) -> bool:
         return isinstance(other, WeightQuantizationInsertionPoint) and self.target_node_name == other.target_node_name
 
@@ -82,6 +93,12 @@ class WeightQuantizationInsertionPoint(QuantizationInsertionPointBase):
 
     def __hash__(self) -> int:
         return hash(str(self))
+
+    def get_state(self) -> dict[str, Any]:
+        state: dict[str, Any] = {WQIPointStateNames.TARGET_NODE_NAME: self.target_node_name}
+        if self.input_port_id is not None:
+            state[WQIPointStateNames.INPUT_PORT_ID] = self.input_port_id
+        return state
 
 
 class AQIPointStateNames:
