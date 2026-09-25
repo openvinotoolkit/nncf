@@ -59,6 +59,38 @@ pruned_model = nncf.batch_norm_adaptation(
 )
 ```
 
+## Structured Pruning
+
+Structured (M:N) sparsity zeroes exactly `M` weights with the smallest absolute values in every consecutive group
+of `N` weights along the structural dimension of the weight tensor, while the remaining `N - M` weights are kept.
+Unlike non-structured sparsity, where zeros are distributed arbitrarily, the positions of the zeroed weights follow
+a fixed repeating pattern. Such patterns can be consumed by hardware and runtime implementations that support them.
+Note that a sparsity pattern alone does not guarantee acceleration on every backend or hardware target.
+
+### Magnitude 2:4
+
+The 2:4 sparsity pattern zeroes 2 out of every 4 consecutive weights (50% sparsity). The pruning ratio is
+not used in this mode: the amount of sparsity is fixed by the pattern itself.
+
+```python
+import nncf
+
+...
+
+pruned_model = nncf.prune(
+    model,
+    mode=nncf.PruneMode.STRUCTURED_MAGNITUDE_2_4,
+    examples_inputs=example_input,
+)
+```
+
+The structural dimension is derived from the same channel and reduction axes that the weight compression
+algorithms use: for Linear and MatMul weights the weights are grouped along the output-channel (row) dimension,
+for convolution weights they are grouped along the flattened (in_channels x spatial) dimension of every output
+channel. Weight tensors whose structural dimension is not divisible by 4 are rejected with a validation error,
+and operations that do not support structured pruning are skipped with a warning. As with non-structured pruning,
+fine-tuning or batch norm adaptation is recommended after pruning.
+
 ## Regularization-Based
 
 The method is based on $L_0$-regularization, with which parameters of the model tend to zero:
