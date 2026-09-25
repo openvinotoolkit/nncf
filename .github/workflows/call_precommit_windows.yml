@@ -17,7 +17,6 @@ on:
         default: ''
         type: string
         required: false
-  pull_request:  # TOREMOVE
 
 defaults:
   run:
