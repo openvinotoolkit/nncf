@@ -16,17 +16,17 @@ import torch.fx
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
+from nncf.experimental.torch.fx.commands import FXModelExtractionCommand
 from nncf.experimental.torch.fx.node_utils import get_graph_node_by_name
 from nncf.experimental.torch.fx.node_utils import get_node_args
 from nncf.experimental.torch.fx.node_utils import set_node_args
-from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 
 
 class FXModelTransformer(ModelTransformer):
     """
     Applies transformations upon Torch FX model.
     FXApplyTransformationCommands are made inplace,
-    PTModelExtractionCommands do not change the input model.
+    FXModelExtractionCommands do not change the input model.
     """
 
     def __init__(self, model: torch.fx.GraphModule):
@@ -34,7 +34,7 @@ class FXModelTransformer(ModelTransformer):
 
         self._command_transformation_ordered_pairs = [
             (FXApplyTransformationCommand, self._apply_transformation),
-            (PTModelExtractionCommand, self._apply_model_extraction),
+            (FXModelExtractionCommand, self._apply_model_extraction),
         ]
 
     def transform(self, transformation_layout: TransformationLayout) -> torch.fx.GraphModule:
@@ -91,7 +91,7 @@ class FXModelTransformer(ModelTransformer):
     @staticmethod
     def _apply_model_extraction(
         model: torch.fx.GraphModule,
-        transformations: list[PTModelExtractionCommand],
+        transformations: list[FXModelExtractionCommand],
     ) -> torch.fx.GraphModule:
         """
         Returns a submodel extracted from the given model by the given transformation.
