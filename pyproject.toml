@@ -11,25 +11,26 @@ authors = [{ name = "Intel" }, { email = "maksim.proshin@intel.com" }]
 requires-python = ">=3.10"
 dynamic = ["version"]
 keywords = [
-    "bert",
-    "classification",
-    "compression",
-    "hawq",
-    "mixed-precision-training",
-    "mmdetection",
-    "nas",
-    "nlp",
-    "object-detection",
-    "pruning",
-    "quantization",
+    "neural-network-compression",
+    "model-optimization",
+    "post-training-quantization",
     "quantization-aware-training",
-    "semantic-segmentation",
-    "sparsity",
-    "transformers",
+    "weight-compression",
+    "compression",
+    "quantization",
+    "pruning",
+    "openvino",
+    "pytorch",
+    "onnx",
 ]
 classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
     "networkx>=2.6, <=3.6.1",
