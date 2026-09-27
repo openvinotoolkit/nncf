@@ -530,6 +530,57 @@ def test_quantize_pt2e_mul_get_attr_input(model_cls, input_node_name):
     assert dequantize_node in mul_node.args
 
 
+@pytest.mark.parametrize(
+    "model_cls",
+    [
+        ActivationTimesWeightModel,
+        WeightTimesActivationModel,
+    ],
+)
+def test_quantize_pt2e_mul_parameter_range_with_batchwise_statistics(
+    model_cls: type[torch.nn.Module],
+) -> None:
+    model = model_cls().eval()
+    with torch.no_grad():
+        model.weight.copy_(torch.tensor([0.25, -0.5, 1.0]).reshape(3, 1, 1))
+
+    example_input = torch.ones(2, 3, 8, 8)
+    fx_model = get_torch_fx_model(model, example_input)
+    quantizer = OneInputAnnotationQuantizer(
+        "mul",
+        "weight",
+        _get_int8_per_tensor_symmetric_qspec(),
+    )
+
+    data_loader = torch.utils.data.DataLoader(
+        torch.ones(2, 3, 8, 8),
+        batch_size=2,
+    )
+    calibration_dataset = nncf.Dataset(data_loader, lambda x: x.to("cpu"))
+
+    quantized_model = quantize_pt2e(
+        fx_model,
+        quantizer,
+        calibration_dataset=calibration_dataset,
+        subset_size=1,
+        fast_bias_correction=None,
+        fold_quantize=False,
+        do_copy=True,
+    )
+
+    weight_node = get_graph_node_by_name(quantized_model.graph, "weight")
+    quantize_node = next(iter(weight_node.users))
+
+    assert quantize_node.target == torch.ops.quantized_decomposed.quantize_per_tensor.default
+
+    scale, zero_point, _, quant_max = quantize_node.args[1:5]
+    positive_range_bound = (quant_max - zero_point) * scale
+
+    # The expected weight range is based on absmax=1.0. If axis 0 were treated
+    # as a batch axis, the bound would instead be mean(abs(weight)) ~= 0.5833.
+    assert positive_range_bound == pytest.approx(1.0, rel=1e-5)
+
+
 def test_quantize_pt2e_custom_quantizer_with_batchwise_statistics(caplog, mocker):
     example_input = torch.ones(2, 3, 3, 3)
     fx_model = get_torch_fx_model(LinearModel(torch.ones(3, 3)), example_input)
