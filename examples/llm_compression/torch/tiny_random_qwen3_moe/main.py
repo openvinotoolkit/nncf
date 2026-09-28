@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import warnings
-from pathlib import Path
 
 import torch
 from torch.jit import TracerWarning
@@ -19,14 +18,13 @@ from transformers import AutoTokenizer
 from transformers import logging
 
 import nncf
-from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 
 logging.set_verbosity_error()
 warnings.filterwarnings("ignore", category=TracerWarning)
 
 
 MODEL_ID = "optimum-intel-internal-testing/tiny-random-qwen3.5-moe"
-GRAPHS_DIR = Path("/home/user/Documents/nncf")
+COMPRESSED_MODEL_ID = "tiny-random-qwen3.5-moe_compressed"
 
 
 def generate_answers(
@@ -102,7 +100,7 @@ def load_model_and_tokenizer(model_id: str) -> tuple[AutoModelForImageTextToText
 
 def get_dummy_dataset(seq_len: int = 16) -> nncf.Dataset:
     """
-    Build a dummy tracing dataset holding a single all-ones sample.
+    Build a dummy calibration dataset holding a single all-ones sample.
 
     :param seq_len: Sequence length of the synthetic sample.
     :return: An NNCF dataset with a single sample.
@@ -121,20 +119,17 @@ def main() -> None:
     answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
     print_answers("Non-optimized model outputs:\n", answers_by_questions)
 
-    tracing_dataset = get_dummy_dataset()
-    example_input = next(iter(tracing_dataset.get_inference_data()))
+    calibration_dataset = get_dummy_dataset()
 
     model = nncf.compress_weights(
         model,
         mode=nncf.CompressWeightsMode.INT4_ASYM,
-        dataset=tracing_dataset,
+        dataset=calibration_dataset,
         group_size=16,
         advanced_parameters=nncf.AdvancedCompressionParameters(
             group_size_fallback_mode=nncf.GroupSizeFallbackMode.ADJUST
         ),
     )
-
-    GraphModelWrapper(model, example_input).get_graph().visualize_graph(GRAPHS_DIR / "graph.dot")
 
     answers_by_questions = generate_answers(QUESTIONS, model, tokenizer)
     print_answers("Optimized model outputs:\n", answers_by_questions)
