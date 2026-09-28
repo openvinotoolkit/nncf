@@ -54,6 +54,7 @@ from nncf.torch.graph.operator_metatypes import PTDropoutMetatype
 from nncf.torch.graph.operator_metatypes import PTGroupedMatMulMetatype
 from nncf.torch.graph.operator_metatypes import PTMulMetatype
 from nncf.torch.graph.operator_metatypes import PTNoopMetatype
+from nncf.torch.graph.operator_metatypes import PTTransposeMetatype
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTransformationCommand
@@ -135,11 +136,8 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         ndims = len(weight_node.layer_attributes.shape)
         reduction_axes = get_weight_compression_reduction_axes(node_with_weight_metatype, weight_port_id, ndims)
-        if node_with_weight_metatype is PTGroupedMatMulMetatype and not any(
-            edge.from_node.node_type == "transpose"
-            for edge in graph.get_input_edges(node_with_weight)
-            if edge.input_port_id == weight_port_id
-        ):
+        weight_input_metatype = graph.get_input_edge_by_port_id(node_with_weight, weight_port_id).from_node.metatype
+        if node_with_weight_metatype == PTGroupedMatMulMetatype and weight_input_metatype != PTTransposeMetatype:
             # A weight that is not transposed is consumed with the [num_groups, C_IN, C_OUT] layout.
             reduction_axes = [ndims - 2]
         return tuple(reduction_axes)
