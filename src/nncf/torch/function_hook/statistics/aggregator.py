@@ -32,12 +32,13 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 
 
 class StatisticCollectorModule(nn.Module):
-    def __init__(self, collector: TensorCollector):
+    def __init__(self, collector: TensorCollector, input_port_id: int | None):
         super().__init__()
         self.collector = collector
+        self.input_port_id = input_port_id
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        self.collector.register_input_for_all_reducers(Tensor(x))
+        self.collector.register_input_for_all_reducers(Tensor(x), self.input_port_id)
         return x
 
 
@@ -75,7 +76,7 @@ class PT2StatisticsAggregator(StatisticsAggregator):
                     for collector in collectors:
                         command = PT2InsertionCommand(
                             target_points=[target_point],
-                            hook_module=StatisticCollectorModule(collector),
+                            hook_module=StatisticCollectorModule(collector, target_point.input_port_id),
                             handle_storage=self.hook_handles,
                         )
                         transformation_layout.register(command)

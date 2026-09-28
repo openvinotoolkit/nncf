@@ -1345,8 +1345,36 @@ class WeightCompression(Algorithm):
                 statistic_point = self._backend_entity.target_point(
                     TargetType.POST_LAYER_OPERATION, node.node_name, port_id=output_port_id
                 )
+
+                # Reduce activations across all but the hidden dimension.
+                n_dims = len(graph.get_output_edges_by_port_id(node, output_port_id)[0].tensor_shape)
+                # negative axis (e.g. -1 for the last axis) is converted into corresponding positive value
+                input_channel_axis = input_channel_axis % n_dims
+                reduction_axes = tuple(i for i in range(n_dims) if i != input_channel_axis)
+
                 all_weight_dims = []
+                stat_collector = None
+                statistic_node = None
                 for node_with_weight in node_with_weights:
+                    collector, input_ports = self._backend_entity.get_statistic_collector(
+                        node_with_weight, graph, reduction_axes, self._subset_size
+                    )
+                    if len(input_ports) > 1:
+                        for input_port in input_ports:
+                            target_point = self._backend_entity.target_point(
+                                TargetType.PRE_LAYER_OPERATION, node_with_weight.node_name, port_id=input_port
+                            )
+                            statistic_container.add_statistic_point(
+                                StatisticPoint(
+                                    target_point=target_point,
+                                    tensor_collector=collector,
+                                    algorithm=self._algorithm_key,
+                                )
+                            )
+                        continue
+
+                    stat_collector = collector
+                    statistic_node = node_with_weight
                     _, weight_port_ids = zip(
                         *self._backend_entity.get_weight_names_and_port_ids(node_with_weight, graph)
                     )
@@ -1356,21 +1384,17 @@ class WeightCompression(Algorithm):
                     ]
                     all_weight_dims.extend(weight_dims)
 
-                # Reduce activations across all but the hidden dimension.
-                n_dims = len(graph.get_output_edges_by_port_id(node, output_port_id)[0].tensor_shape)
-                # negative axis (e.g. -1 for the last axis) is converted into corresponding positive value
-                input_channel_axis = input_channel_axis % n_dims
-                reduction_axes = tuple(i for i in range(n_dims) if i != input_channel_axis)
+                if not all_weight_dims:
+                    continue
 
                 # For 3D weights, keep the batch (per-expert) dimension only when activation
                 # and weight dimensions are same.
                 if any(weight_dim == 3 for weight_dim in all_weight_dims) and n_dims == 3:
                     assert len(reduction_axes) == 2
                     reduction_axes = reduction_axes[1:]
-
-                stat_collector = self._backend_entity.mean_statistic_collector(
-                    reduction_axes=reduction_axes, subset_size=self._subset_size
-                )
+                    stat_collector, _ = self._backend_entity.get_statistic_collector(
+                        statistic_node, graph, reduction_axes, self._subset_size
+                    )
                 statistic_container.add_statistic_point(
                     StatisticPoint(
                         target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
@@ -1407,20 +1431,51 @@ class WeightCompression(Algorithm):
         # shape is an original shape of an activation before reduction, n is the size of the dataset (or subset_size).
         statistics = {}
         for (act_node, output_port_id, _), matmul_nodes in matmul_input_to_output_nodes_map.items():
-            tensor_collectors = list(
-                statistic_points.get_algo_statistics_for_node(
-                    act_node.node_name,
-                    self._backend_entity.get_filter_fn_for_statistics(output_port_id, self._algorithm_key),
-                    self._algorithm_key,
-                )
-            )
             # Statistics could be empty in case when the statistics is registered for another algorithm,
             # e.g. mixed precision.
-            if tensor_collectors:
-                assert len(tensor_collectors) == 1
-                stats = tensor_collectors[0].get_statistics()
-
-                # Each activation node may have multiple MatMul nodes which it is an input to
-                for node in matmul_nodes:
+            for node in matmul_nodes:
+                has_node_statistics = any(
+                    self._algorithm_key in point.algorithm_to_tensor_collectors
+                    for point in statistic_points.get(node.node_name, [])
+                )
+                target_node_name = node.node_name if has_node_statistics else act_node.node_name
+                tensor_collectors = list(
+                    statistic_points.get_algo_statistics_for_node(
+                        target_node_name,
+                        self._backend_entity.get_filter_fn_for_statistics(output_port_id, self._algorithm_key),
+                        self._algorithm_key,
+                    )
+                )
+                if tensor_collectors:
+                    assert len(tensor_collectors) == 1
+                    stats = tensor_collectors[0].get_statistics()
                     statistics[node.node_name] = copy.deepcopy(stats)
         return statistics
+
+    @staticmethod
+    def repack_weights(model: TModel, graph: NNCFGraph) -> TModel:
+        """
+        Repacks compressed weight constants to a lower-bit representation when possible.
+
+        Iterates over all nodes in the graph and attempts to replace compressed constants
+        (i8, u8, i4, u4) with a more compact symmetric representation (i2, i3, i6) if the
+        actual value range allows it.
+
+        :param model: Backend-specific model with compressed weights.
+        :param graph: NNCFGraph instance corresponding to the model.
+        :return: The model with repacked weight constants.
+        """
+        backend = get_backend(model)
+        if backend != BackendType.OPENVINO:
+            msg = f"Unsupported type of backend: {backend}"
+            raise nncf.UnsupportedBackendError(msg)
+
+        from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
+
+        backend_entity = OVWeightCompressionAlgoBackend(model)
+
+        for node in graph.topological_sort():
+            is_repacked = backend_entity.try_repack(node, graph)
+            if is_repacked:
+                print(f"Repacked node: {node.node_name}")
+        return model

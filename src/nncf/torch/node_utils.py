@@ -28,7 +28,7 @@ def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
         msg = f"Activation channel axis retrieval from node with metatype {node.metatype} is not supported"
         raise nncf.InternalError(msg)
 
-    if node.metatype not in [PTMatMulMetatype, PTAddmmMetatype]:
+    if node.metatype not in [PTMatMulMetatype, PTAddmmMetatype, op.PTGroupedMatMulMetatype]:
         if not isinstance(node.metatype.output_channel_axis, int):
             msg = f"Node metatype {node.metatype} does not have defined output channel axis"
             raise nncf.InternalError(msg)

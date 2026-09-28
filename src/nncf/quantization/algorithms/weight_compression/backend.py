@@ -243,6 +243,25 @@ class WeightCompressionAlgoBackend(ABC):
         :param subset_size: Number of samples to collect
         """
 
+    def get_statistic_collector(
+        self,
+        node: NNCFNode,
+        graph: NNCFGraph,
+        reduction_axes: tuple[int, ...],
+        subset_size: int | None = None,
+    ) -> tuple[TensorCollector, tuple[int, ...]]:
+        """
+        Return a statistics collector and its operation input port IDs.
+
+        :param node: Node whose input statistics are collected.
+        :param graph: NNCFGraph instance containing the node.
+        :param reduction_axes: Axes along which activation statistics are reduced.
+        :param subset_size: Number of samples to collect.
+        :return: Statistics collector with its operation input ports.
+        """
+        collector = self.mean_statistic_collector(reduction_axes, subset_size)
+        return collector, (self.get_activation_port_id(node, graph),)
+
     @staticmethod
     @abstractmethod
     def get_activation_port_id(node: NNCFNode, graph: NNCFGraph) -> int:
