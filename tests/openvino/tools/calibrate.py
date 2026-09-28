@@ -23,12 +23,12 @@ from dataclasses import asdict
 from dataclasses import dataclass
 from dataclasses import replace
 from enum import Enum
+from importlib import metadata as importlib_metadata
 from itertools import islice
 from typing import Any, Iterable, TypeVar
 
 import numpy as np
 import openvino as ov
-import pkg_resources
 from config import Config
 from openvino import Dimension
 from openvino import PartialShape
@@ -1115,8 +1115,8 @@ class EnvInfo:
     @staticmethod
     def _get_nncf_version() -> str:
         try:
-            version = pkg_resources.get_distribution("nncf").version
-        except pkg_resources.DistributionNotFound:
+            version = importlib_metadata.version("nncf")
+        except importlib_metadata.PackageNotFoundError:
             version = "Unknown"
         return version
 

@@ -4,6 +4,10 @@ permissions: read-all
 on:
   workflow_call:
     inputs:
+      pr_num:
+        description: 'The pull request number'
+        type: string
+        default: ''
       python_version:
         description: 'Python version'
         type: string
@@ -62,6 +66,8 @@ jobs:
     outputs:
       images: "${{ steps.handle_docker.outputs.images }}"
     steps:
+      - name: CPU Info
+        run: awk 'BEGIN{RS=""} END{print}' /proc/cpuinfo
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: openvinotoolkit/openvino/.github/actions/handle_docker@1f6bb04df50d71dd7e392537eee6b834312f269a
@@ -136,4 +142,6 @@ jobs:
 
       - name: Run PyTorch precommit test scope
         run: |
-          pytest -ra --durations=30 tests/torch -m cuda
+          pytest -ra --durations=30 tests/torch -m "cuda and not long"
+        env:
+          PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cu126  # TODO(AlexanderDokuchaev): Remove when update ci to use cuda13

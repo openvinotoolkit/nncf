@@ -38,7 +38,7 @@ dependencies = [
     "openvino-telemetry>=2023.2.0",
     "packaging>=20.0",
     "psutil",
-    "pydot>=1.4.1, <=3.0.4",
+    "pydot>=1.4.1, <=4.0.1",
     "rich>=13.5.2",
     "safetensors>=0.4.1",
     "scikit-learn>=0.24.0",
@@ -277,6 +277,9 @@ single-line-exclusions = ["typing"]
 
 [tool.pytest.ini_options]
 pythonpath = "."
+filterwarnings = [
+    "ignore:'setParseAction' deprecated - use 'set_parse_action':pyparsing.PyparsingDeprecationWarning:pydot.dot_parser",
+]
 
 [tool.bandit]
 exclude_dirs = ["tools", "tests", "**/venv*", "build"]

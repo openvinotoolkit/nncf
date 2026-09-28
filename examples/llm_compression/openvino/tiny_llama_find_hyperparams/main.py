@@ -34,7 +34,7 @@ MODEL_PATH = ROOT / "compressed_model.xml"
 STATISTICS_PATH = ROOT / "statistics"
 
 COMPRESSION_MODE = nncf.parameters.CompressWeightsMode.INT4_SYM
-MAX_DROP = 0.2
+MAX_DROP = 0.25
 # We consider the following range of parameters: group_size - [64, 128], ratio - [0.5,...,1.0]
 MIN_GROUP_SIZE = 64
 MAX_GROUP_SIZE = 128
@@ -258,6 +258,7 @@ def main():
     delta = end - start
     delta -= datetime.timedelta(microseconds=delta.microseconds)
     print(f"Elapsed time: {delta}")
+    print(f"awq, ratio, group_size: {awq}, {ratio}, {group_size}")
     return awq, ratio, group_size
 
 

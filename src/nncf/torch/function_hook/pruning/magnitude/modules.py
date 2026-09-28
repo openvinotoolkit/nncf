@@ -30,7 +30,7 @@ def apply_magnitude_binary_mask(input_: torch.Tensor, mask: torch.Tensor) -> tor
     :return: The input tensor with the mask applied.
     """
     if has_torch_function_unary(input_):
-        return handle_torch_function(apply_magnitude_binary_mask, (input_,), input_, mask)  # type: ignore[no-any-return]
+        return handle_torch_function(apply_magnitude_binary_mask, (input_,), input_, mask)
     return input_ * mask
 
 

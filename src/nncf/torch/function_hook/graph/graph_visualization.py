@@ -14,7 +14,7 @@ from enum import Enum
 from typing import Any
 
 import networkx as nx  # type: ignore[import-untyped]
-import pydot  # type: ignore[import-untyped]
+import pydot
 
 from nncf.torch.function_hook.graph.graph_utils import ConstMeta
 from nncf.torch.function_hook.graph.graph_utils import EdgeMeta
@@ -166,7 +166,7 @@ def color_picker(data: str) -> str:
     return _RAINBOW_COLORS[hex_int % len(_RAINBOW_COLORS)]
 
 
-def get_style(node: dict[str, Any], style: PydotStyleTemplate) -> dict[str, str]:
+def get_style(node: dict[str, Any], style: PydotStyleTemplate) -> dict[str, Any]:
     """
     Generates a style dictionary for a graph node based on its metadata and the desired style.
 

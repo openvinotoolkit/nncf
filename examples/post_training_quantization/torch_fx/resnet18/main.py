@@ -30,6 +30,10 @@ import nncf
 from nncf.common.utils.helpers import create_table
 from nncf.common.utils.os import is_windows
 
+# TODO(anazir299): Remove after this is moved to openvino: https://github.com/openvinotoolkit/openvino/pull/37910
+if hasattr(torch._dynamo.config, "prepare_freezing"):
+    torch._dynamo.config.prepare_freezing = True
+
 IMAGE_SIZE = 64
 
 
