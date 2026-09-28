@@ -36,7 +36,7 @@ CONV_META_TYPES = [
 
 OPERATORS_WITH_BIAS_METATYPES = CONV_META_TYPES + [om.PTLinearMetatype]
 CONV_FUSED_META_TYPES = [om.PTBatchNormMetatype]
-AVAILABLE_NODE_TYPES_FOR_WEIGHT_SUBGRAPH = om.QUANTIZE_NODE_TYPES + om.PRUNING_NODE_TYPES
+AVAILABLE_NODE_TYPES_FOR_WEIGHT_SUBGRAPH = om.QUANTIZE_NODE_TYPES + om.PRUNING_NODE_TYPES + ["transpose"]
 
 
 def find_const_node_in_constant_subgraph(node: NNCFNode, graph: NNCFGraph) -> NNCFNode | None:
@@ -359,7 +359,7 @@ def get_weight_compression_reduction_axes(metatype: OperatorMetatype, weight_por
     """
     if metatype in [om.PTAtenEmbeddingMetatype, om.PTEmbeddingMetatype]:
         return [1]
-    if metatype == om.PTLinearMetatype:
+    if metatype in [om.PTLinearMetatype, om.PTGroupedMatMulMetatype]:
         return [ndims - 1]
     if metatype == om.PTMatMulMetatype:
         if weight_port_id == 0:

@@ -523,6 +523,16 @@ class PTMatMulMetatype(PTOperatorMetatype):
 
 
 @PT_OPERATOR_METATYPES.register()
+class PTGroupedMatMulMetatype(PTOperatorMetatype):
+    name = "GroupedMatMulOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH: ["_grouped_mm"],
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["grouped_mm"],
+    }
+    weight_port_ids = [1]
+
+
+@PT_OPERATOR_METATYPES.register()
 class PTAddmmMetatype(PTOperatorMetatype):
     name = "MatMulOp"
     module_to_function_names = {NamespaceTarget.TORCH: ["addmm", "baddbmm"]}
@@ -1041,7 +1051,7 @@ OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
     PTAtenEmbeddingBagMetatype,
 ]
 
-MATMUL_METATYPES = [PTLinearMetatype, PTMatMulMetatype, PTAddmmMetatype]
+MATMUL_METATYPES = [PTLinearMetatype, PTMatMulMetatype, PTAddmmMetatype, PTGroupedMatMulMetatype]
 
 EMBEDDING_METATYPES = [PTEmbeddingMetatype, PTAtenEmbeddingMetatype]
 
