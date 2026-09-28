@@ -105,7 +105,7 @@ test-tools:
 # Linters
 ###############################################################################
 install-pre-commit:
-	pip install pre-commit
+	pip install pre-commit==4.6.2
 
 pre-commit:
 	pre-commit run -a
