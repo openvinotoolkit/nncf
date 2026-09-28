@@ -196,7 +196,6 @@ def run_pipeline(
     test_cases: dict,
     result_data: dict[str, RunInfo],
     output_dir: Path,
-    data_dir: Path | None,
     no_eval: bool,
     batch_size: int | None,
     run_fp32_backend: bool,
@@ -219,7 +218,6 @@ def run_pipeline(
     pipeline_kwargs.update(
         {
             "output_dir": output_dir,
-            "data_dir": data_dir,
             "no_eval": no_eval,
             "run_benchmark_app": run_benchmark_app,
             "batch_size": batch_size or test_model_param.get("batch_size", 1),
@@ -283,7 +281,6 @@ def test_ptq_quantization(
         PTQ_TEST_CASES,
         result_data,
         output_dir,
-        None,  # data_dir is not used in PTQ, used HF datasets
         no_eval,
         batch_size,
         run_fp32_backend,
@@ -319,7 +316,6 @@ def test_weight_compression(
         WC_TEST_CASES,
         result_data,
         output_dir,
-        None,  # data_dir is not used in WC
         no_eval,
         batch_size,
         run_fp32_backend,
