@@ -25,6 +25,10 @@ on:
 env:
   UV_SYSTEM_PYTHON: 'true'
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   cpu:
     name: ${{ matrix.scope }}
@@ -59,9 +63,6 @@ jobs:
             install: install-tools
             test: test-tools
             workers: 1
-    defaults:
-      run:
-        shell: bash
     env:
       NUM_WORKERS: ${{ matrix.workers }}
     steps:
@@ -75,7 +76,7 @@ jobs:
         with:
           python-version: ${{ inputs.python_version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
@@ -91,9 +92,6 @@ jobs:
     timeout-minutes: 40
     runs-on: aks-linux-6-cores-55gb-gpu-a10
     if: ${{ inputs.gpu_enabled == true }}
-    defaults:
-      run:
-        shell: bash
     env:
       DEBIAN_FRONTEND: noninteractive
     steps:
@@ -117,7 +115,7 @@ jobs:
         with:
           python-version: ${{ inputs.python_version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: Override constraints
         if: ${{ inputs.override_requirements != '' }}
         run: python .github/scripts/override_constraints.py "${{ inputs.override_requirements }}"
