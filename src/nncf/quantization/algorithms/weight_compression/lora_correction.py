@@ -174,6 +174,7 @@ class LoraCorrectionAlgorithm:
             CompressWeightsMode.INT4_ASYM,
             CompressWeightsMode.INT3_SYM,
             CompressWeightsMode.INT2_SYM,
+            CompressWeightsMode.INT2_ASYM,
         ):
             fq_weights = do_integer_dequantization(
                 compressed_weight,
@@ -183,7 +184,8 @@ class LoraCorrectionAlgorithm:
             fq_weights = do_float_dequantization(compressed_weight, reduction_axis)
         else:
             msg = (
-                f"{mode.value} mode is invalid for Lora Correction algorithm. Supported modes: INT4_SYM, INT4_ASYM, NF4"
+                f"{mode.value} mode is invalid for Lora Correction algorithm. "
+                "Supported modes: INT4_SYM, INT4_ASYM, INT3_SYM, INT2_SYM, INT2_ASYM, NF4"
             )
             raise nncf.InternalError(msg)
         # fq_w + residual = w   =>  residual = w - fq_w
