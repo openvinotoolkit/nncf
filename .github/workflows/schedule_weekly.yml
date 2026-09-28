@@ -1,8 +1,13 @@
 name: "[Schedule] Weekly"
+run-name: "[Schedule] Weekly${{ inputs.pr_num != '' && format(' PR#{0}', inputs.pr_num) || '' }}"
 permissions: read-all
 
 on:
   workflow_dispatch:
+    inputs:
+      pr_num:
+        description: 'The pull request number'
+        default: ''
   schedule:
     - cron: '0 0 * * 0'
 
@@ -21,6 +26,7 @@ jobs:
           - python_version: "3.14"
     uses: ./.github/workflows/call_precommit.yml
     with:
+      pr_num: ${{ inputs.pr_num }}
       python_version: ${{ matrix.python_version }}
       override_requirements: ${{ matrix.override_requirements || '' }}
       gpu_enabled: false
@@ -28,3 +34,5 @@ jobs:
   macos:
     if: github.repository_owner == 'openvinotoolkit'
     uses: ./.github/workflows/macos.yml
+    with:
+      pr_num: ${{ inputs.pr_num }}
