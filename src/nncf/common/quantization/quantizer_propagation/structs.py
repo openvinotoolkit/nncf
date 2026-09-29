@@ -12,11 +12,11 @@
 from __future__ import annotations
 
 from enum import Enum
+from enum import StrEnum
 
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.utils.api_marker import api
-from nncf.parameters import StrEnum
 
 
 class QuantizationTrait(Enum):
