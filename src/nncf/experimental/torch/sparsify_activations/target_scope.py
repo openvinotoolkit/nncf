@@ -13,13 +13,13 @@ from dataclasses import dataclass
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.scopes import get_difference_scope
 from nncf.scopes import get_matched_scope_info
 
 
 @dataclass
-class TargetScope(IgnoredScope):
+class TargetScope(Scope):
     r"""
     Specifies the target portions in a model graph.
 

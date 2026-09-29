@@ -115,9 +115,11 @@ class Scope:
     validate: bool = True
 
 
-# Deprecated alias for :class:`nncf.Scope`, kept for backward compatibility. Use `nncf.Scope` instead.
 # TODO(anzr299): Remove this alias in future properly.
-IgnoredScope = Scope
+class IgnoredScope(Scope):
+    """
+    Deprecated alias for :class:`nncf.Scope`, kept for backward compatibility. Use `nncf.Scope` instead.
+    """
 
 
 def get_difference_scope(scope_1: Scope, scope_2: Scope) -> Scope:
