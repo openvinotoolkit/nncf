@@ -18,7 +18,6 @@ from typing import Any, TypeVar
 
 import nncf
 from nncf import Dataset
-from nncf.common.deprecation import warning_deprecated
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -52,6 +51,7 @@ from nncf.quantization.algorithms.weight_compression.scale_estimation import Sca
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_reduction_channel_size
 from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.scopes import get_node_names_from_scope
 from nncf.tensor import Tensor
 from nncf.tensor import functions as fns
@@ -123,7 +123,7 @@ def get_weight_compression_configuration(
         "scale_estimation": scale_estimation or False,
         "gptq": gptq or False,
         "lora_correction": lora_correction or False,
-        "ignored_scope": ignored_scope or IgnoredScope(),
+        "ignored_scope": ignored_scope or Scope(),
         "sensitivity_metric": (
             (
                 SensitivityMetric.WEIGHT_QUANTIZATION_ERROR
@@ -158,12 +158,6 @@ def check_user_compression_configuration(
     """
     Validates the user's weight compression configuration for correctness.
     """
-    if isinstance(ignored_scope, IgnoredScope):
-        warning_deprecated(
-            "Usage of `nncf.IgnoredScope` is deprecated and will be removed in a future NNCF version. "
-            "Use `nncf.Scope` instead."
-        )
-
     if mode in INT8_MODES:
         if (ratio and ratio != 1) or (group_size and group_size != -1):
             msg = (

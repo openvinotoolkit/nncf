@@ -69,6 +69,7 @@ from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.quantization.range_estimator import StatisticsType
 from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.scopes import get_node_names_from_scope
 
 TModel = TypeVar("TModel")
@@ -206,7 +207,7 @@ class MinMaxQuantization(Algorithm):
         self._activations_range_estimator_params = activations_range_estimator_params
         self._weights_range_estimator_params = weights_range_estimator_params
         self._preset = preset
-        self._ignored_scope = IgnoredScope() if ignored_scope is None else ignored_scope
+        self._ignored_scope = Scope() if ignored_scope is None else ignored_scope
         self.quantizer_propagation_rule = quantizer_propagation_rule
 
         # validate input parameter types

@@ -14,8 +14,6 @@ import nncf
 from nncf.common.deprecation import _generate_deprecation_message
 from nncf.common.deprecation import deprecated
 from nncf.common.logging.logger import NNCFDeprecationWarning
-from nncf.parameters import CompressWeightsMode
-from nncf.quantization.algorithms.weight_compression.algorithm import check_user_compression_configuration
 
 EXAMPLE_MSG = "foo"
 START_VERSION = "1.2.3"
@@ -57,24 +55,9 @@ def test_warnings_are_shown_for_deprecated_class_instantiation():
 
 
 def test_warnings_are_shown_for_deprecated_ignored_scope():
-    with pytest.warns(NNCFDeprecationWarning, match="`nncf.IgnoredScope` is deprecated"):
-        check_user_compression_configuration(
-            mode=CompressWeightsMode.INT8_ASYM,
-            subset_size=1,
-            dataset=None,
-            ratio=None,
-            group_size=None,
-            all_layers=None,
-            awq=None,
-            scale_estimation=None,
-            gptq=None,
-            lora_correction=None,
-            ignored_scope=nncf.IgnoredScope(names=["node_name"]),
-            sensitivity_metric=None,
-            backup_mode=None,
-            compression_format=None,
-            advanced_parameters=None,
-        )
+    with pytest.warns(NNCFDeprecationWarning, match="Use `nncf.Scope` instead."):
+        ignored_scope = nncf.IgnoredScope(names=["node_name"])
+    assert isinstance(ignored_scope, nncf.Scope)
 
 
 def test_generate_deprecation_message():

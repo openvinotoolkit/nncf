@@ -27,6 +27,7 @@ from nncf.data import Dataset
 from nncf.experimental.torch.sparsify_activations.target_scope import TargetScope
 from nncf.experimental.torch.sparsify_activations.target_scope import get_target_node_names_from_target_scope
 from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.scopes import get_node_names_from_scope
 from nncf.torch.model_creation import is_wrapped_model
 from nncf.torch.model_creation import wrap_model
@@ -243,7 +244,7 @@ def sparsify_activations(
             raise ValueError(msg)
 
     if ignored_scope is None:
-        ignored_scope = IgnoredScope()
+        ignored_scope = Scope()
 
     backend = get_backend(model)
     if backend == BackendType.TORCH and not is_wrapped_model(model):

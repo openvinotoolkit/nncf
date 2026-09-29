@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from dataclasses import field
 
 import nncf
+from nncf.common.deprecation import deprecated
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
@@ -116,6 +117,7 @@ class Scope:
 
 
 # TODO(anzr299): Remove this alias in future properly.
+@deprecated(msg="Use `nncf.Scope` instead.")
 class IgnoredScope(Scope):
     """
     Deprecated alias for :class:`nncf.Scope`, kept for backward compatibility. Use `nncf.Scope` instead.
