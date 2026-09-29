@@ -18,6 +18,7 @@ from typing import Any, TypeVar
 
 import nncf
 from nncf import Dataset
+from nncf.common.deprecation import warning_deprecated
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -157,6 +158,12 @@ def check_user_compression_configuration(
     """
     Validates the user's weight compression configuration for correctness.
     """
+    if isinstance(ignored_scope, IgnoredScope):
+        warning_deprecated(
+            "Usage of `nncf.IgnoredScope` is deprecated and will be removed in a future NNCF version. "
+            "Use `nncf.Scope` instead."
+        )
+
     if mode in INT8_MODES:
         if (ratio and ratio != 1) or (group_size and group_size != -1):
             msg = (
