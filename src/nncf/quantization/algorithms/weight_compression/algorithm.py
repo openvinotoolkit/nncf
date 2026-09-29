@@ -930,6 +930,13 @@ class WeightCompression(Algorithm):
             for wp in weight_params
             if wp.node_with_weight.metatype in self._backend_entity.matmul_metatypes
         ]
+        if get_backend(model) == BackendType.TORCH:
+            from nncf.torch.graph.operator_metatypes import PTGroupedMatMulMetatype
+
+            if any(node.metatype == PTGroupedMatMulMetatype for node in matmul_nodes_to_compress):
+                msg = "Data-aware weight compression is not supported for GroupedMatMul in the Torch backend."
+                raise nncf.ParameterNotSupportedError(msg)
+
         matmul_input_to_output_nodes_map = self.get_matmul_input_to_output_nodes_map(matmul_nodes_to_compress, graph)
         if statistic_points is None:
             statistic_points = self.get_statistic_points(model, graph, matmul_input_to_output_nodes_map)
