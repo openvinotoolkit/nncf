@@ -60,17 +60,52 @@ def get_node_names_from_subgraph(graph: NNCFGraph, subgraph: Subgraph) -> list[s
     return list(sorted(matched_names))
 
 
+@api(canonical_alias="nncf.Scope")
 @dataclass
-class BaseScope:
-    """
+class Scope:
+    r"""
     Defines a portion of a model by a set of matching rules against the model graph.
 
+    Example:
+
+    ..  code-block:: python
+
+            import nncf
+
+            # Specify by node name:
+            node_names = ['node_1', 'node_2', 'node_3']
+            scope = nncf.Scope(names=node_names)
+
+            # Specify using regular expressions:
+            patterns = ['node_\\d']
+            scope = nncf.Scope(patterns=patterns)
+
+            # Specify by operation type:
+
+            # OpenVINO opset https://docs.openvino.ai/latest/openvino_docs_ops_opset.html
+            operation_types = ['Multiply', 'GroupConvolution', 'Interpolate']
+            scope = nncf.Scope(types=operation_types)
+
+            # ONNX opset https://github.com/onnx/onnx/blob/main/docs/Operators.md
+            operation_types = ['Mul', 'Conv', 'Resize']
+            scope = nncf.Scope(types=operation_types)
+
+            # Specify by subgraph:
+            scope = nncf.Scope(subgraphs=[nncf.Subgraph(inputs=['node_1'], outputs=['node_3'])])
+
+    **Note:** Operation types must be specified according to the model framework.
+
     :param names: List of node names.
+    :type names: List[str]
     :param patterns: List of regular expressions that define patterns for names of nodes.
+    :type patterns: List[str]
     :param types: List of operation types.
+    :type types: List[str]
     :param subgraphs: List of subgraphs.
-    :param validate: If set to True, then an error will be raised if any rule does not match
+    :type subgraphs: List[Subgraph]
+    :param validate: If set to True, then a RuntimeError will be raised if any rule does not match
       in the model graph.
+    :type validate: bool
     """
 
     names: list[str] = field(default_factory=list)
@@ -80,66 +115,20 @@ class BaseScope:
     validate: bool = True
 
 
-@api(canonical_alias="nncf.IgnoredScope")
-@dataclass
-class IgnoredScope(BaseScope):
-    r"""
-    Provides an option to specify portions of model to be excluded from compression.
-
-    The ignored scope defines model sub-graphs that should be excluded from the compression process such as
-    quantization, pruning and etc.
-
-    Example:
-
-    ..  code-block:: python
-
-            import nncf
-
-            # Exclude by node name:
-            node_names = ['node_1', 'node_2', 'node_3']
-            ignored_scope = nncf.IgnoredScope(names=node_names)
-
-            # Exclude using regular expressions:
-            patterns = ['node_\\d']
-            ignored_scope = nncf.IgnoredScope(patterns=patterns)
-
-            # Exclude by operation type:
-
-            # OpenVINO opset https://docs.openvino.ai/latest/openvino_docs_ops_opset.html
-            operation_types = ['Multiply', 'GroupConvolution', 'Interpolate']
-            ignored_scope = nncf.IgnoredScope(types=operation_types)
-
-            # ONNX opset https://github.com/onnx/onnx/blob/main/docs/Operators.md
-            operation_types = ['Mul', 'Conv', 'Resize']
-            ignored_scope = nncf.IgnoredScope(types=operation_types)
-
-    **Note:** Operation types must be specified according to the model framework.
-
-    :param names: List of ignored node names.
-    :type names: List[str]
-    :param patterns: List of regular expressions that define patterns for names of ignored nodes.
-    :type patterns: List[str]
-    :param types: List of ignored operation types.
-    :type types: List[str]
-    :param subgraphs: List of ignored subgraphs.
-    :type subgraphs: List[Subgraph]
-    :param validate: If set to True, then a RuntimeError will be raised if any ignored scope does not match
-      in the model graph.
-    :type types: bool
-    """
+# Deprecated alias for :class:`nncf.Scope`, kept for backward compatibility. Use `nncf.Scope` instead.
+# TODO(anzr299): Remove this alias in future properly.
+IgnoredScope = Scope
 
 
-def get_difference_scope(scope_1: BaseScope, scope_2: BaseScope) -> BaseScope:
+def get_difference_scope(scope_1: Scope, scope_2: Scope) -> Scope:
     """
     Returns scope with rules from 'scope_1' not presented at 'scope_2'.
-    The returned scope has the same type as 'scope_1'.
 
     :param scope_1: First scope.
     :param scope_2: Second scope.
     :return: Scope with the rules difference.
     """
-    cls = scope_1.__class__
-    return cls(
+    return Scope(
         names=list(set(scope_1.names) - set(scope_2.names)),
         patterns=list(set(scope_1.patterns) - set(scope_2.patterns)),
         types=list(set(scope_1.types) - set(scope_2.types)),
@@ -148,9 +137,9 @@ def get_difference_scope(scope_1: BaseScope, scope_2: BaseScope) -> BaseScope:
     )
 
 
-def convert_ignored_scope_to_list(ignored_scope: IgnoredScope | None) -> list[str]:
+def convert_ignored_scope_to_list(ignored_scope: Scope | None) -> list[str]:
     """
-    Convert the contents of the `IgnoredScope` class to the legacy ignored
+    Convert the contents of the ignored `Scope` to the legacy ignored
     scope format.
 
     :param ignored_scope: The ignored scope.
@@ -168,10 +157,10 @@ def convert_ignored_scope_to_list(ignored_scope: IgnoredScope | None) -> list[st
     return results
 
 
-def get_matched_scope_info(scope: BaseScope, nncf_graphs: list[NNCFGraph]) -> tuple[BaseScope, dict[str, set[str]]]:
+def get_matched_scope_info(scope: Scope, nncf_graphs: list[NNCFGraph]) -> tuple[Scope, dict[str, set[str]]]:
     """
     Returns matched scope for provided graphs along with all found matches.
-    The resulted scope consist of all matched rules and has the same type as the given scope.
+    The resulted scope consist of all matched rules.
     The found matches consist of a dictionary with a rule name as a key and matched node names as a value.
 
     :param scope: Scope instance.
@@ -205,8 +194,7 @@ def get_matched_scope_info(scope: BaseScope, nncf_graphs: list[NNCFGraph]) -> tu
                 matches["subgraphs"].update(names_from_subgraph)
                 subgraphs_numbers.add(i)
 
-    cls = scope.__class__
-    matched_scope = cls(
+    matched_scope = Scope(
         names=list(names),
         patterns=list(patterns),
         types=list(types),
@@ -216,53 +204,38 @@ def get_matched_scope_info(scope: BaseScope, nncf_graphs: list[NNCFGraph]) -> tu
     return matched_scope, matches
 
 
-def _get_scope_name(scope: BaseScope) -> str:
-    """
-    Returns the name of the given scope, used in the messages about the matched and unmatched nodes.
-
-    :param scope: Scope.
-    :return: Name of the scope.
-    """
-    return "Ignored" if isinstance(scope, IgnoredScope) else "Annotated"
-
-
-def _info_matched_scope(matches: dict[str, set[str]], scope: BaseScope) -> None:
+def _info_matched_scope(matches: dict[str, set[str]]) -> None:
     """
     Log matches.
 
     :param matches: Matches.
-    :param scope: Scope the matches are found by.
     """
-    scope_name = _get_scope_name(scope)
     for rule_type, rules in matches.items():
         if rules:
-            nncf_logger.info(f"{len(rules)} {scope_name} nodes were found by {rule_type} in the NNCFGraph")
+            nncf_logger.info(f"{len(rules)} nodes were found by {rule_type} in the NNCFGraph")
 
 
-def _error_unmatched_scope(unmatched_scope: BaseScope) -> str:
+def _error_unmatched_scope(unmatched_scope: Scope) -> str:
     """
     Returns an error message for unmatched scope.
 
     :param unmatched_scope: Unmatched scope.
     :return str: Error message.
     """
-    scope_name = _get_scope_name(unmatched_scope)
     err_msg = "\n"
     for rule_type in ("names", "types", "patterns"):
         unmatched_rules = getattr(unmatched_scope, rule_type)
         if unmatched_rules:
-            err_msg += (
-                f"{scope_name} nodes that matches {rule_type} {unmatched_rules} were not found in the NNCFGraph.\n"
-            )
+            err_msg += f"Nodes that matches {rule_type} {unmatched_rules} were not found in the NNCFGraph.\n"
     for subgraph in unmatched_scope.subgraphs:
         err_msg += (
-            f"{scope_name} nodes that matches subgraph with input names {subgraph.inputs} "
+            f"Nodes that matches subgraph with input names {subgraph.inputs} "
             f"and output names {subgraph.outputs} were not found in the NNCFGraph.\n"
         )
     return err_msg
 
 
-def _check_scope_strictly_matched(scope: BaseScope, matched_scope: BaseScope) -> None:
+def _check_scope_strictly_matched(scope: Scope, matched_scope: Scope) -> None:
     """
     Passes when scope and matched_scope are equal, otherwise - raises ValidationError.
 
@@ -274,7 +247,7 @@ def _check_scope_strictly_matched(scope: BaseScope, matched_scope: BaseScope) ->
         raise nncf.ValidationError(_error_unmatched_scope(unmatched_scope))
 
 
-def get_node_names_from_scope(scope: BaseScope, nncf_graph: NNCFGraph, strict: bool = True) -> set[str]:
+def get_node_names_from_scope(scope: Scope, nncf_graph: NNCFGraph, strict: bool = True) -> set[str]:
     """
     Returns matched names according to the scope and NNCFGraph.
     If strict is True, raises nncf.ValidationError if any rule was not matched.
@@ -288,11 +261,11 @@ def get_node_names_from_scope(scope: BaseScope, nncf_graph: NNCFGraph, strict: b
     matched_scope, matches = get_matched_scope_info(scope, [nncf_graph])
     if strict:
         _check_scope_strictly_matched(scope, matched_scope)
-    _info_matched_scope(matches, scope)
+    _info_matched_scope(matches)
     return {name for match in matches.values() for name in match}
 
 
-def validate_scope(scope: BaseScope, nncf_graphs: list[NNCFGraph]) -> None:
+def validate_scope(scope: Scope, nncf_graphs: list[NNCFGraph]) -> None:
     """
     Passes whether all rules at 'scope' have matches at provided graphs, otherwise - raises ValidationError.
 
