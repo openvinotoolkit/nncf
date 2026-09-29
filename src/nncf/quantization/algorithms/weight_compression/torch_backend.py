@@ -226,14 +226,14 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         :param rank: The rank for the decomposition. If None, the full rank is used.
         :return: A tuple containing the U and V matrices from the SVD.
         """
-        # O stands for output dimension, H - input dimension or hidden size, R - rank.
+        # O stands for output dimension, H - input dimension or hidden size, R - rank, B - batch dimension.
         U_full, S_full, V_full = torch.linalg.svd(svd_residual, full_matrices=False)
-        U = U_full[:, :rank]  # [H, R]
+        U = U_full[..., :rank]  # [H, R] or [B, H, R]
         S_sqrt = torch.sqrt(S_full)
-        S = torch.diag(S_sqrt[:rank])  # [R, R]
-        V = V_full[:rank, :]  # [R, O]
-        V = S @ V  # [R, O]
-        U = U @ S  # [H, R]
+        S = torch.diag_embed(S_sqrt[..., :rank])  # [R, R] or [B, R, R]
+        V = V_full[..., :rank, :]  # [R, O] or [B, R, O]
+        V = S @ V  # [R, O] or [B, R, O]
+        U = U @ S  # [H, R] or [B, H, R]
         return U, V
 
     @staticmethod

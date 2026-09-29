@@ -33,6 +33,7 @@ from nncf.torch.quantization.layers import LoraMixin
 from nncf.torch.quantization.layers import SymmetricQuantizer as SQ
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.function_hook.quantization.test_weights_compression import AWQLinearModel
+from tests.torch.test_models.synthetic import GroupedMatMulModel
 from tests.torch.test_models.synthetic import LinearModel
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.utils import compare_with_reference_file
@@ -197,6 +198,29 @@ def test_invalid_lora_rank():
             compression_format=CompressionFormat.FQ_LORA,
             advanced_parameters=AdvancedCompressionParameters(lora_adapter_rank=too_big_rank),
         )
+
+
+@pytest.mark.parametrize("transposed_weight", (False, True), ids=("native_weight", "transposed_weight"))
+def test_fq_lora_grouped_matmul(transposed_weight):
+    rank = 2
+    model = GroupedMatMulModel(transposed_weight=transposed_weight)
+    example_input = torch.ones(model.INPUT_SHAPE, dtype=model.INPUT_DTYPE)
+    wrapped_model = wrap_model(model, example_input=example_input, trace_parameters=True)
+
+    compressed_model = compress_weights(
+        wrapped_model,
+        mode=CompressWeightsMode.INT4_SYM,
+        group_size=4,
+        all_layers=True,
+        compression_format=CompressionFormat.FQ_LORA,
+        advanced_parameters=AdvancedCompressionParameters(lora_adapter_rank=rank),
+    )
+
+    num_groups, c_in, c_out = GroupedMatMulModel.NUM_GROUPS, GroupedMatMulModel.C_IN, GroupedMatMulModel.C_OUT
+    out_features, in_features = (c_out, c_in) if transposed_weight else (c_in, c_out)
+    quantizer = next(module for module in compressed_model.modules() if isinstance(module, LoraMixin))
+    assert quantizer.lora_A.shape == (num_groups, rank, in_features)
+    assert quantizer.lora_B.shape == (num_groups, out_features, rank)
 
 
 @pytest.mark.parametrize("all_layers", [True, False])
