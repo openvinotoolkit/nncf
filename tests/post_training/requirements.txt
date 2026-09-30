@@ -27,3 +27,4 @@ timm==0.9.2
 accelerate==1.9.0
 transformers==5.5.0
 whowhatbench @ git+https://github.com/AlexanderDokuchaev/openvino.genai@a26c9b20d07209f035f6d74aeae94d6a72a132ab#subdirectory=tools/who_what_benchmark
+tabulate==0.10.0
