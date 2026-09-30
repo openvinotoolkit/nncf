@@ -59,7 +59,11 @@ def create_table(
             )
         )
 
-    console = Console(color_system=None, force_terminal=False)
+    console = Console(
+        color_system=None,
+        force_terminal=False,
+        width=100_000,  # To generate table as it, no depends from terminal width
+    )
     with console.capture() as capture:
         console.print(table)
     return capture.get().rstrip("\n")
