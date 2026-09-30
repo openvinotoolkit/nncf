@@ -1,4 +1,4 @@
-# Quantization Aware Discillation with absorbable LoRA for 2/3-bit LLM compression
+# Quantization Aware Distillation with absorbable LoRA for 2/3-bit LLM compression
 
 This example trains a Hugging Face causal LM with NNCF weight compression in `FQ_LORA` mode. The script does not just run a static example; it performs an end-to-end compression + fine-tuning pipeline for 2-bit or 3-bit quantized weights.
 
@@ -27,58 +27,27 @@ This is a real training pipeline for low-bit LLM optimization, not a simple infe
 
 ## Prerequisites
 
-Before running this example, ensure you have following installed and set up your environment:
-
-- Python 3.10+
-- CUDA-enabled NVIDIA GPU
-- PyTorch with CUDA support
-- A working installation of the repository and dependencies
+Before running this example, ensure you have Python 3.10+ installed and set up your environment:
 
 ### 1. Create and activate a virtual environment
 
 ```bash
-cd examples/llm_compression/torch/distillation_qat_with_lora_2_3_bit
 python3 -m venv nncf_env
 source nncf_env/bin/activate  # On Windows: nncf_env\Scripts\activate.bat
 ```
 
-### 2. Install the example dependencies from this folder
-
-```bash
-python -m pip install -r requirements.txt
-```
-
-### 3. Install NNCF and other dependencies
+### 2. Install NNCF and other dependencies
 
 ```bash
 python3 -m pip install ../../../../ -r requirements.txt
 ```
 
-## Usage
+## Run Example
 
-Run the script directly:
-
-```bash
-cd examples/llm_compression/torch/distillation_qat_with_lora_2_3_bit
-python main.py --pretrained meta-llama/Llama-3.2-1B-Instruct --bits 3 --dataset pile-10k --epochs 1 --output_dir output
-```
-
-The default command line is effectively:
+The example is fully automated. Just run the following command in the prepared Python environment:
 
 ```bash
-python main.py \
-  --pretrained meta-llama/Llama-3.2-1B-Instruct \
-  --bits 3 \
-  --output_dir output \
-  --dataset pile-10k \
-  --num_train_samples 2048 \
-  --train_seqlen 1024 \
-  --lr 1e-4 \
-  --epochs 1 \
-  --scale_epochs 0 \
-  --batch_size 32 \
-  --microbatch_size 8 \
-  --lora_rank 256
+python main.py
 ```
 
 ## Important CLI options
@@ -106,6 +75,7 @@ python main.py \
 - `--linear_lr_scheduler`: use a linear learning-rate decay schedule
 - `--batch_size`: accumulation target
 - `--microbatch_size`: per-step microbatch size
+- `--full_determinism`: to enable deterministic QAD
 
 ### Output/export
 
@@ -143,7 +113,7 @@ The optimization loop is distillation-based:
 - the script minimizes a KL divergence between the student and teacher outputs / hidden states
 - optimizer updates are accumulated across microbatch steps and applied when `batch_size // microbatch_size` is reached
 
-This makes the example a low-bit QAT + LoRA distillation workflow rather than a plain quantization pass.
+This makes the example a low-bit QAD + LoRA distillation workflow rather than a plain quantization pass.
 
 ## Notes
 
@@ -151,5 +121,3 @@ This makes the example a low-bit QAT + LoRA distillation workflow rather than a 
 - Default model is `meta-llama/Llama-3.2-1B-Instruct`.
 - OpenVINO export is always performed at the end of the run, after checkpoint restoration and stripping.
 - `--resume` reuses the checkpoint if present; otherwise the script initializes from scratch.
-
-For more background on absorbable LoRA and low-bit training-time compression, see the project documentation for QAT LoRA usage and NNCF compression flows.
