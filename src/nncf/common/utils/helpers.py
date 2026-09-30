@@ -10,19 +10,21 @@
 # limitations under the License.
 import os
 from contextlib import contextmanager
-from typing import Any, Hashable, Iterable, Iterator, TypeVar
+from itertools import repeat
+from typing import Any, Iterable, Iterator, Literal
 
-from tabulate import tabulate
+from rich import box
+from rich.console import Console
+from rich.table import Table
+from rich.text import Text
 
 from nncf.common.utils.os import is_windows
-
-TKey = TypeVar("TKey", bound=Hashable)
 
 
 def create_table(
     header: list[str],
     rows: list[list[Any]],
-    table_fmt: str = "mixed_grid",
+    table_fmt: Literal["mixed_grid", "grid"] = "mixed_grid",
     max_col_widths: int | Iterable[int] | None = None,
 ) -> str:
     """
@@ -30,17 +32,37 @@ def create_table(
 
     :param header: Table's header.
     :param rows: Table's rows.
-    :param table_fmt: Type of formatting of the table.
+    :param table_fmt: Table format: "mixed_grid" (Rich's default style) or "grid" (ASCII).
     :param max_col_widths: Max widths of columns.
     :return: A string which represents a table with a header and rows.
     """
-    if not rows:
-        # For empty rows max_col_widths raises IndexError
-        max_col_widths = None
     if is_windows():
-        # Not all terminals on Windows supports any format of table
         table_fmt = "grid"
-    return tabulate(tabular_data=rows, headers=header, tablefmt=table_fmt, maxcolwidths=max_col_widths, floatfmt=".3f")
+    formats = {"mixed_grid": box.HEAVY_HEAD, "grid": box.ASCII}
+    if table_fmt not in formats:
+        msg = f"Unsupported table format: {table_fmt}"
+        raise ValueError(msg)
+    table = Table(box=formats[table_fmt], show_header=bool(header), show_lines=True)
+    for title in header:
+        table.add_column(Text(title))
+    if isinstance(max_col_widths, int):
+        max_col_widths = repeat(max_col_widths)
+    if max_col_widths is not None:
+        for column, max_width in zip(table.columns, max_col_widths):
+            column.max_width = max_width
+
+    for row in rows:
+        table.add_row(
+            *(
+                Text("" if value is None else f"{value:.3f}" if isinstance(value, float) else str(value))
+                for value in row
+            )
+        )
+
+    console = Console(color_system=None, force_terminal=False)
+    with console.capture() as capture:
+        console.print(table)
+    return capture.get().rstrip("\n")
 
 
 @contextmanager
