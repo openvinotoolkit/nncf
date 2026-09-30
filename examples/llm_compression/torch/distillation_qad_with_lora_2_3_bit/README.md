@@ -1,4 +1,4 @@
-# Distillation QAT with absorbable LoRA for 2/3-bit LLM compression
+# Quantization Aware Discillation with absorbable LoRA for 2/3-bit LLM compression
 
 This example trains a Hugging Face causal LM with NNCF weight compression in `FQ_LORA` mode. The script does not just run a static example; it performs an end-to-end compression + fine-tuning pipeline for 2-bit or 3-bit quantized weights.
 
