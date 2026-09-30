@@ -28,7 +28,7 @@ import nncf
 
 
 @dataclass
-class TestModel:
+class ModelDesc:
     model_url: str
     model_name: str
     int8_ref_top1: float
@@ -40,21 +40,21 @@ class TestModel:
 
 
 MODELS = [
-    TestModel(
+    ModelDesc(
         "https://github.com/onnx/models/raw/5faef4c33eba0395177850e1e31c4a6a9e634c82/vision/classification/mobilenet/model/mobilenetv2-12.onnx",
         "mobilenetv2-12",
         0.7864968152866242,
         1,
         1,
     ),
-    TestModel(
+    ModelDesc(
         "https://github.com/onnx/models/raw/5faef4c33eba0395177850e1e31c4a6a9e634c82/vision/classification/resnet/model/resnet50-v1-7.onnx",
         "resnet50-v1-7",
         0.8114649681528663,
         300,
         246,
     ),
-    TestModel(
+    ModelDesc(
         "https://github.com/onnx/models/raw/5faef4c33eba0395177850e1e31c4a6a9e634c82/vision/classification/efficientnet-lite4/model/efficientnet-lite4-11.onnx",
         "efficientnet-lite4-11",
         0.8035668789808917,

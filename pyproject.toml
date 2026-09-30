@@ -277,6 +277,9 @@ single-line-exclusions = ["typing"]
 
 [tool.pytest.ini_options]
 pythonpath = "."
+filterwarnings = [
+    "ignore:'setParseAction' deprecated - use 'set_parse_action':pyparsing.PyparsingDeprecationWarning:pydot.dot_parser",
+]
 
 [tool.bandit]
 exclude_dirs = ["tools", "tests", "**/venv*", "build"]
