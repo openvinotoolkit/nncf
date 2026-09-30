@@ -17,7 +17,7 @@ from numpy.typing import NDArray
 
 try:
     from typing_extensions import TypeAliasType
-except ImportError:
+except (ImportError, ModuleNotFoundError):
     from typing import TypeAliasType
 
 from nncf.tensor import Tensor
