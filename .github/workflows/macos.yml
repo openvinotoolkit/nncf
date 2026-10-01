@@ -57,3 +57,4 @@ jobs:
         run: pytest -ra tests/openvino
         env:
           ONEDNN_MAX_CPU_ISA: AVX2
+          OV_CPU_MAX_ISA: AVX2
