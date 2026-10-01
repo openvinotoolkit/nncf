@@ -10,6 +10,7 @@
 # limitations under the License.
 import pytest
 
+import nncf
 from nncf.common.deprecation import _generate_deprecation_message
 from nncf.common.deprecation import deprecated
 from nncf.common.logging.logger import NNCFDeprecationWarning
@@ -51,6 +52,12 @@ def test_warnings_are_shown_for_deprecated_function_call_with_versions():
 def test_warnings_are_shown_for_deprecated_class_instantiation():
     with pytest.warns(NNCFDeprecationWarning, match=EXAMPLE_MSG):
         DeprecatedClass()
+
+
+def test_warnings_are_shown_for_deprecated_ignored_scope():
+    with pytest.warns(NNCFDeprecationWarning, match="Use `nncf.Scope` instead."):
+        ignored_scope = nncf.IgnoredScope(names=["node_name"])
+    assert isinstance(ignored_scope, nncf.Scope)
 
 
 def test_generate_deprecation_message():

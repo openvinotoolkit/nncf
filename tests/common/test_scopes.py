@@ -12,9 +12,9 @@ import pytest
 
 from nncf.common.graph import NNCFNode
 from nncf.common.scopes import get_not_matched_scopes
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.scopes import Subgraph
-from nncf.scopes import get_difference_ignored_scope
+from nncf.scopes import get_difference_scope
 
 
 @pytest.mark.parametrize(
@@ -27,10 +27,10 @@ from nncf.scopes import get_difference_ignored_scope
         ([r"{re}\d"], [r"{re}\d"]),
         ([r"{re}\w"], []),
         (["A", "B", "{re}.*", "1"], ["1"]),
-        (IgnoredScope(names=["A", "B"]), []),
-        (IgnoredScope(names=["1", "2"]), ["1", "2"]),
-        (IgnoredScope(patterns=[r"\d"]), [r"{re}\d"]),
-        (IgnoredScope(patterns=[r"\w"]), []),
+        (Scope(names=["A", "B"]), []),
+        (Scope(names=["1", "2"]), ["1", "2"]),
+        (Scope(patterns=[r"\d"]), [r"{re}\d"]),
+        (Scope(patterns=[r"\w"]), []),
     ],
 )
 def test_get_not_matched_scopes(scope, ref):
@@ -46,7 +46,7 @@ def test_get_not_matched_scopes(scope, ref):
     "scope_1, scope_2, ref",
     (
         (
-            IgnoredScope(
+            Scope(
                 names=["A_name", "B_name"],
                 patterns=["A_pattern", "B_pattern"],
                 types=["A_type", "B_type"],
@@ -55,7 +55,7 @@ def test_get_not_matched_scopes(scope, ref):
                     Subgraph(inputs=["B_input"], outputs=["B_output"]),
                 ],
             ),
-            IgnoredScope(
+            Scope(
                 names=["B_name", "C_name"],
                 patterns=["B_pattern", "C_pattern"],
                 types=["B_type", "C_type"],
@@ -64,7 +64,7 @@ def test_get_not_matched_scopes(scope, ref):
                     Subgraph(inputs=["C_input"], outputs=["C_output"]),
                 ],
             ),
-            IgnoredScope(
+            Scope(
                 names=["A_name"],
                 patterns=["A_pattern"],
                 types=["A_type"],
@@ -74,4 +74,4 @@ def test_get_not_matched_scopes(scope, ref):
     ),
 )
 def test_ignored_scope_diff(scope_1, scope_2, ref):
-    assert get_difference_ignored_scope(scope_1, scope_2) == ref
+    assert get_difference_scope(scope_1, scope_2) == ref

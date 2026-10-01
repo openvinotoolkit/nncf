@@ -16,14 +16,14 @@ import openvino as ov
 
 import nncf
 from nncf.common.logging import nncf_logger
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 
 
 def exclude_empty_fields(value: dict[str, Any]) -> dict[str, Any]:
     """
     Remove keys where value is empty and key is `validate`
 
-    :param value: IgnoredScope instance, based on the quantization parameters
+    :param value: Scope instance, based on the quantization parameters
     """
     value.pop("validate")
     keys = list(value.keys())
@@ -47,8 +47,8 @@ def dump_parameters(
     try:
         path = path if path else []
         for key, value in parameters.items():
-            # Special condition for composed fields like IgnoredScope
-            if isinstance(value, IgnoredScope):
+            # Special condition for composed fields like Scope
+            if isinstance(value, Scope):
                 value = exclude_empty_fields(asdict(value))
                 if bool(value):
                     dump_parameters(model, value, algo_name, [key])
