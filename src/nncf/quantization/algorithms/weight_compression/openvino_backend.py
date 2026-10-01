@@ -119,15 +119,10 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         ov_node = self.name_to_node_mapping[node.node_name]
 
-        supported_src_types = {ov.Type.u4: 4, ov.Type.i4: 4, ov.Type.u8: 8, ov.Type.i8: 8}
+        supported_src_types = {ov.Type.i4: 4, ov.Type.i8: 8}
         if ov_node.tensor_view.element_type not in supported_src_types:
             return False, 0, 0
-        bits = supported_src_types[ov_node.tensor_view.element_type]
-        asym = ov_node.tensor_view.element_type in [ov.Type.u8, ov.Type.u4]
-
-        # only repack for sym types are supported for now: i3, i2
-        if asym:
-            return False, 0, 0
+        bits = ov_node.tensor_view.element_type.get_bitwidth()
 
         weight_tensor = Tensor(get_const_value_as_ov_tensor(ov_node))
         weight_tensor = weight_tensor.as_numpy_tensor().astype(TensorDataType.int32)
