@@ -50,6 +50,7 @@ from tests.onnx.common import ModelBuilder
 from tests.onnx.conftest import ONNX_TEST_ROOT
 
 REFERENCE_SCALES_DIR = ONNX_TEST_ROOT / "data" / "reference_scales"
+CUSTOM_ANNOTATION_REFERENCES_DIR = ONNX_TEST_ROOT / "data" / "references_custom_annotation"
 
 UNSUPPORTED_MODES = (
     CompressWeightsMode.NF4,
@@ -636,7 +637,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
             raise NotImplementedError(msg)
         """
         Builds a model to be used in the following tests:
-            - TemplateWeightCompression.test_awq_with_ignored_scope()
+            - TemplateWeightCompression.test_awq_with_excluded_node()
             - TemplateWeightCompression.test_awq_scale_reference()
             - TemplateWeightCompression.test_error_message_for_invalid_group_size()
         tests.
@@ -725,6 +726,44 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_awq_scale_ref_path() -> Path:
         return REFERENCE_SCALES_DIR / "awq_scale_ref.json"
+
+    @staticmethod
+    def get_shared_weight_model() -> onnx.ModelProto:
+        """
+        Builds a model with two MatMul nodes that share the same weight.
+        """
+        weight = np.arange(0, 16).reshape(4, 4).astype(np.float32)
+        initializer = onnx.numpy_helper.from_array(weight, name="shared_weight")
+        nodes = [
+            onnx.helper.make_node("MatMul", ["input", "shared_weight"], ["MatMul_0_output"], name="MatMul_0"),
+            onnx.helper.make_node("MatMul", ["MatMul_0_output", "shared_weight"], ["output"], name="MatMul_1"),
+        ]
+        graph = onnx.helper.make_graph(
+            nodes,
+            "shared-weight-graph",
+            inputs=[onnx.helper.make_tensor_value_info("input", onnx.TensorProto.FLOAT, (1, 4, 4))],
+            outputs=[onnx.helper.make_tensor_value_info("output", onnx.TensorProto.FLOAT, (1, 4, 4))],
+            initializer=[initializer],
+        )
+        model = onnx.helper.make_model(graph, opset_imports=[onnx.helper.make_operatorsetid("", 21)])
+        onnx.checker.check_model(model)
+        return model
+
+    @staticmethod
+    def get_shared_weight_node_name() -> str:
+        return "MatMul_1"
+
+    @staticmethod
+    def get_node_with_shared_weight_name() -> str:
+        return "MatMul_0"
+
+    @staticmethod
+    def get_mode_not_supported_by_backend() -> CompressWeightsMode | None:
+        return CompressWeightsMode.NF4
+
+    @staticmethod
+    def get_custom_annotation_ref_path(ref_name: str) -> Path:
+        return CUSTOM_ANNOTATION_REFERENCES_DIR / f"{ref_name}.json"
 
     @staticmethod
     def get_transform_func() -> Callable[..., Any] | None:

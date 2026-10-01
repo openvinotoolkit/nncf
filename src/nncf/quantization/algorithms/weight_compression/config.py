@@ -16,13 +16,43 @@ from functools import reduce
 import numpy as np
 
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.utils.api_marker import api
 from nncf.errors import InternalError
 from nncf.errors import ValidationError
 from nncf.parameters import CompressWeightsMode
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
 
+FIXED_GROUP_SIZE_MODES = {
+    CompressWeightsMode.MXFP4: 32,
+    CompressWeightsMode.MXFP8_E4M3: 32,
+    CompressWeightsMode.NVFP4: 16,
+}
+PER_CHANNEL_BY_DEFAULT_MODES = [
+    CompressWeightsMode.INT8_ASYM,
+    CompressWeightsMode.INT8_SYM,
+    CompressWeightsMode.CODEBOOK,
+    CompressWeightsMode.CB4,
+    CompressWeightsMode.ADAPTIVE_CODEBOOK,
+]
+DEFAULT_GROUP_SIZE = 128
 
+
+def get_default_group_size(mode: CompressWeightsMode) -> int:
+    """
+    Returns the group size to use for the given mode when no group size is requested explicitly.
+
+    :param mode: Compression mode to get the default group size for.
+    :return: Default group size for the given mode.
+    """
+    if mode in FIXED_GROUP_SIZE_MODES:
+        return FIXED_GROUP_SIZE_MODES[mode]
+    if mode in PER_CHANNEL_BY_DEFAULT_MODES:
+        return -1
+    return DEFAULT_GROUP_SIZE
+
+
+@api(canonical_alias="nncf.WeightCompressionConfig")
 @dataclass
 class WeightCompressionConfig:
     """
@@ -30,17 +60,20 @@ class WeightCompressionConfig:
 
     :param mode: Defines a mode for weight compression. Defaults to INT8_ASYM mode.
     :param group_size: Number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
-        The value -1 means no grouping. Defaults to -1.
+        The value -1 means no grouping. Defaults to None, which means that the default group size of the given
+        mode is used, e.g. -1 for the INT8 modes, 32 for MXFP4 and 128 for INT4_SYM.
     :param codebook_values: Optional codebook values for CODEBOOK compression mode.
         Must be nncf.tensor.Tensor which wraps numpy array or ov tensor. Storing ov tensor is useful for having
         destination data type information available.
     """
 
     mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM
-    group_size: int = -1
+    group_size: int | None = None
     codebook_values: Tensor | None = None
 
     def __post_init__(self) -> None:
+        if self.group_size is None:
+            self.group_size = get_default_group_size(self.mode)
         if self.group_size == 0 or self.group_size < -1:
             msg = f"Invalid group_size={self.group_size}. Group size must be a positive integer or -1."
             raise ValidationError(msg)

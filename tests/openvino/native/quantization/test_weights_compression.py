@@ -88,6 +88,8 @@ from tests.openvino.native.models import SimpleMoEModel
 from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.quantization.test_fq_params_calculation import REFERENCE_SCALES_DIR
 
+CUSTOM_ANNOTATION_REFERENCES_DIR = Path("references_custom_annotation")
+
 TEST_MODELS = {
     IntegerModel: ["matmul_2_data", "gather_2_data", "matmul_1_data"],
     WeightsModel: ["weights_0", "weights_1"],
@@ -977,7 +979,7 @@ def test_nvfp4_optimized_scale_compression():
     The optimized path is forced via patching to avoid needing a large weight tensor.
     """
     weight = Tensor(np.random.randn(2, 16).astype(np.float32))
-    config = WeightCompressionConfig(mode=CompressWeightsMode.NVFP4)
+    config = WeightCompressionConfig(mode=CompressWeightsMode.NVFP4, group_size=-1)
     reduction_axes = -1
 
     # Force the optimized OV path for all tensors regardless of size
@@ -1508,7 +1510,7 @@ def test_int_compressed_weighs_range(mode, data):
     data = np.array(data).astype(np.float32)
     w = Tensor(data)
 
-    config = WeightCompressionConfig(mode=mode)
+    config = WeightCompressionConfig(mode=mode, group_size=-1)
     compressed_weight = do_integer_quantization(w, config, -1)
 
     assert np.allclose(np.abs(compressed_weight.tensor.data), np.abs(w.data))
@@ -1612,7 +1614,7 @@ def test_float_compressed_weighs_range(mode, id_, data):
     data = np.array(data).astype(np.float32)
     w = Tensor(data)
 
-    config = WeightCompressionConfig(mode=mode)
+    config = WeightCompressionConfig(mode=mode, group_size=-1)
     cw = do_float_quantization(w, config, -1)
 
     decompressed_weight = do_float_dequantization(cw, -1).data
@@ -1657,18 +1659,18 @@ def test_codebook_weights_range(data):
         (WeightCompressionConfig(CompressWeightsMode.INT8_ASYM), True, True, False),
         (WeightCompressionConfig(CompressWeightsMode.INT8_ASYM), True, False, True),
         (WeightCompressionConfig(CompressWeightsMode.INT8_ASYM), False, True, True),
-        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM), False, False, False),
-        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM), True, True, False),
-        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM), True, False, True),
-        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM), False, True, True),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, group_size=-1), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, group_size=-1), True, True, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, group_size=-1), True, False, True),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_ASYM, group_size=-1), False, True, True),
         (WeightCompressionConfig(CompressWeightsMode.INT8_SYM), True, False, False),
         (WeightCompressionConfig(CompressWeightsMode.INT8_SYM), False, False, False),
-        (WeightCompressionConfig(CompressWeightsMode.INT4_SYM), True, False, False),
-        (WeightCompressionConfig(CompressWeightsMode.INT4_SYM), False, False, False),
-        (WeightCompressionConfig(CompressWeightsMode.INT3_SYM), True, False, False),
-        (WeightCompressionConfig(CompressWeightsMode.INT3_SYM), False, False, False),
-        (WeightCompressionConfig(CompressWeightsMode.INT2_SYM), True, False, False),
-        (WeightCompressionConfig(CompressWeightsMode.INT2_SYM), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_SYM, group_size=-1), True, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT4_SYM, group_size=-1), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT3_SYM, group_size=-1), True, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT3_SYM, group_size=-1), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT2_SYM, group_size=-1), True, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT2_SYM, group_size=-1), False, False, False),
     ],
 )
 def test_int_quantization_with_precomputed_parameters(config, precompute_scale, precompute_zero_point, raises):
@@ -1959,6 +1961,7 @@ def test_data_free_compression_with_backup_mode(backup_mode):
     assert act_num == num_compressed
 
 
+@pytest.mark.parametrize("annotate", [False, True], ids=["default", "annotated"])
 @pytest.mark.parametrize("backup_mode", [BackupMode.NONE, BackupMode.INT8_ASYM, BackupMode.INT8_SYM])
 @pytest.mark.parametrize(
     ("params", "num_compressed"),
@@ -1975,11 +1978,21 @@ def test_data_free_compression_with_backup_mode(backup_mode):
         ({"awq": True}, 6),
     ),
 )
-def test_data_based_compression_with_backup_mode(backup_mode, params, num_compressed):
+def test_data_based_compression_with_backup_mode(backup_mode, params, num_compressed, annotate):
     model = AWQMatmulModel().ov_model
     sz = 8
     n_samples = 10
     dataset = Dataset([np.ones([1, i + 1, sz]) for i in range(n_samples)])
+
+    custom_annotation = None
+    if annotate:
+        custom_annotation = [
+            nncf.CustomAnnotation(
+                scope=nncf.CustomAnnotationScope(names=["MatMul_1"]),
+                config=WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=-1),
+            )
+        ]
+        num_compressed = 6
 
     compressed_model = compress_weights(
         model,
@@ -1988,9 +2001,11 @@ def test_data_based_compression_with_backup_mode(backup_mode, params, num_compre
         group_size=-1,
         dataset=dataset,
         backup_mode=backup_mode,
+        custom_annotation=custom_annotation,
         **params,
     )
     act_num = 0
+    annotated_num = 0
     if backup_mode == BackupMode.INT8_ASYM:
         backup_ov_mode = ov.Type.u8
     elif backup_mode == BackupMode.INT8_SYM:
@@ -2001,6 +2016,8 @@ def test_data_based_compression_with_backup_mode(backup_mode, params, num_compre
         if op.get_type_name() == "Constant":
             if op.get_element_type() == ov.Type.u4:
                 act_num += 1
+            elif op.get_element_type() == ov.Type.i4:
+                annotated_num += 1
             elif "/scale" in op.get_friendly_name():
                 assert op.get_element_type() == ov.Type.f16
             elif "_lora_" in op.get_friendly_name():
@@ -2008,6 +2025,7 @@ def test_data_based_compression_with_backup_mode(backup_mode, params, num_compre
             else:
                 assert op.get_element_type() == backup_ov_mode
     assert act_num == num_compressed
+    assert annotated_num == (1 if annotate else 0)
 
 
 @pytest.mark.parametrize(
@@ -2544,6 +2562,22 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_awq_scale_ref_path() -> Path:
         return get_actual_reference_for_current_openvino(REFERENCE_SCALES_DIR / "awq_scale_ref.json")
+
+    @staticmethod
+    def get_shared_weight_model() -> ov.Model:
+        return GatherAndMatmulShareData().ov_model
+
+    @staticmethod
+    def get_shared_weight_node_name() -> str:
+        return "MatMul_2"
+
+    @staticmethod
+    def get_node_with_shared_weight_name() -> str:
+        return "Gather_1"
+
+    @staticmethod
+    def get_custom_annotation_ref_path(ref_name: str) -> Path:
+        return get_actual_reference_for_current_openvino(CUSTOM_ANNOTATION_REFERENCES_DIR / f"{ref_name}.json")
 
     @pytest.fixture
     def transpose_a_supported(self) -> bool:

@@ -1,0 +1,7 @@
+{
+    "MatMul_0": {
+        "mode": "int4_asym",
+        "group_size": 2,
+        "codebook_values": null
+    }
+}

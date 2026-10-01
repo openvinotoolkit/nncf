@@ -14,8 +14,8 @@ from dataclasses import dataclass
 import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.scopes import IgnoredScope
-from nncf.scopes import get_difference_ignored_scope
-from nncf.scopes import get_matched_ignored_scope_info
+from nncf.scopes import get_difference_scope
+from nncf.scopes import get_matched_scope_info
 
 
 @dataclass
@@ -84,7 +84,7 @@ def get_target_node_names_from_target_scope(
     :param strict: Whether target_scope must match at least one node or not.
     :return: NNCF node names from the given graph matched by target scope.
     """
-    matched_target_scope, matches = get_matched_ignored_scope_info(target_scope, [nncf_graph])
+    matched_target_scope, matches = get_matched_scope_info(target_scope, [nncf_graph])
     if strict:
         _check_target_scope_strictly_matched(target_scope, matched_target_scope)
     return set().union(*matches.values())
@@ -97,7 +97,7 @@ def _check_target_scope_strictly_matched(target_scope: TargetScope, matched_targ
     :param target_scope: The given target scope.
     :param matched_target_scope: The actual target scope matched in a graph.
     """
-    unmatched_scope = get_difference_ignored_scope(target_scope, matched_target_scope)
+    unmatched_scope = get_difference_scope(target_scope, matched_target_scope)
     error_messages = []
     for match_type in ("names", "types", "patterns", "subgraphs"):
         unmatched_rules = getattr(unmatched_scope, match_type)

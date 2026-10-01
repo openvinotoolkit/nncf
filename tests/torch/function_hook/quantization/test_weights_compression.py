@@ -52,6 +52,9 @@ from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
 
 REFERENCE_SCALES_DIR = TEST_ROOT / "torch" / "data" / "function_hook" / "quantization" / "reference_scales"
+CUSTOM_ANNOTATION_REFERENCES_DIR = (
+    TEST_ROOT / "torch" / "data" / "function_hook" / "quantization" / "references_custom_annotation"
+)
 
 ALL_SENSITIVITY_METRICS = list(SensitivityMetric)
 
@@ -593,7 +596,8 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
     def get_sequential_matmul_model(transpose_a: bool) -> torch.nn.Module:
         if transpose_a:
             pytest.skip("transpose_a=True is not supported for PT backend")
-        return SequentialMatmulModel()
+        wrapped_model = GraphModelWrapper(wrap_model(SequentialMatmulModel()), example_input=torch.ones([1, 4, 4]))
+        return wrapped_model
 
     @staticmethod
     def get_model_for_test_scale_estimation(transpose_a: bool):
@@ -722,6 +726,27 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_awq_scale_ref_path() -> Path:
         return REFERENCE_SCALES_DIR / "awq_scale_ref.json"
+
+    @staticmethod
+    def get_shared_weight_model() -> GraphModelWrapper:
+        model = wrap_model(ShortTransformer(8, 16, share_weights=True))
+        return GraphModelWrapper(model, example_input=torch.randint(0, 10, (8,)))
+
+    @staticmethod
+    def get_shared_weight_node_name() -> str:
+        return "lm_head/linear/0"
+
+    @staticmethod
+    def get_node_with_shared_weight_name() -> str:
+        return "wte/embedding/0"
+
+    @staticmethod
+    def get_mode_not_supported_by_backend() -> CompressWeightsMode | None:
+        return CompressWeightsMode.NF4
+
+    @staticmethod
+    def get_custom_annotation_ref_path(ref_name: str) -> Path:
+        return CUSTOM_ANNOTATION_REFERENCES_DIR / f"{ref_name}.json"
 
     @staticmethod
     def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, input_shape=None, is_3d_weights: bool = False):

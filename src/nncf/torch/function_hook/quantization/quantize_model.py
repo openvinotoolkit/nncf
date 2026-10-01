@@ -26,6 +26,7 @@ from nncf.parameters import SensitivityMetric
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import CustomAnnotation
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.quantization.quantize_model import warning_model_no_batchwise_support
@@ -100,6 +101,7 @@ def compress_weights_impl(
     backup_mode: BackupMode,
     compression_format: CompressionFormat,
     advanced_parameters: AdvancedCompressionParameters | None = None,
+    custom_annotation: list[CustomAnnotation] | None = None,
 ) -> torch.nn.Module:
     """
     Implementation of the `compress_weights()` method for the PyTorch backend.
@@ -119,6 +121,7 @@ def compress_weights_impl(
         backup_mode,
         compression_format,
         advanced_parameters,
+        custom_annotation,
     )
     graph = build_graph(model)
 
