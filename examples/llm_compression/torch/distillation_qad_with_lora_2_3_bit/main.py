@@ -329,7 +329,6 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--pretrained",
         type=str,
-        # default="Qwen/Qwen3-8B",
         default="meta-llama/Llama-3.2-1B-Instruct",
         help="The model id or path of a pretrained HF model configuration.",
     )
