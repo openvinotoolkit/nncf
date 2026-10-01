@@ -350,6 +350,7 @@ def test_update_fused_bias(model_cls):
         (om.PTAddmmMetatype, 1, 3, [2]),
         (om.PTAddmmMetatype, 2, 3, [1]),
         (om.PTAddmmMetatype, 2, 1, [0]),
+        (om.PTGroupedMatMulMetatype, 1, 3, [2]),
         (om.PTConv1dMetatype, 0, 3, [1, 2]),
         (om.PTConv2dMetatype, 0, 4, [1, 2, 3]),
         (om.PTConv3dMetatype, 0, 5, [1, 2, 3, 4]),
