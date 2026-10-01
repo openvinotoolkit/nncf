@@ -12,6 +12,7 @@
 from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal
 
 import nncf
@@ -21,7 +22,6 @@ from nncf.common.quantization.defaults import QUANTIZATION_BITS
 from nncf.common.quantization.defaults import QUANTIZATION_NARROW_RANGE
 from nncf.common.quantization.defaults import QUANTIZATION_PER_CHANNEL
 from nncf.common.utils.api_marker import api
-from nncf.parameters import StrEnum
 from nncf.parameters import TargetDevice
 from nncf.tensor.definitions import TensorDataType
 
