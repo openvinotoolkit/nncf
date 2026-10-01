@@ -12,14 +12,12 @@
 import re
 from pathlib import Path
 
-import yaml
-
 from tests.cross_fw.shared.paths import PROJECT_ROOT
 
 MD_INSTALLATION = PROJECT_ROOT / "docs" / "Installation.md"
 CONSTRAINTS = PROJECT_ROOT / "constraints.txt"
 WORKFLOW_PRECOMMIT = PROJECT_ROOT / ".github" / "workflows" / "precommit.yml"
-WORKFLOW_CALL_PRECOMMIT = PROJECT_ROOT / ".github" / "workflows" / "call_precommit.yml"
+DOCKERFILE_PYTORCH_CUDA = PROJECT_ROOT / ".github" / "dockerfiles" / "nncf" / "pytorch_cuda" / "Dockerfile"
 
 
 def _extract_section(content: str, header: str) -> str:
@@ -81,17 +79,13 @@ def _parse_python_version_from_precommit_workflow() -> str:
     return ret
 
 
-def _get_cuda_version_from_workflow(workflow_file: Path, job_name: str) -> str:
-    """"""
-    with workflow_file.open() as f:
-        data = yaml.safe_load(f)
-    steps = data["jobs"][job_name]["steps"]
-    for step in steps:
-        run_command = step.get("run", "")
-        match = re.search(r"cuda[_-](\d+\.\d+)", run_command)
-        if match:
-            return match.group(1)
-    return "not found"
+def _get_cuda_version_from_dockerfile(dockerfile: Path) -> str:
+    """
+    Parses the CUDA toolkit version from the CUDA installer command in the given Dockerfile.
+    """
+    content = dockerfile.read_text(encoding="utf-8")
+    match = re.search(r"cuda[_-](\d+\.\d+)", content)
+    return match.group(1) if match else "not found"
 
 
 def test_corresponded_versions():
@@ -121,7 +115,7 @@ def test_test_environment():
     ref = {
         "python": _parse_python_version_from_precommit_workflow(),
         "pytorch": actual_versions["pytorch"],
-        "cuda_torch": _get_cuda_version_from_workflow(WORKFLOW_CALL_PRECOMMIT, "pytorch-cuda"),
+        "cuda_torch": _get_cuda_version_from_dockerfile(DOCKERFILE_PYTORCH_CUDA),
     }
     print(md_versions, ref)
     assert md_versions == ref, (
