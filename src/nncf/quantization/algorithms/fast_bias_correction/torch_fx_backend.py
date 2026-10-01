@@ -20,13 +20,13 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.builders import get_mean_statistic_collector
 from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
+from nncf.experimental.torch.fx.commands import FXModelExtractionCommand
 from nncf.experimental.torch.fx.model_utils import get_target_point
 from nncf.experimental.torch.fx.node_utils import get_bias_value
 from nncf.experimental.torch.fx.node_utils import is_node_with_bias
 from nncf.experimental.torch.fx.transformations import constant_update_transformation_builder
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.tensor import Tensor
-from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import is_quantized_weights
 
@@ -47,8 +47,8 @@ class FXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def model_extraction_command(
         input_ids: list[tuple[str, int]], output_ids: list[tuple[str, int]]
-    ) -> PTModelExtractionCommand:
-        return PTModelExtractionCommand([input_ids[0]], [output_ids[0]])
+    ) -> FXModelExtractionCommand:
+        return FXModelExtractionCommand([input_ids[0]], [output_ids[0]])
 
     @staticmethod
     def mean_statistic_collector(

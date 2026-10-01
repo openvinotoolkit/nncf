@@ -19,6 +19,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.builders import get_mean_statistic_collector
 from nncf.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
+from nncf.experimental.torch.fx.commands import FXModelExtractionCommand
 from nncf.experimental.torch.fx.model_utils import get_target_point
 from nncf.experimental.torch.fx.model_utils import remove_fq_from_inputs
 from nncf.experimental.torch.fx.node_utils import get_bias_value
@@ -28,7 +29,6 @@ from nncf.experimental.torch.fx.transformations import constant_update_transform
 from nncf.experimental.torch.fx.transformations import output_insertion_transformation_builder
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.tensor import Tensor
-from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import is_quantized_weights
 
@@ -49,8 +49,8 @@ class FXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @staticmethod
     def model_extraction_command(
         input_ids: set[tuple[str, int]], output_ids: set[tuple[str, int]]
-    ) -> PTModelExtractionCommand:
-        return PTModelExtractionCommand(list(input_ids), list(output_ids))
+    ) -> FXModelExtractionCommand:
+        return FXModelExtractionCommand(list(input_ids), list(output_ids))
 
     @staticmethod
     def output_insertion_command(nncf_graph: NNCFGraph, target_point: PTTargetPoint) -> FXApplyTransformationCommand:
