@@ -41,7 +41,7 @@ def fixture_use_avx2(monkeypatch: pytest.MonkeyPatch) -> None:
         old_value = os.environ.get(env_var)
         monkeypatch.setenv(env_var, "AVX2")
         if old_value is not None and old_value != "AVX2":
-            print(f"Warning: {env_var} is overriding to AVX2, was {old_value}")
+            print(f"Warning: overriding {env_var} with AVX2; previous value was {old_value}")
 
 
 def _parse_version(s: Path):
