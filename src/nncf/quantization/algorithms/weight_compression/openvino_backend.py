@@ -148,11 +148,13 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         # representation [u2/u3] - zero_point per tensor
         offset = 2 ** (optimal_bits - 1)
         compressed_tensor = weight_tensor + offset
+
+        target_type = self.name_to_node_mapping[next_nodes[0].node_name].get_element_type()
         compressed_const = create_ov_const_from_tensor(compressed_tensor, compression_dtype, name=const_node_name)
-        converted_const = opset.convert(compressed_const, ov.Type.f16)
+        converted_const = opset.convert(compressed_const, target_type)
 
         zero_point_const = opset.constant(offset, dtype=ov.Type.i8, name=f"{const_node_name}/zero_point")
-        zero_point_const = opset.convert(zero_point_const, ov.Type.f16)
+        zero_point_const = opset.convert(zero_point_const, target_type)
 
         converted_const = opset.subtract(
             converted_const, zero_point_const, name=f"{const_node_name}/zero_point/subtract"
