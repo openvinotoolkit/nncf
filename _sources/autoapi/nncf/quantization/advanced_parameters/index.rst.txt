@@ -35,7 +35,7 @@ Classes
 
 .. py:class:: FP8Type
 
-   Bases: :py:obj:`nncf.parameters.StrEnum`
+   Bases: :py:obj:`enum.StrEnum`
 
    Defines FP8 special types (https://arxiv.org/pdf/2209.05433.pdf).
 
@@ -45,7 +45,7 @@ Classes
 
 .. py:class:: GroupSizeFallbackMode
 
-   Bases: :py:obj:`nncf.parameters.StrEnum`
+   Bases: :py:obj:`enum.StrEnum`
 
    Specifies how to handle nodes that do not support the given group size.
 

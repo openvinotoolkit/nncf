@@ -147,7 +147,7 @@ Functions
 
 .. py:class:: BackupMode
 
-   Bases: :py:obj:`StrEnum`
+   Bases: :py:obj:`enum.StrEnum`
 
    Defines a backup mode for weight compression.
    :param NONE: Stands for original floating-point precision of the model weights.
@@ -162,7 +162,7 @@ Functions
 
 .. py:class:: CompressionFormat
 
-   Bases: :py:obj:`StrEnum`
+   Bases: :py:obj:`enum.StrEnum`
 
    Describes the format in which the model is saved after weight compression.
 
@@ -184,7 +184,7 @@ Functions
 
 .. py:class:: CompressWeightsMode
 
-   Bases: :py:obj:`StrEnum`
+   Bases: :py:obj:`enum.StrEnum`
 
    Defines a mode for weight compression.
    :param INT8_SYM: Stands for 8-bit integer symmetric quantization of all weights.
@@ -220,7 +220,7 @@ Functions
 
 .. py:class:: DropType
 
-   Bases: :py:obj:`StrEnum`
+   Bases: :py:obj:`enum.StrEnum`
 
    Describes the accuracy drop type, which determines how the accuracy drop between
    the original model and the compressed model is calculated.
@@ -233,7 +233,7 @@ Functions
 
 .. py:class:: ModelType
 
-   Bases: :py:obj:`StrEnum`
+   Bases: :py:obj:`enum.StrEnum`
 
    Describes the model type the specificity of which will be taken into account during compression.
 
@@ -243,7 +243,7 @@ Functions
 
 .. py:class:: PruneMode
 
-   Bases: :py:obj:`StrEnum`
+   Bases: :py:obj:`enum.StrEnum`
 
    Enumeration for different pruning modes in neural network compression.
 
@@ -258,7 +258,7 @@ Functions
 
 .. py:class:: QuantizationMode
 
-   Bases: :py:obj:`StrEnum`
+   Bases: :py:obj:`enum.StrEnum`
 
    Defines special modes.
    Currently contains only FP8-related modes (https://arxiv.org/pdf/2209.05433.pdf).
@@ -269,7 +269,7 @@ Functions
 
 .. py:class:: SensitivityMetric
 
-   Bases: :py:obj:`StrEnum`
+   Bases: :py:obj:`enum.StrEnum`
 
    Defines a sensitivity metric for assigning quantization precision to layers. In order to
        preserve the accuracy of the model, the more sensitive layers receives a higher precision.
@@ -290,7 +290,7 @@ Functions
 
 .. py:class:: StripFormat
 
-   Bases: :py:obj:`StrEnum`
+   Bases: :py:obj:`enum.StrEnum`
 
    Describes the format in which model is saved after strip: operation that removes auxiliary layers and
    operations added during the compression process, resulting in a clean model ready for deployment.
@@ -305,7 +305,7 @@ Functions
 
 .. py:class:: TargetDevice
 
-   Bases: :py:obj:`StrEnum`
+   Bases: :py:obj:`enum.StrEnum`
 
    Target device architecture for compression.
 
@@ -348,7 +348,7 @@ Functions
 
 .. py:class:: QuantizationPreset
 
-   Bases: :py:obj:`nncf.parameters.StrEnum`
+   Bases: :py:obj:`enum.StrEnum`
 
    An enum with values corresponding to the available quantization presets.
 
@@ -515,7 +515,7 @@ Functions
 
 .. py:class:: OverflowFix
 
-   Bases: :py:obj:`nncf.parameters.StrEnum`
+   Bases: :py:obj:`enum.StrEnum`
 
    This option controls whether to apply the overflow issue fix for the 8-bit
    quantization.

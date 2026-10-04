@@ -17,7 +17,7 @@ Classes
 
 .. py:class:: QuantizationScheme
 
-   Bases: :py:obj:`nncf.parameters.StrEnum`
+   Bases: :py:obj:`enum.StrEnum`
 
    Enumeration for specifying quantization schemes.
 
