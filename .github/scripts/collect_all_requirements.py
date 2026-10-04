@@ -12,9 +12,8 @@ import argparse
 import re
 import shutil
 import subprocess
-from pathlib import Path
-
 import tomllib
+from pathlib import Path
 
 
 def _package_name(requirement_line: str) -> str | None:
