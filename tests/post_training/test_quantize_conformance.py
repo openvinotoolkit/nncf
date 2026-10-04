@@ -36,16 +36,12 @@ DATA_ROOT = Path(__file__).parent / "data"
 
 
 @pytest.fixture(scope="function", name="use_avx2")
-def fixture_use_avx2():
-    old_value = os.environ.get("ONEDNN_MAX_CPU_ISA")
-    os.environ["ONEDNN_MAX_CPU_ISA"] = "AVX2"
-    if old_value is not None and old_value != "AVX2":
-        print(f"Warning: ONEDNN_MAX_CPU_ISA is overriding to AVX2, was {old_value}")
-    yield
-    if old_value is None:
-        del os.environ["ONEDNN_MAX_CPU_ISA"]
-    else:
-        os.environ["ONEDNN_MAX_CPU_ISA"] = old_value
+def fixture_use_avx2(monkeypatch: pytest.MonkeyPatch) -> None:
+    for env_var in ("ONEDNN_MAX_CPU_ISA", "OV_CPU_MAX_ISA"):
+        old_value = os.environ.get(env_var)
+        monkeypatch.setenv(env_var, "AVX2")
+        if old_value is not None and old_value != "AVX2":
+            print(f"Warning: overriding {env_var} with AVX2; previous value was {old_value}")
 
 
 def _parse_version(s: Path):
