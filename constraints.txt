@@ -9,7 +9,7 @@ torchao==0.18.0
 # ONNX
 onnx==1.23.0
 onnx-ir==1.0.0
-onnxruntime==1.24.3
+onnxruntime==1.30.0
 onnxscript==0.7.1
 
 # Tests and examples
