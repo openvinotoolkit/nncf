@@ -20,12 +20,17 @@ from nncf.parameters import SensitivityMetric
 from nncf.quantization.advanced_parameters import AdvancedAWQParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedLoraCorrectionParameters
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedScaleEstimationParameters
+from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
+from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from tests.post_training.pipelines.base import ALL_PTQ_BACKENDS
 from tests.post_training.pipelines.base import FX_BACKENDS
+from tests.post_training.pipelines.base import NNCF_PTQ_BACKENDS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.causal_language_model import CausalLMHF
 from tests.post_training.pipelines.gpt import GPT
+from tests.post_training.pipelines.image_classification_timm import ImageClassificationTimm
 from tests.post_training.pipelines.image_classification_torchvision import ImageClassificationTorchvision
 from tests.post_training.pipelines.lm_weight_compression import LMWeightCompression
 from tests.post_training.pipelines.masked_language_modeling import MaskedLanguageModelingHF
@@ -95,20 +100,20 @@ QUANTIZATION_MODELS = [
         ],
         "batch_size": 128,
     },
+    {
+        "reported_name": "torchvision/mobilenet_v3_small_BC",
+        "model_id": "mobilenet_v3_small",
+        "pipeline_cls": ImageClassificationTorchvision,
+        "compression_params": {
+            "subset_size": 2,
+            "fast_bias_correction": False,
+            "preset": QuantizationPreset.MIXED,
+        },
+        "backends": FX_BACKENDS + [BackendType.OV, BackendType.ONNX],
+        "batch_size": 128,
+    },
     # {
-    #     "reported_name": "torchvision/mobilenet_v3_small_BC",
-    #     "model_id": "mobilenet_v3_small",
-    #     "pipeline_cls": ImageClassificationTorchvision,
-    #     "compression_params": {
-    #         "subset_size": 2,
-    #         "fast_bias_correction": False,
-    #         "preset": QuantizationPreset.MIXED,
-    #     },
-    #     "backends": FX_BACKENDS + [BackendType.OV, BackendType.ONNX],
-    #     "batch_size": 128,
-    # },
-    # {
-    #     "reported_name": "torchvision/vit_b_16",
+    #     "reported_name": "torchvision/vit_b_16",     # DISABLED: too long on FX
     #     "model_id": "vit_b_16",
     #     "pipeline_cls": ImageClassificationTorchvision,
     #     "compression_params": {
@@ -121,7 +126,7 @@ QUANTIZATION_MODELS = [
     #     "batch_size": 1,
     # },
     # {
-    #     "reported_name": "torchvision/swin_v2_s",
+    #     "reported_name": "torchvision/swin_v2_s",   # DISABLED: too long on FX
     #     "model_id": "swin_v2_s",
     #     "pipeline_cls": ImageClassificationTorchvision,
     #     "compression_params": {
@@ -133,123 +138,123 @@ QUANTIZATION_MODELS = [
     #     "backends": FX_BACKENDS + [BackendType.OV],
     #     "batch_size": 1,
     # },
-    # # Timm models
+    # Timm models
+    {
+        "reported_name": "timm/crossvit_9_240",
+        "model_id": "crossvit_9_240",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "subset_size": 2,
+            "preset": QuantizationPreset.MIXED,
+            "model_type": ModelType.TRANSFORMER,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                smooth_quant_alpha=-1.0, activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
+            ),
+        },
+        "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "timm/darknet53",
+        "model_id": "darknet53",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "subset_size": 2,
+            "preset": QuantizationPreset.MIXED,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
+            ),
+        },
+        "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "timm/deit3_small_patch16_224",
+        "model_id": "deit3_small_patch16_224",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "subset_size": 2,
+            "preset": QuantizationPreset.MIXED,
+            "model_type": ModelType.TRANSFORMER,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=-1)
+            ),
+        },
+        "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "timm/dla34",
+        "model_id": "dla34",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "subset_size": 2,
+            "preset": QuantizationPreset.MIXED,
+        },
+        "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "timm/dpn68",
+        "model_id": "dpn68",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "subset_size": 2,
+            "preset": QuantizationPreset.MIXED,
+        },
+        "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "timm/efficientnet_b0",
+        "model_id": "efficientnet_b0",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "subset_size": 2,
+            "preset": QuantizationPreset.MIXED,
+        },
+        "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "timm/efficientnet_b0_BC",
+        "model_id": "efficientnet_b0",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "subset_size": 2,
+            "preset": QuantizationPreset.MIXED,
+            "fast_bias_correction": False,
+        },
+        "backends": [BackendType.ONNX, BackendType.OV],
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "timm/efficientnet_lite0",
+        "model_id": "efficientnet_lite0",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "subset_size": 2,
+            "preset": QuantizationPreset.MIXED,
+        },
+        "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "timm/hrnet_w18",
+        "model_id": "hrnet_w18",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "subset_size": 2,
+            "preset": QuantizationPreset.MIXED,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
+            ),
+        },
+        "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
+    },
     # {
-    #     "reported_name": "timm/crossvit_9_240",
-    #     "model_id": "crossvit_9_240",
-    #     "pipeline_cls": ImageClassificationTimm,
-    #     "compression_params": {
-    #         "subset_size": 2,
-    #         "preset": QuantizationPreset.MIXED,
-    #         "model_type": ModelType.TRANSFORMER,
-    #         "advanced_parameters": AdvancedQuantizationParameters(
-    #             smooth_quant_alpha=-1.0, activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
-    #         ),
-    #     },
-    #     "backends": ALL_PTQ_BACKENDS,
-    #     "batch_size": 128,
-    # },
-    # {
-    #     "reported_name": "timm/darknet53",
-    #     "model_id": "darknet53",
-    #     "pipeline_cls": ImageClassificationTimm,
-    #     "compression_params": {
-    #         "subset_size": 2,
-    #         "preset": QuantizationPreset.MIXED,
-    #         "advanced_parameters": AdvancedQuantizationParameters(
-    #             activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
-    #         ),
-    #     },
-    #     "backends": ALL_PTQ_BACKENDS,
-    #     "batch_size": 128,
-    # },
-    # {
-    #     "reported_name": "timm/deit3_small_patch16_224",
-    #     "model_id": "deit3_small_patch16_224",
-    #     "pipeline_cls": ImageClassificationTimm,
-    #     "compression_params": {
-    #         "subset_size": 2,
-    #         "preset": QuantizationPreset.MIXED,
-    #         "model_type": ModelType.TRANSFORMER,
-    #         "advanced_parameters": AdvancedQuantizationParameters(
-    #             smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=-1)
-    #         ),
-    #     },
-    #     "backends": ALL_PTQ_BACKENDS,
-    #     "batch_size": 128,
-    # },
-    # {
-    #     "reported_name": "timm/dla34",
-    #     "model_id": "dla34",
-    #     "pipeline_cls": ImageClassificationTimm,
-    #     "compression_params": {
-    #         "subset_size": 2,
-    #         "preset": QuantizationPreset.MIXED,
-    #     },
-    #     "backends": ALL_PTQ_BACKENDS,
-    #     "batch_size": 128,
-    # },
-    # {
-    #     "reported_name": "timm/dpn68",
-    #     "model_id": "dpn68",
-    #     "pipeline_cls": ImageClassificationTimm,
-    #     "compression_params": {
-    #         "subset_size": 2,
-    #         "preset": QuantizationPreset.MIXED,
-    #     },
-    #     "backends": ALL_PTQ_BACKENDS,
-    #     "batch_size": 128,
-    # },
-    # {
-    #     "reported_name": "timm/efficientnet_b0",
-    #     "model_id": "efficientnet_b0",
-    #     "pipeline_cls": ImageClassificationTimm,
-    #     "compression_params": {
-    #         "subset_size": 2,
-    #         "preset": QuantizationPreset.MIXED,
-    #     },
-    #     "backends": ALL_PTQ_BACKENDS,
-    #     "batch_size": 128,
-    # },
-    # {
-    #     "reported_name": "timm/efficientnet_b0_BC",
-    #     "model_id": "efficientnet_b0",
-    #     "pipeline_cls": ImageClassificationTimm,
-    #     "compression_params": {
-    #         "subset_size": 2,
-    #         "preset": QuantizationPreset.MIXED,
-    #         "fast_bias_correction": False,
-    #     },
-    #     "backends": [BackendType.ONNX, BackendType.OV],
-    #     "batch_size": 128,
-    # },
-    # {
-    #     "reported_name": "timm/efficientnet_lite0",
-    #     "model_id": "efficientnet_lite0",
-    #     "pipeline_cls": ImageClassificationTimm,
-    #     "compression_params": {
-    #         "subset_size": 2,
-    #         "preset": QuantizationPreset.MIXED,
-    #     },
-    #     "backends": ALL_PTQ_BACKENDS,
-    #     "batch_size": 128,
-    # },
-    # {
-    #     "reported_name": "timm/hrnet_w18",
-    #     "model_id": "hrnet_w18",
-    #     "pipeline_cls": ImageClassificationTimm,
-    #     "compression_params": {
-    #         "subset_size": 2,
-    #         "preset": QuantizationPreset.MIXED,
-    #         "advanced_parameters": AdvancedQuantizationParameters(
-    #             activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
-    #         ),
-    #     },
-    #     "backends": ALL_PTQ_BACKENDS,
-    #     "batch_size": 128,
-    # },
-    # {
-    #     "reported_name": "timm/inception_resnet_v2",
+    #     "reported_name": "timm/inception_resnet_v2",   # DISABLED: too slow
     #     "model_id": "inception_resnet_v2",
     #     "pipeline_cls": ImageClassificationTimm,
     #     "compression_params": {
@@ -258,163 +263,163 @@ QUANTIZATION_MODELS = [
     #     "backends": NNCF_PTQ_BACKENDS,
     #     "batch_size": 64,
     # },
-    # {
-    #     "reported_name": "timm/mobilenetv2_050",
-    #     "model_id": "mobilenetv2_050",
-    #     "pipeline_cls": ImageClassificationTimm,
-    #     "compression_params": {
-    #         "subset_size": 2,
-    #         "preset": QuantizationPreset.MIXED,
-    #         "advanced_parameters": AdvancedQuantizationParameters(
-    #             activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
-    #         ),
-    #     },
-    #     "backends": ALL_PTQ_BACKENDS,
-    #     "batch_size": 128,
-    # },
-    # {
-    #     "reported_name": "timm/mobilenetv2_050_BC",
-    #     "model_id": "mobilenetv2_050",
-    #     "pipeline_cls": ImageClassificationTimm,
-    #     "compression_params": {
-    #         "subset_size": 2,
-    #         "preset": QuantizationPreset.MIXED,
-    #         "fast_bias_correction": False,
-    #         "advanced_parameters": AdvancedQuantizationParameters(
-    #             activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
-    #         ),
-    #     },
-    #     "backends": [BackendType.ONNX, BackendType.OV],
-    #     "batch_size": 128,
-    # },
-    # {
-    #     "reported_name": "timm/mobilenetv3_small_050",
-    #     "model_id": "mobilenetv3_small_050",
-    #     "pipeline_cls": ImageClassificationTimm,
-    #     "compression_params": {
-    #         "subset_size": 2,
-    #         "preset": QuantizationPreset.MIXED,
-    #         "advanced_parameters": AdvancedQuantizationParameters(
-    #             activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
-    #         ),
-    #     },
-    #     "backends": ALL_PTQ_BACKENDS,
-    #     "batch_size": 128,
-    # },
-    # {
-    #     "reported_name": "timm/mobilenetv3_small_050_BC",
-    #     "model_id": "mobilenetv3_small_050",
-    #     "pipeline_cls": ImageClassificationTimm,
-    #     "compression_params": {
-    #         "subset_size": 2,
-    #         "preset": QuantizationPreset.MIXED,
-    #         "fast_bias_correction": False,
-    #         "advanced_parameters": AdvancedQuantizationParameters(
-    #             activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
-    #         ),
-    #     },
-    #     "backends": [BackendType.ONNX, BackendType.OV],
-    #     "batch_size": 128,
-    # },
-    # {
-    #     "reported_name": "timm/regnetx_002",
-    #     "model_id": "regnetx_002",
-    #     "pipeline_cls": ImageClassificationTimm,
-    #     "compression_params": {
-    #         "subset_size": 2,
-    #         "preset": QuantizationPreset.MIXED,
-    #         "advanced_parameters": AdvancedQuantizationParameters(
-    #             activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
-    #         ),
-    #     },
-    #     "backends": ALL_PTQ_BACKENDS,
-    #     "batch_size": 128,
-    # },
-    # {
-    #     "reported_name": "timm/resnest14d",
-    #     "model_id": "resnest14d",
-    #     "pipeline_cls": ImageClassificationTimm,
-    #     "compression_params": {
-    #         "subset_size": 2,
-    #         "preset": QuantizationPreset.MIXED,
-    #         "advanced_parameters": AdvancedQuantizationParameters(
-    #             activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
-    #         ),
-    #     },
-    #     "backends": ALL_PTQ_BACKENDS,
-    #     "batch_size": 128,
-    # },
-    # {
-    #     "reported_name": "timm/swin_base_patch4_window7_224",
-    #     "model_id": "swin_base_patch4_window7_224",
-    #     "pipeline_cls": ImageClassificationTimm,
-    #     "compression_params": {
-    #         "subset_size": 9,
-    #         "preset": QuantizationPreset.MIXED,
-    #         "model_type": ModelType.TRANSFORMER,
-    #     },
-    #     "backends": [BackendType.OV],
-    #     "batch_size": 32,
-    # },
-    # {
-    #     "reported_name": "timm/swin_base_patch4_window7_224_no_sq",
-    #     "model_id": "swin_base_patch4_window7_224",
-    #     "pipeline_cls": ImageClassificationTimm,
-    #     "compression_params": {
-    #         "subset_size": 2,
-    #         "preset": QuantizationPreset.MIXED,
-    #         "model_type": ModelType.TRANSFORMER,
-    #         "advanced_parameters": AdvancedQuantizationParameters(
-    #             smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=-1),
-    #         ),
-    #     },
-    #     "backends": [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX],
-    #     "batch_size": 128,
-    # },
-    # {
-    #     "reported_name": "timm/tf_inception_v3",
-    #     "model_id": "tf_inception_v3",
-    #     "pipeline_cls": ImageClassificationTimm,
-    #     "compression_params": {
-    #         "subset_size": 2,
-    #         "preset": QuantizationPreset.MIXED,
-    #     },
-    #     "backends": ALL_PTQ_BACKENDS,
-    #     "batch_size": 128,
-    # },
-    # {
-    #     "reported_name": "timm/vgg11",
-    #     "model_id": "vgg11",
-    #     "pipeline_cls": ImageClassificationTimm,
-    #     "compression_params": {
-    #         "subset_size": 2,
-    #     },
-    #     "backends": NNCF_PTQ_BACKENDS,
-    #     "batch_size": 128,
-    # },
-    # {
-    #     "reported_name": "timm/visformer_small",
-    #     "model_id": "visformer_small",
-    #     "pipeline_cls": ImageClassificationTimm,
-    #     "compression_params": {
-    #         "subset_size": 2,
-    #         "preset": QuantizationPreset.MIXED,
-    #         "model_type": ModelType.TRANSFORMER,
-    #     },
-    #     "backends": ALL_PTQ_BACKENDS,
-    #     "batch_size": 128,
-    # },
-    # {
-    #     "reported_name": "timm/wide_resnet50_2",
-    #     "model_id": "wide_resnet50_2",
-    #     "pipeline_cls": ImageClassificationTimm,
-    #     "compression_params": {
-    #         "subset_size": 2,
-    #         "preset": QuantizationPreset.MIXED,
-    #     },
-    #     "backends": ALL_PTQ_BACKENDS,
-    #     "batch_size": 128,
-    # },
+    {
+        "reported_name": "timm/mobilenetv2_050",
+        "model_id": "mobilenetv2_050",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "subset_size": 2,
+            "preset": QuantizationPreset.MIXED,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
+            ),
+        },
+        "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "timm/mobilenetv2_050_BC",
+        "model_id": "mobilenetv2_050",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "subset_size": 2,
+            "preset": QuantizationPreset.MIXED,
+            "fast_bias_correction": False,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
+            ),
+        },
+        "backends": [BackendType.ONNX, BackendType.OV],
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "timm/mobilenetv3_small_050",
+        "model_id": "mobilenetv3_small_050",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "subset_size": 2,
+            "preset": QuantizationPreset.MIXED,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
+            ),
+        },
+        "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "timm/mobilenetv3_small_050_BC",
+        "model_id": "mobilenetv3_small_050",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "subset_size": 2,
+            "preset": QuantizationPreset.MIXED,
+            "fast_bias_correction": False,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
+            ),
+        },
+        "backends": [BackendType.ONNX, BackendType.OV],
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "timm/regnetx_002",
+        "model_id": "regnetx_002",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "subset_size": 2,
+            "preset": QuantizationPreset.MIXED,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
+            ),
+        },
+        "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "timm/resnest14d",
+        "model_id": "resnest14d",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "subset_size": 2,
+            "preset": QuantizationPreset.MIXED,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
+            ),
+        },
+        "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "timm/swin_base_patch4_window7_224",
+        "model_id": "swin_base_patch4_window7_224",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "subset_size": 9,
+            "preset": QuantizationPreset.MIXED,
+            "model_type": ModelType.TRANSFORMER,
+        },
+        "backends": [BackendType.OV],
+        "batch_size": 32,
+    },
+    {
+        "reported_name": "timm/swin_base_patch4_window7_224_no_sq",
+        "model_id": "swin_base_patch4_window7_224",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "subset_size": 2,
+            "preset": QuantizationPreset.MIXED,
+            "model_type": ModelType.TRANSFORMER,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=-1),
+            ),
+        },
+        "backends": [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX],
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "timm/tf_inception_v3",
+        "model_id": "tf_inception_v3",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "subset_size": 2,
+            "preset": QuantizationPreset.MIXED,
+        },
+        "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "timm/vgg11",
+        "model_id": "vgg11",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "subset_size": 2,
+        },
+        "backends": NNCF_PTQ_BACKENDS,
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "timm/visformer_small",
+        "model_id": "visformer_small",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "subset_size": 2,
+            "preset": QuantizationPreset.MIXED,
+            "model_type": ModelType.TRANSFORMER,
+        },
+        "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "timm/wide_resnet50_2",
+        "model_id": "wide_resnet50_2",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "subset_size": 2,
+            "preset": QuantizationPreset.MIXED,
+        },
+        "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
+    },
 ]
 
 

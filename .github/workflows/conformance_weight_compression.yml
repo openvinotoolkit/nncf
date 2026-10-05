@@ -100,13 +100,13 @@ jobs:
   #     artifact_pattern: weight-compression-pytest-results-*
 
   ptq-quantization-cpu:
-    name: PTQ quantization [${{ matrix.group }}/6]
+    name: PTQ quantization [${{ matrix.group }}/10]
     runs-on: ubuntu-latest-16-cores
-    timeout-minutes: 60
+    timeout-minutes: 100
     strategy:
       fail-fast: false
       matrix:
-        group: [1, 2, 3, 4, 5, 6]
+        group: [1, 2, 3, 4, 5, 6, 7, 8 , 9, 10]
     steps:
       - name: CPU Info
         run: awk 'BEGIN{RS=""} END{print}' /proc/cpuinfo
@@ -130,7 +130,7 @@ jobs:
             --junit-xml=${{ env.RESULT_XML }} \
             --durations-path=tests/post_training/data/ptq_test_durations.json \
             --splitting-algorithm=least_duration \
-            --splits 6 \
+            --splits 10 \
             --group ${{ matrix.group }} \
             ${{ env.PYTEST_ARGS }}
           ret=$?
