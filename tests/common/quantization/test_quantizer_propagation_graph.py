@@ -13,6 +13,7 @@ from abc import abstractmethod
 from collections import Counter
 from collections import namedtuple
 from copy import deepcopy
+from textwrap import dedent
 
 import networkx as nx
 import pytest
@@ -30,9 +31,7 @@ from nncf.common.quantization.quantizer_propagation.structs import PropagationPa
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationStateGraphNodeType
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
-from nncf.common.quantization.quantizer_setup import MultiConfigQuantizationPoint
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
-from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
@@ -1311,6 +1310,29 @@ def create_graph_for_output_quant_as_weights() -> NNCFGraph:
 MODEL_GRAPH: NNCFGraph = create_graph_for_output_quant_as_weights()
 
 
+def get_quantizer_setup_str(setup: MultiConfigQuantizerSetup) -> str:
+    """
+    Builds a deterministic, human-readable string representation of a quantizer setup.
+    """
+    qp_id_to_key = {qp_id: str(qp.insertion_point) for qp_id, qp in setup.quantization_points.items()}
+
+    def format_groups(groups: dict[int, set[int]]) -> list[str]:
+        sorted_groups = sorted(sorted(qp_id_to_key[qp_id] for qp_id in group) for group in groups.values())
+        return [f"  [{', '.join(members)}]" for members in sorted_groups] or ["  <none>"]
+
+    lines = ["Quantization points:"]
+    for qp in sorted(setup.quantization_points.values(), key=lambda p: str(p.insertion_point)):
+        qp_type = "weight" if qp.is_weight_quantization_point() else "activation"
+        directly_quantized = ", ".join(qp.directly_quantized_operator_node_names)
+        lines.append(f"  {qp.insertion_point} ({qp_type}), quantizes: {directly_quantized}")
+        lines.extend(f"    {qc}" for qc in qp.possible_qconfigs)
+    lines.append("Shared input groups:")
+    lines.extend(format_groups(setup.shared_input_operation_set_groups))
+    lines.append("Unified scale groups:")
+    lines.extend(format_groups(setup.unified_scale_groups))
+    return "\n".join(lines) + "\n"
+
+
 class OutputQuantAsWeightsSetupTestStruct(ABC):
     operator_node_key_vs_trait_dict: dict[str, QuantizationTrait]
     quantizable_module_node_names_vs_qconfigs: dict[NNCFNodeName, list[QuantizerConfig]]
@@ -1324,7 +1346,7 @@ class OutputQuantAsWeightsSetupTestStruct(ABC):
         pass
 
     @abstractmethod
-    def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
+    def ref_setup_str(self) -> str:
         pass
 
 
@@ -1336,15 +1358,18 @@ class LinearPropagation(OutputQuantAsWeightsSetupTestStruct):
     }
     quantizable_module_node_names_vs_qconfigs = {"C/C_0": [QuantizerConfig()]}
 
-    def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
-        setup = MultiConfigQuantizerSetup()
-        setup.quantization_points[0] = MultiConfigQuantizationPoint(
-            WeightQuantizationInsertionPoint(target_node_name="C/C_0"),
-            possible_qconfigs=[QuantizerConfig()],
-            directly_quantized_operator_node_names=["C/C_0", "G/G_0"],
+    def ref_setup_str(self) -> str:
+        return dedent(
+            """\
+            Quantization points:
+              C/C_0|WEIGHT (weight), quantizes: C/C_0, G/G_0
+                B:8 M:S SGN:ANY PC:N NR:N
+            Shared input groups:
+              [C/C_0|WEIGHT]
+            Unified scale groups:
+              <none>
+            """
         )
-        setup.shared_input_operation_set_groups[0] = {0}
-        return setup
 
     def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
         pq_1 = qpsg.add_propagating_quantizer([QuantizerConfig()], InsertionPointGraph.get_pre_hook_node_key("6 G/G_0"))
@@ -1370,15 +1395,18 @@ class TestOutputQuantAsWeightsSetup:
             "C/C_0": [QuantizerConfig(num_bits=6), QuantizerConfig(num_bits=8)]
         }
 
-        def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
-            setup = MultiConfigQuantizerSetup()
-            setup.quantization_points[0] = MultiConfigQuantizationPoint(
-                WeightQuantizationInsertionPoint(target_node_name="C/C_0"),
-                possible_qconfigs=[QuantizerConfig(num_bits=8)],
-                directly_quantized_operator_node_names=["C/C_0", "G/G_0"],
+        def ref_setup_str(self) -> str:
+            return dedent(
+                """\
+                Quantization points:
+                  C/C_0|WEIGHT (weight), quantizes: C/C_0, G/G_0
+                    B:8 M:S SGN:ANY PC:N NR:N
+                Shared input groups:
+                  [C/C_0|WEIGHT]
+                Unified scale groups:
+                  <none>
+                """
             )
-            setup.shared_input_operation_set_groups[0] = {0}
-            return setup
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             pq_1 = qpsg.add_propagating_quantizer(
@@ -1405,20 +1433,22 @@ class TestOutputQuantAsWeightsSetup:
             "C/C_0": [QuantizerConfig(num_bits=6), QuantizerConfig(num_bits=8)]
         }
 
-        def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
-            setup = MultiConfigQuantizerSetup()
-            setup.quantization_points[0] = MultiConfigQuantizationPoint(
-                WeightQuantizationInsertionPoint(target_node_name="C/C_0"),
-                possible_qconfigs=[QuantizerConfig(num_bits=6), QuantizerConfig(num_bits=8)],
-                directly_quantized_operator_node_names=["C/C_0"],
+        def ref_setup_str(self) -> str:
+            return dedent(
+                """\
+                Quantization points:
+                  C/C_0|OUTPUT (activation), quantizes: G/G_0
+                    B:7 M:S SGN:ANY PC:N NR:N
+                    B:5 M:S SGN:ANY PC:N NR:N
+                  C/C_0|WEIGHT (weight), quantizes: C/C_0
+                    B:6 M:S SGN:ANY PC:N NR:N
+                    B:8 M:S SGN:ANY PC:N NR:N
+                Shared input groups:
+                  [C/C_0|OUTPUT, C/C_0|WEIGHT]
+                Unified scale groups:
+                  <none>
+                """
             )
-            setup.quantization_points[1] = MultiConfigQuantizationPoint(
-                ActivationQuantizationInsertionPoint(target_node_name="C/C_0"),
-                possible_qconfigs=[QuantizerConfig(num_bits=7), QuantizerConfig(num_bits=5)],
-                directly_quantized_operator_node_names=["G/G_0"],
-            )
-            setup.shared_input_operation_set_groups = {0: {0, 1}}
-            return setup
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             pq_1 = qpsg.add_propagating_quantizer(
@@ -1442,21 +1472,20 @@ class TestOutputQuantAsWeightsSetup:
         }
         quantizable_module_node_names_vs_qconfigs = {"I/I_0": [QuantizerConfig(num_bits=4)]}
 
-        def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
-            setup = MultiConfigQuantizerSetup()
-            setup.quantization_points[0] = MultiConfigQuantizationPoint(
-                WeightQuantizationInsertionPoint(target_node_name="I/I_0"),
-                possible_qconfigs=[QuantizerConfig(num_bits=4)],
-                directly_quantized_operator_node_names=["I/I_0", "J/J_0"],
+        def ref_setup_str(self) -> str:
+            return dedent(
+                """\
+                Quantization points:
+                  I/I_0|WEIGHT (weight), quantizes: I/I_0, J/J_0
+                    B:4 M:S SGN:ANY PC:N NR:N
+                  J/J_0|INPUT1 (activation), quantizes: J/J_0
+                    B:4 M:S SGN:ANY PC:N NR:N
+                Shared input groups:
+                  [I/I_0|WEIGHT, J/J_0|INPUT1]
+                Unified scale groups:
+                  [I/I_0|WEIGHT, J/J_0|INPUT1]
+                """
             )
-            setup.quantization_points[1] = MultiConfigQuantizationPoint(
-                ActivationQuantizationInsertionPoint(target_node_name="J/J_0", input_port_id=1),
-                possible_qconfigs=[QuantizerConfig(num_bits=4)],
-                directly_quantized_operator_node_names=["J/J_0"],
-            )
-            setup.unified_scale_groups = {0: {0, 1}}
-            setup.shared_input_operation_set_groups = {0: {0, 1}}
-            return setup
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             pq_1 = qpsg.add_propagating_quantizer(
@@ -1489,21 +1518,20 @@ class TestOutputQuantAsWeightsSetup:
             "F/F_0": [QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
         }
 
-        def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
-            setup = MultiConfigQuantizerSetup()
-            setup.quantization_points[0] = MultiConfigQuantizationPoint(
-                WeightQuantizationInsertionPoint(target_node_name="I/I_0"),
-                possible_qconfigs=[QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
-                directly_quantized_operator_node_names=["I/I_0", "J/J_0"],
+        def ref_setup_str(self) -> str:
+            return dedent(
+                """\
+                Quantization points:
+                  F/F_0|WEIGHT (weight), quantizes: F/F_0, J/J_0
+                    B:8 M:A SGN:ANY PC:N NR:N
+                  I/I_0|WEIGHT (weight), quantizes: I/I_0, J/J_0
+                    B:8 M:A SGN:ANY PC:N NR:N
+                Shared input groups:
+                  [F/F_0|WEIGHT, I/I_0|WEIGHT]
+                Unified scale groups:
+                  [F/F_0|WEIGHT, I/I_0|WEIGHT]
+                """
             )
-            setup.quantization_points[1] = MultiConfigQuantizationPoint(
-                WeightQuantizationInsertionPoint(target_node_name="F/F_0"),
-                possible_qconfigs=[QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
-                directly_quantized_operator_node_names=["F/F_0", "J/J_0"],
-            )
-            setup.unified_scale_groups = {0: {0, 1}}
-            setup.shared_input_operation_set_groups = {0: {0, 1}}
-            return setup
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             pq_1 = qpsg.add_propagating_quantizer(
@@ -1546,21 +1574,20 @@ class TestOutputQuantAsWeightsSetup:
             "F/F_0": [QuantizerConfig(mode=QuantizationMode.ASYMMETRIC, per_channel=True), QuantizerConfig(num_bits=4)],
         }
 
-        def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
-            setup = MultiConfigQuantizerSetup()
-            setup.quantization_points[0] = MultiConfigQuantizationPoint(
-                WeightQuantizationInsertionPoint(target_node_name="I/I_0"),
-                possible_qconfigs=[QuantizerConfig(num_bits=4)],
-                directly_quantized_operator_node_names=["I/I_0", "J/J_0"],
+        def ref_setup_str(self) -> str:
+            return dedent(
+                """\
+                Quantization points:
+                  F/F_0|WEIGHT (weight), quantizes: F/F_0, J/J_0
+                    B:4 M:S SGN:ANY PC:N NR:N
+                  I/I_0|WEIGHT (weight), quantizes: I/I_0, J/J_0
+                    B:4 M:S SGN:ANY PC:N NR:N
+                Shared input groups:
+                  [F/F_0|WEIGHT, I/I_0|WEIGHT]
+                Unified scale groups:
+                  [F/F_0|WEIGHT, I/I_0|WEIGHT]
+                """
             )
-            setup.quantization_points[1] = MultiConfigQuantizationPoint(
-                WeightQuantizationInsertionPoint(target_node_name="F/F_0"),
-                possible_qconfigs=[QuantizerConfig(num_bits=4)],
-                directly_quantized_operator_node_names=["F/F_0", "J/J_0"],
-            )
-            setup.unified_scale_groups = {0: {0, 1}}
-            setup.shared_input_operation_set_groups = {0: {0, 1}}
-            return setup
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             pq_1 = qpsg.add_propagating_quantizer(
@@ -1611,30 +1638,24 @@ class TestOutputQuantAsWeightsSetup:
             ],
         }
 
-        def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
-            setup = MultiConfigQuantizerSetup()
-            setup.quantization_points[0] = MultiConfigQuantizationPoint(
-                WeightQuantizationInsertionPoint(target_node_name="I/I_0"),
-                possible_qconfigs=[QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
-                directly_quantized_operator_node_names=["I/I_0", "J/J_0"],
+        def ref_setup_str(self) -> str:
+            return dedent(
+                """\
+                Quantization points:
+                  F/F_0|OUTPUT (activation), quantizes: J/J_0
+                    B:8 M:A SGN:ANY PC:N NR:N
+                  F/F_0|WEIGHT (weight), quantizes: F/F_0
+                    B:8 M:A SGN:ANY PC:Y NR:N
+                    B:4 M:S SGN:ANY PC:N NR:N
+                    B:8 M:S SGN:ANY PC:N NR:N
+                  I/I_0|WEIGHT (weight), quantizes: I/I_0, J/J_0
+                    B:8 M:A SGN:ANY PC:N NR:N
+                Shared input groups:
+                  [F/F_0|OUTPUT, F/F_0|WEIGHT, I/I_0|WEIGHT]
+                Unified scale groups:
+                  [F/F_0|OUTPUT, I/I_0|WEIGHT]
+                """
             )
-            setup.quantization_points[1] = MultiConfigQuantizationPoint(
-                WeightQuantizationInsertionPoint(target_node_name="F/F_0"),
-                possible_qconfigs=[
-                    QuantizerConfig(mode=QuantizationMode.ASYMMETRIC, per_channel=True),
-                    QuantizerConfig(num_bits=4),
-                    QuantizerConfig(),
-                ],
-                directly_quantized_operator_node_names=["F/F_0"],
-            )
-            setup.quantization_points[2] = MultiConfigQuantizationPoint(
-                ActivationQuantizationInsertionPoint(target_node_name="F/F_0"),
-                possible_qconfigs=[QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
-                directly_quantized_operator_node_names=["J/J_0"],
-            )
-            setup.unified_scale_groups = {0: {0, 2}}
-            setup.shared_input_operation_set_groups = {0: {0, 1, 2}}
-            return setup
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             pq_1 = qpsg.add_propagating_quantizer(
@@ -1700,8 +1721,8 @@ class TestOutputQuantAsWeightsSetup:
         test_quantizer_setup = prepped_qpsg.create_quantizer_setup(
             output_quant_as_weights_test_struct.quantizable_module_node_names_vs_qconfigs
         )
-        ref_quantizer_setup = output_quant_as_weights_test_struct.ref_quantizer_setup()
-        assert test_quantizer_setup.equivalent_to(ref_quantizer_setup)
+        test_setup_str = get_quantizer_setup_str(test_quantizer_setup)
+        assert test_setup_str == output_quant_as_weights_test_struct.ref_setup_str()
 
 
 @pytest.mark.parametrize(

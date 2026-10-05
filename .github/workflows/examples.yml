@@ -58,14 +58,14 @@ jobs:
       matrix:
         group: [1, 2, 3, 4, 5, 6]
     steps:
+      - name: CPU Info
+        run: awk 'BEGIN{RS=""} END{print}' /proc/cpuinfo
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - name: cpuinfo
-        run: cat /proc/cpuinfo
       - name: Install test requirements
         run: |
           pip install -r tests/cross_fw/examples/requirements.txt
@@ -112,19 +112,16 @@ jobs:
         run: |
           wget -q https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run
           sudo sh cuda_12.6.3_560.35.05_linux.run --toolkit --silent
-      - name: Runner info
-        continue-on-error: true
-        run: |
-          nvidia-smi
-          cat /proc/cpuinfo
+      - name: CPU Info
+        run: awk 'BEGIN{RS=""} END{print}' /proc/cpuinfo
+      - name: GPU Info
+        run: nvidia-smi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - name: cpuinfo
-        run: cat /proc/cpuinfo
       - name: Install test requirements
         run: |
           pip install -r tests/cross_fw/examples/requirements.txt
@@ -166,6 +163,8 @@ jobs:
       PYTHONIOENCODING: utf-8
       NNCF_EXTENSION_LOAD_TIMEOUT: 180
     steps:
+      - name: CPU Info
+        run: awk 'BEGIN{RS=""} END{print}' /proc/cpuinfo
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}

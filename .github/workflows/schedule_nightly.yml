@@ -1,8 +1,13 @@
 name: "[Schedule] Nightly"
+run-name: "[Schedule] Nightly${{ inputs.pr_num != '' && format(' PR#{0}', inputs.pr_num) || '' }}"
 permissions: read-all
 
 on:
   workflow_dispatch:
+    inputs:
+      pr_num:
+        description: 'The pull request number'
+        default: ''
   schedule:
     - cron: '0 0 * * *'
 
@@ -10,11 +15,14 @@ jobs:
   install:
     if: github.repository_owner == 'openvinotoolkit'
     uses: ./.github/workflows/install.yml
+    with:
+      pr_num: ${{ inputs.pr_num }}
 
   examples:
     if: github.repository_owner == 'openvinotoolkit'
     uses: ./.github/workflows/examples.yml
     with:
+      pr_num: ${{ inputs.pr_num }}
       skip_windows: false
       skip_gpu: false
 
@@ -24,22 +32,28 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
       - uses: AlexanderDokuchaev/md-dead-link-check@5b5641a92ec95d13a5b04927e0e11de5c3405298 # v1.3.0
 
   weight-compression:
     if: github.repository_owner == 'openvinotoolkit'
     uses: ./.github/workflows/conformance_weight_compression.yml
+    with:
+      pr_num: ${{ inputs.pr_num }}
 
   precommit-windows:
     if: github.repository_owner == 'openvinotoolkit'
     uses: ./.github/workflows/call_precommit_windows.yml
     with:
+      pr_num: ${{ inputs.pr_num }}
       python_version: "3.12"
 
   precommit-ubuntu:
     if: github.repository_owner == 'openvinotoolkit'
     uses: ./.github/workflows/call_precommit.yml
     with:
+      pr_num: ${{ inputs.pr_num }}
       python_version: "3.12"
       gpu_enabled: true
 

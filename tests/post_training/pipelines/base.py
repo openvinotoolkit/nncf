@@ -228,7 +228,6 @@ class BaseTestPipeline(ABC):
         backend: BackendType,
         compression_params: dict,
         output_dir: Path,
-        data_dir: Path,
         reference_data: dict,
         no_eval: bool,
         run_benchmark_app: bool,
@@ -241,7 +240,6 @@ class BaseTestPipeline(ABC):
         self.backend = backend
         self.compression_params = compression_params
         self.output_dir = output_dir
-        self.data_dir = data_dir
         self.reference_data = reference_data
         self.params = params or {}
         self.batch_size = batch_size
@@ -362,9 +360,9 @@ class BaseTestPipeline(ABC):
             atol = reference_data.get("atol", 0.001)
             if not np.isclose(metric_value, metric_reference, atol=atol):
                 status_msg = (
-                    f"Regression: Metric value is less than reference {metric_value} < {metric_reference}"
+                    f"Regression: Metric value is less than reference {metric_value:0.5f} < {metric_reference}"
                     if metric_value < metric_reference
-                    else f"Improvement: Metric value is better than reference {metric_value} > {metric_reference}"
+                    else f"Improvement: Metric value is better than reference {metric_value:0.5f} > {metric_reference}"
                 )
                 errors.append(ErrorReport(ErrorReason.METRICS, status_msg))
 
@@ -407,7 +405,6 @@ class PTQTestPipeline(BaseTestPipeline):
         backend,
         compression_params,
         output_dir,
-        data_dir,
         reference_data,
         no_eval,
         run_benchmark_app,
@@ -421,7 +418,6 @@ class PTQTestPipeline(BaseTestPipeline):
             backend,
             compression_params,
             output_dir,
-            data_dir,
             reference_data,
             no_eval,
             run_benchmark_app,
