@@ -9,7 +9,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-      time: "09:00"
+      time: "03:00"
       timezone: "Asia/Dubai"
     assignees:
       - "AlexanderDokuchaev"
@@ -25,7 +25,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-      time: "09:00"
+      time: "03:00"
       timezone: "Asia/Dubai"
     open-pull-requests-limit: 10
     assignees:
@@ -42,3 +42,21 @@ updates:
       - dependency-name: "torchvision"
       # Tests
       - dependency-name: "pytest*"
+
+  # pre-commit hooks
+  - package-ecosystem: pre-commit
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+      timezone: "Asia/Dubai"
+    open-pull-requests-limit: 10
+    assignees:
+      - "AlexanderDokuchaev"
+    ignore:
+      - dependency-name: "https://github.com/streetsidesoftware/cspell-cli"
+    groups:
+      pre-commit:
+        patterns:
+          - "*"

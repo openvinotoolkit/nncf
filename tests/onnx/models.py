@@ -460,7 +460,7 @@ class OneConvolutionalModel(ONNXReferenceModel):
 
 @ALL_SYNTHETIC_MODELS.register()
 class SplitBlockModel(ONNXReferenceModel):
-    """
+    r"""
     Like the YOLO C2f split block, with a weighted op on a single branch only.
     conv -> chunk -> conv -> cat
               \             /

@@ -46,9 +46,11 @@ import nncf
 
 ...
 
+
 def transform_fn(batch: tuple[torch.Tensor, int]) -> torch.Tensor:
     inputs, _ = batch
     return inputs.to(device=device)
+
 
 calibration_dataset = nncf.Dataset(train_loader, transform_func=transform_fn)
 
