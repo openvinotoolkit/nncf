@@ -66,7 +66,7 @@ Additional arguments:
 - `--batch-size=N` to use batch_size for calibration. Some of the models do not support --batch-size > 1. For such models, please, use --batch-size=1.
 - `--benchmark` to collect throughput statistics, add `FPS` column to result.csv
 - `--extra-columns` to add additional columns to reports.csv, like time for each algorithms
-- `--memory-monitor` to using MemoryMonitor from tools/memory_monitor.py
+- `--memory-monitor` to using MemoryMonitor from tools/memory_monitor/memory_monitor.py
 
 ### Examples
 
