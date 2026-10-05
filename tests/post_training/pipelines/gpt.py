@@ -105,7 +105,7 @@ class GPT(PTQTestPipeline):
 
         num_samples = self.compression_params.get("subset_size", 300)
         calibration_dataset = quantizer.get_calibration_dataset(
-            "glue",
+            "nyu-mll/glue",
             dataset_config_name="sst2",
             preprocess_function=preprocess_function,
             num_samples=num_samples,

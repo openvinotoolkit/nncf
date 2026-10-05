@@ -95,7 +95,7 @@ class MaskedLanguageModelingHF(PTQTestPipeline):
             return self.preprocessor(examples["sentence"], padding=True, truncation=True, max_length=128)
 
         calibration_dataset = quantizer.get_calibration_dataset(
-            "glue",
+            "nyu-mll/glue",
             dataset_config_name="sst2",
             preprocess_function=preprocess_function,
             num_samples=num_samples,
