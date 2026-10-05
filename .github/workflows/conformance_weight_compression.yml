@@ -34,6 +34,7 @@ env:
   TQDM_DISABLE: 1
   RESULT_XML: "pytest-results.xml"
   HOME_HF: "/home/runner/hf_home"
+  HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
 jobs:
   # weight-compression-cpu:
