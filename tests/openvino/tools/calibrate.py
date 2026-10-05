@@ -33,6 +33,8 @@ from config import Config
 from openvino import Dimension
 from openvino import PartialShape
 
+from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationRule
+
 try:
     from accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
     from accuracy_checker.evaluators.quantization_model_evaluator import create_model_evaluator
@@ -126,6 +128,7 @@ class CustomJSONEncoder(json.JSONEncoder):
                 DropType,
                 QuantizationMode,
                 RestoreMode,
+                QuantizerPropagationRule,
             ),
         ):
             return o.value
@@ -1205,7 +1208,3 @@ def main():
     model_name = config.model.model_name
     output_model_path = os.path.join(output_dir, f"{model_name}.xml")
     ov.serialize(output_model, output_model_path)
-
-
-if __name__ == "__main__":
-    main()
