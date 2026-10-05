@@ -26,6 +26,7 @@ on:
         description: 'Pytest arguments'
         type: string
         default: ''
+  pull_request:
 
 defaults:
   run:
