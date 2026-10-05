@@ -14,11 +14,13 @@ Common algorithms should use wrapped tensors and provide the unwrapped tensor to
 from nncf.tensor import Tensor
 
 import numpy as np
-numpy_array = np.array([1,2])
+
+numpy_array = np.array([1, 2])
 nncf_tensor = Tensor(numpy_array)
 
 import torch
-torch_tensor = np.array([1,2])
+
+torch_tensor = np.array([1, 2])
 nncf_tensor = Tensor(torch_tensor)
 ```
 
@@ -31,10 +33,10 @@ from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorBackend
 
 # create zeros tensor where data is numpy array
-nncf_tensor = fns.zeros((2,2), backend=TensorBackend.numpy)
+nncf_tensor = fns.zeros((2, 2), backend=TensorBackend.numpy)
 
 # create zeros tensor where data is torch tensor
-nncf_tensor = fns.zeros((2,2), backend=TensorBackend.torch)
+nncf_tensor = fns.zeros((2, 2), backend=TensorBackend.torch)
 ```
 
 ### Math operations
@@ -42,8 +44,8 @@ nncf_tensor = fns.zeros((2,2), backend=TensorBackend.torch)
 All math operations are overridden to operated with wrapped object and return `Tensor`
 
 ```python
-tensor_a = Tensor(np.array([1,2]))
-tensor_b = Tensor(np.array([1,2]))
+tensor_a = Tensor(np.array([1, 2]))
+tensor_b = Tensor(np.array([1, 2]))
 tensor_a + tensor_b  # Tensor(array([2, 4]))
 ```
 
@@ -54,8 +56,8 @@ tensor_a + tensor_b  # Tensor(array([2, 4]))
 All math operations are overridden to operated with wrapped object and return `Tensor`
 
 ```python
-tensor_a = Tensor(np.array([1,2]))
-tensor_b = Tensor(np.array([1,2]))
+tensor_a = Tensor(np.array([1, 2]))
+tensor_b = Tensor(np.array([1, 2]))
 tensor_a < tensor_b  # Tensor(array([False, False]))
 ```
 
@@ -73,6 +75,7 @@ All available functions you can found in the functions module.
 
 ```python
 from nncf.tensor import functions as fns
+
 fns.max(nncf_tensor)  # Tensor(2)
 ```
 
@@ -89,7 +92,7 @@ fns.max(a=nncf_tensor)  # TypeError: wrapper requires at least 1 positional argu
 For `Tensor` available `TensorIterator` that return `Tensor`
 
 ```python
-tensor_a = Tensor(np.array([1,2]))
+tensor_a = Tensor(np.array([1, 2]))
 for x in tensor_a:
     print(x)
 
@@ -100,8 +103,8 @@ for x in tensor_a:
 ### Get element by index Tensor
 
 ```python
-tensor_a = Tensor(np.array([[1],[2]]))
-tensor_a[0]    # Tensor(array([1]))
+tensor_a = Tensor(np.array([[1], [2]]))
+tensor_a[0]  # Tensor(array([1]))
 tensor_a[0:2]  # Tensor(array([[1],[2]]))
 ```
 
@@ -116,6 +119,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
     ```python
     class Tensor:
         ...
+
         def foo(self, arg1: Type) -> "Tensor":
             return fns.foo(self, arg1)
     ```
