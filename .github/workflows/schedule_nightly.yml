@@ -42,6 +42,14 @@ jobs:
     with:
       pr_num: ${{ inputs.pr_num }}
 
+  ptq-quantization:
+    if: github.repository_owner == 'openvinotoolkit'
+    uses: ./.github/workflows/conformance_ptq_quantization.yml
+    with:
+      pr_num: ${{ inputs.pr_num }}
+    secrets:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+
   precommit-windows:
     if: github.repository_owner == 'openvinotoolkit'
     uses: ./.github/workflows/call_precommit_windows.yml
