@@ -20,7 +20,7 @@ from dataclasses import field
 from itertools import chain
 from types import MethodType
 from types import TracebackType
-from typing import Any, Callable, Iterator, cast
+from typing import Any, Callable, Generator, cast
 
 import torch
 from torch import Tensor
@@ -501,7 +501,7 @@ class FunctionHookMode(TorchFunctionMode):
         return self.hook_storage.execute_pre_function_hooks(name, 0, value)
 
     @contextmanager
-    def disable(self) -> Iterator[None]:
+    def disable(self) -> Generator[None, None, None]:
         """
         Temporarily disables the function tracing and execution hooks within a context.
 
@@ -514,7 +514,7 @@ class FunctionHookMode(TorchFunctionMode):
 
 
 @contextmanager
-def disable_function_hook_mode() -> Iterator[None]:
+def disable_function_hook_mode() -> Generator[None, None, None]:
     """
     Temporarily disables the function tracing and execution hooks within a context.
     """
