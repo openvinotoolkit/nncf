@@ -8,7 +8,7 @@ description = "Neural Networks Compression Framework"
 readme = "docs/PyPiPublishing.md"
 license = "Apache-2.0"
 authors = [{ name = "Intel" }, { email = "maksim.proshin@intel.com" }]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dynamic = ["version"]
 keywords = [
     "bert",
@@ -43,7 +43,6 @@ dependencies = [
     "safetensors>=0.4.1",
     "scikit-learn>=0.24.0",
     "scipy>=1.3.2",
-    "tabulate>=0.9.0",
 ]
 
 [project.optional-dependencies]
@@ -277,6 +276,9 @@ single-line-exclusions = ["typing"]
 
 [tool.pytest.ini_options]
 pythonpath = "."
+filterwarnings = [
+    "ignore:'setParseAction' deprecated - use 'set_parse_action':pyparsing.PyparsingDeprecationWarning:pydot.dot_parser",
+]
 
 [tool.bandit]
 exclude_dirs = ["tools", "tests", "**/venv*", "build"]
