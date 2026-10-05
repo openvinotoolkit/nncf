@@ -66,7 +66,7 @@ compressed_model = nncf.compress_weights(
     mode=nncf.CompressWeightsMode.INT4_ASYM,
     group_size=64,
     compression_format=nncf.CompressionFormat.FQ_LORA,
-    dataset=Dataset([model.dummy_inputs])
+    dataset=Dataset([model.dummy_inputs]),
 )
 ```
 

@@ -34,7 +34,6 @@ def fixture_sparsify_activations_reference_data():
 def test_sparsify_activations(
     sparsify_activations_reference_data: dict,
     test_case_name: str,
-    data_dir: Path,
     output_dir: Path,
     result_data: dict[str, RunInfo],
     no_eval: bool,
@@ -52,7 +51,6 @@ def test_sparsify_activations(
         SPARSIFY_ACTIVATIONS_TEST_CASES,
         result_data,
         output_dir,
-        data_dir,
         no_eval,
         batch_size,
         run_fp32_backend,

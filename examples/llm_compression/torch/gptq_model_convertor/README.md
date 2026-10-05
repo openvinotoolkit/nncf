@@ -7,7 +7,7 @@ This example demonstrates how to replace compressed linear modules to GPTQ modul
 
 ## Prerequisites
 
-Before running this example, ensure you have Python 3.10+ installed and set up your environment:
+Before running this example, ensure you have Python 3.11+ installed and set up your environment:
 
 ### 1. Create and activate a virtual environment
 
