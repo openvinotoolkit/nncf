@@ -1208,3 +1208,7 @@ def main():
     model_name = config.model.model_name
     output_model_path = os.path.join(output_dir, f"{model_name}.xml")
     ov.serialize(output_model, output_model_path)
+
+
+if __name__ == "__main__":
+    main()
