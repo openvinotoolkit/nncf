@@ -11,7 +11,7 @@
 import os
 from contextlib import contextmanager
 from itertools import repeat
-from typing import Any, Iterable, Iterator, Literal
+from typing import Any, Generator, Iterable, Literal
 
 from rich import box
 from rich.console import Console
@@ -70,7 +70,7 @@ def create_table(
 
 
 @contextmanager
-def set_env_variable(key: str, value: str) -> Iterator[None]:
+def set_env_variable(key: str, value: str) -> Generator[None, None, None]:
     """
     Temporarily sets an environment variable.
 
