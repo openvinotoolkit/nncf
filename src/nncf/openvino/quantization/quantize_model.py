@@ -422,13 +422,3 @@ def compress_weights_impl(
         statistics_points = statistics_aggregator.statistic_points
 
     return compression_algorithm.apply(model, graph, statistics_points, dataset)
-
-
-def repack_weights_impl(model: ov.Model) -> ov.Model:
-    """
-    Implementation of the `repack_weights()` method for the OpenVINO backend.
-    """
-    model = remove_friendly_name_duplicates(model)
-    graph = build_graph(model)
-
-    return WeightCompression.repack_weights(model, graph)

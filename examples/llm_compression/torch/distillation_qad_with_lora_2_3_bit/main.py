@@ -41,7 +41,6 @@ from nncf.parameters import StripFormat
 from nncf.quantization.advanced_parameters import AdvancedAWQParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.quantize_model import compress_weights
-from nncf.quantization.quantize_model import repack_weights
 from nncf.torch import load_from_config
 from nncf.torch.function_hook.wrapper import get_hook_storage
 from nncf.torch.quantization.layers import AsymmetricLoraQuantizer
@@ -300,7 +299,7 @@ def export_to_openvino(pretrained: str, ckpt_file: Path, ir_dir: Path, tokenizer
     tokenizer.save_pretrained(ir_dir)
 
     model_to_eval = OVModelForCausalLM.from_pretrained(ir_dir)
-    model_to_eval.model = repack_weights(model_to_eval.model)
+    model_to_eval.model = nncf.repack_weights(model_to_eval.model)
     model_to_eval.save_pretrained(ir_dir / "repacked")
     tokenizer.save_pretrained(ir_dir / "repacked")
     print(f"The OpenVINO model has been repacked and saved to: {ir_dir / 'repacked'}")

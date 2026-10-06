@@ -13,12 +13,14 @@ from typing import Callable, Iterable
 import openvino as ov
 from openvino import opset13 as opset
 
+from nncf.common.factory import build_graph
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.utils import get_reduction_axes
+from nncf.common.logging import nncf_logger
 from nncf.common.tensor_statistics.collectors import MeanAggregator
 from nncf.common.tensor_statistics.collectors import NoopAggregator
 from nncf.common.tensor_statistics.collectors import TensorCollector
@@ -27,10 +29,14 @@ from nncf.common.tensor_statistics.statistics import MaxVarianceTensorStatistic
 from nncf.common.tensor_statistics.statistics import MeanMagnitudeTensorStatistic
 from nncf.common.tensor_statistics.statistics import MeanVarianceTensorStatistic
 from nncf.common.tensor_statistics.statistics import WCTensorStatistic
+from nncf.common.utils.api_marker import api
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import get_backend
 from nncf.common.utils.caching import disable_results_caching
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.openvino.graph.model_transformer import OVModelTransformer
+from nncf.openvino.graph.model_utils import remove_friendly_name_duplicates
 from nncf.openvino.graph.node_utils import convert_op
 from nncf.openvino.graph.node_utils import create_ov_codebook_subgraph
 from nncf.openvino.graph.node_utils import create_ov_const_from_tensor
@@ -540,3 +546,44 @@ class OVMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, OVWeightCompression
         collector = TensorCollector(MeanMagnitudeTensorStatistic)
         collector.register_statistic_branch(MeanMagnitudeTensorStatistic.MEAN_MAGNITUDE_STAT, reducer, aggregator)
         return collector
+
+
+@api(canonical_alias="nncf.repack_weights")
+def repack_weights(
+    model: ov.Model,
+) -> ov.Model:
+    """
+    Looking for 4 and 8 bit weights in OV model and repack them if maximal absolute value corresponds
+    to the supported type with lower bits.
+
+    :param model: A model to be repacked.
+    :type model: ov.Model
+    :return: The non-trainable model with repacked weights or the same model.
+    """
+    backend = get_backend(model)
+
+    if backend != BackendType.OPENVINO:
+        msg = f"Unsupported type of backend: {backend}"
+        raise Exception(msg)
+
+    model = remove_friendly_name_duplicates(model)
+    graph = build_graph(model)
+
+    backend_entity = OVWeightCompressionAlgoBackend(model)
+
+    n_repacked_tensors = 0
+    bits_before = 0
+    bits_after = 0
+
+    for node in graph.topological_sort():
+        is_repacked, bits_before_node, bits_after_node = backend_entity.try_repack(node, graph)
+        if is_repacked:
+            n_repacked_tensors += 1
+            bits_before += bits_before_node
+            bits_after += bits_after_node
+    nncf_logger.info(
+        f"\nTotal repacked tensors: {n_repacked_tensors}; "
+        f"\ntotal MB before: {bits_before / 8 / 1024 / 1024}; "
+        f"\ntotal MB after: {bits_after / 8 / 1024 / 1024}"
+    )
+    return model
