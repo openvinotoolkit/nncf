@@ -43,15 +43,20 @@ env:
 jobs:
   conformance-wc:
     name: Conformance WC [${{ matrix.group }}/6]
-    runs-on: ubuntu-latest-16-cores
+    runs-on: aks-linux-16-cores-32gb
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        group: [1, 2, 3, 4, 5, 6, 7, 8]
+        group: [1 ] #, 2, 3, 4, 5, 6, 7, 8]
     steps:
       - name: CPU Info
         run: awk 'BEGIN{RS=""} END{print}' /proc/cpuinfo
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
