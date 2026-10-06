@@ -40,7 +40,6 @@ from nncf.onnx.graph.onnx_helper import get_input_port_ids_for_node_after_input
 from nncf.onnx.graph.onnx_helper import get_model_inputs
 from nncf.onnx.graph.onnx_helper import get_output_port_id_for_node_before_output
 from nncf.onnx.graph.onnx_helper import get_parents_node_mapping
-from nncf.onnx.graph.onnx_helper import is_node_has_shared_weight
 
 
 class ONNXLayerAttributes(BaseLayerAttributes):
@@ -409,16 +408,15 @@ class GraphConverter:
 
             if weight_port_ids:  # If node has weight
                 for weight_port_id in weight_port_ids:
-                    weight_edge_name = node.input[weight_port_id]
+                    weight_edge_name = get_tensor_edge_name(onnx_model, node, weight_port_id, parents_node_mapping)
                     edge = edge_info_mapping[weight_edge_name]
                     weight_shape = get_edge_shape(edge)
-                    dtype = get_edge_dtype(
-                        edge_info_mapping.get(
-                            get_tensor_edge_name(onnx_model, node, weight_port_id, parents_node_mapping)
-                        )
-                    )
+                    dtype = get_edge_dtype(edge)
                     weight_attrs[weight_port_id] = {"name": weight_edge_name, "shape": weight_shape, "dtype": dtype}
-                    if not is_shared and is_node_has_shared_weight(node, weight_port_id, children_node_mapping):
+
+                    # The weight tensor is shared if there is more than one consumer of this weight tensor.
+                    is_weight_shared = len(children_node_mapping[weight_edge_name]) > 1
+                    if not is_shared and is_weight_shared:
                         is_shared = True
 
             layer_attributes = ONNXLayerAttributes(

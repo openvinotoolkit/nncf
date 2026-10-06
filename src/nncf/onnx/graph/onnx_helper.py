@@ -292,24 +292,6 @@ def get_children(node: onnx.NodeProto, children_node_mapping: dict[str, list[onn
     return output
 
 
-def is_node_has_shared_weight(
-    node: onnx.NodeProto,
-    weight_port_id: int,
-    children_node_mapping: dict[str, list[onnx.NodeProto]],
-) -> bool:
-    """
-    Returns whether the node share a weight.
-
-    :param node: Node.
-    :param weight_port_id: Port id on which there is a weight.
-    :param edge_node_mapping: Mapping describing start and consumed nodes of the edges.
-    :return: True whether node shares a weight - otherwise False.
-    """
-    weight_tensor_edge = node.input[weight_port_id]
-    nodes = children_node_mapping[weight_tensor_edge]
-    return len(nodes) > 1
-
-
 def pack_4_bits(tensor: np.ndarray[Any, Any]) -> np.ndarray[Any, Any]:
     """
     Apply packing based on the rule - https://onnx.ai/onnx/technical/int4.html#packing-and-unpacking
