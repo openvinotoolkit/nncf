@@ -361,21 +361,21 @@ QUANTIZATION_MODELS = [
         "backends": [BackendType.OV],
         "batch_size": 32,
     },
-    {
-        "reported_name": "timm/swin_base_patch4_window7_224_no_sq",
-        "model_id": "swin_base_patch4_window7_224",
-        "pipeline_cls": ImageClassificationTimm,
-        "compression_params": {
-            "subset_size": 2,
-            "preset": QuantizationPreset.MIXED,
-            "model_type": ModelType.TRANSFORMER,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=-1),
-            ),
-        },
-        "backends": [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX],
-        "batch_size": 128,
-    },
+    # {
+    #     "reported_name": "timm/swin_base_patch4_window7_224_no_sq",     # DISABLED: too slow
+    #     "model_id": "swin_base_patch4_window7_224",
+    #     "pipeline_cls": ImageClassificationTimm,
+    #     "compression_params": {
+    #         "subset_size": 2,
+    #         "preset": QuantizationPreset.MIXED,
+    #         "model_type": ModelType.TRANSFORMER,
+    #         "advanced_parameters": AdvancedQuantizationParameters(
+    #             smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=-1),
+    #         ),
+    #     },
+    #     "backends": [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX],
+    #     "batch_size": 128,
+    # },
     {
         "reported_name": "timm/tf_inception_v3",
         "model_id": "tf_inception_v3",
