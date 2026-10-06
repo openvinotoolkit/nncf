@@ -35,6 +35,7 @@ env:
   RESULT_XML: "pytest-results.xml"
   HOME_HF: "/home/runner/hf_home"
   HF_TOKEN: ${{ secrets.HF_TOKEN_2 }}
+  UV_SYSTEM_PYTHON: 'true'
 
 jobs:
   # weight-compression-cpu:
