@@ -349,18 +349,18 @@ QUANTIZATION_MODELS = [
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,
     },
-    {
-        "reported_name": "timm/swin_base_patch4_window7_224",
-        "model_id": "swin_base_patch4_window7_224",
-        "pipeline_cls": ImageClassificationTimm,
-        "compression_params": {
-            "subset_size": 9,
-            "preset": QuantizationPreset.MIXED,
-            "model_type": ModelType.TRANSFORMER,
-        },
-        "backends": [BackendType.OV],
-        "batch_size": 32,
-    },
+    # {
+    #     "reported_name": "timm/swin_base_patch4_window7_224",    # DISABLED: too slow
+    #     "model_id": "swin_base_patch4_window7_224",
+    #     "pipeline_cls": ImageClassificationTimm,
+    #     "compression_params": {
+    #         "subset_size": 9,
+    #         "preset": QuantizationPreset.MIXED,
+    #         "model_type": ModelType.TRANSFORMER,
+    #     },
+    #     "backends": [BackendType.OV],
+    #     "batch_size": 32,
+    # },
     # {
     #     "reported_name": "timm/swin_base_patch4_window7_224_no_sq",     # DISABLED: too slow
     #     "model_id": "swin_base_patch4_window7_224",

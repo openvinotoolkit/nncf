@@ -7,7 +7,7 @@ endif
 GENERAL_PYTEST_ARGS := $(NUM_WORKERS_ARG) -ra --durations=30
 CMD_INSTALL := uv pip install
 CMD_PYTEST := python -m pytest
-MAX_CPU_ISA := ONEDNN_MAX_CPU_ISA=AVX2 OV_CPU_MAX_ISA=AVX2
+MAX_CPU_ISA := ONEDNN_MAX_CPU_ISA=AVX512 OV_CPU_MAX_ISA=AVX512
 
 ###############################################################################
 # Common part
