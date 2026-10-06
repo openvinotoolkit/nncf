@@ -1,5 +1,5 @@
-name: PTQ conformance
-run-name: "PTQ conformance${{ inputs.pr_num != '' && format(' PR#{0}', inputs.pr_num) || '' }}${{ inputs.pytest_args != '' && format(' [{0}]', inputs.pytest_args) || '' }}"
+name: Conformance PTQ
+run-name: "Conformance PTQ${{ inputs.pr_num != '' && format(' PR#{0}', inputs.pr_num) || '' }}${{ inputs.pytest_args != '' && format(' [{0}]', inputs.pytest_args) || '' }}"
 permissions: read-all
 
 on:
@@ -42,7 +42,7 @@ env:
 
 jobs:
   conformance-ptq:
-    name: PTQ conformance [${{ matrix.group }}/20]
+    name: Conformance PTQ [${{ matrix.group }}/20]
     runs-on: ubuntu-latest-16-cores
     timeout-minutes: 100
     strategy:
