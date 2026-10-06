@@ -286,7 +286,8 @@ QUANTIZATION_MODELS = [
             "preset": QuantizationPreset.MIXED,
             "fast_bias_correction": False,
             "advanced_parameters": AdvancedQuantizationParameters(
-                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
+                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM,
+                overflow_fix=nncf.OverflowFix.ENABLE,  # Added to get better accuracy with max_isa=avx2
             ),
         },
         "backends": [BackendType.ONNX, BackendType.OV],
@@ -300,7 +301,8 @@ QUANTIZATION_MODELS = [
             "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
             "advanced_parameters": AdvancedQuantizationParameters(
-                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
+                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM,
+                overflow_fix=nncf.OverflowFix.ENABLE,  # Added to get better accuracy with max_isa=avx2
             ),
         },
         "backends": ALL_PTQ_BACKENDS,
