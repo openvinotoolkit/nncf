@@ -43,7 +43,7 @@ env:
 
 jobs:
   conformance-wc:
-    name: Conformance WC [${{ matrix.group }}/6]
+    name: Conformance WC [${{ matrix.group }}/8]
     runs-on: aks-linux-16-cores-32gb
     container:
       image: openvinogithubactions.azurecr.io/dockerhub/ubuntu:20.04
