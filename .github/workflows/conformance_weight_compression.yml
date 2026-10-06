@@ -145,21 +145,6 @@ jobs:
           name: ptq_results_${{ matrix.group }}
           path: tmp/results.csv
           if-no-files-found: ignore
-      - name: Upload test results
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: ptq-pytest-results-${{ matrix.group }}
-          path: ${{ env.RESULT_XML }}
-          retention-days: 7
-
-  summary:
-    name: Summary PTQ
-    if: ${{ !cancelled() }}
-    needs: conformance-ptq
-    uses: ./.github/workflows/call_summary.yml
-    with:
-      artifact_pattern: ptq-pytest-results-*
 
   combine-csv:
     name: Combined CSV results
