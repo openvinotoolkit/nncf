@@ -408,10 +408,8 @@ class GraphConverter:
             bias_attrs = _get_bias_attr(node, onnx_model, parents_node_mapping, children_node_mapping)
 
             if weight_port_ids:  # If node has weight
-                weight_edge_names = []
                 for weight_port_id in weight_port_ids:
                     weight_edge_name = node.input[weight_port_id]
-                    weight_edge_names.append(weight_edge_name)
                     edge = edge_info_mapping[weight_edge_name]
                     weight_shape = get_edge_shape(edge)
                     dtype = get_edge_dtype(
