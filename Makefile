@@ -75,10 +75,10 @@ install-conformance:
 	$(CMD_INSTALL) -e . -r tests/post_training/requirements.txt
 
 test-ptq:
-	$(MAX_CPU_ISA) $(CMD_PYTEST) $(GENERAL_PYTEST_ARGS) -s tests/post_training/test_quantize_conformance.py::test_ptq_quantization $(ARGS)
+	ONEDNN_MAX_CPU_ISA=AVX512 OV_CPU_MAX_ISA=AVX512 $(CMD_PYTEST) $(GENERAL_PYTEST_ARGS) -s tests/post_training/test_quantize_conformance.py::test_ptq_quantization $(ARGS)
 
 test-wc:
-	$(MAX_CPU_ISA) $(CMD_PYTEST) $(GENERAL_PYTEST_ARGS) -s tests/post_training/test_quantize_conformance.py::test_weight_compression $(ARGS)
+	NEDNN_MAX_CPU_ISA=AVX512 OV_CPU_MAX_ISA=AVX512 $(CMD_PYTEST) $(GENERAL_PYTEST_ARGS) -s tests/post_training/test_quantize_conformance.py::test_weight_compression $(ARGS)
 
 
 ###############################################################################
