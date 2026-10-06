@@ -58,7 +58,7 @@ jobs:
       - name: Install dependencies
         run: |
           apt-get update
-          apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
+          apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make git git-lfs
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
