@@ -161,8 +161,8 @@ jobs:
     with:
       artifact_pattern: ptq-pytest-results-*
 
-  combine-ptq-results:
-    name: Combined PTQ results
+  combine-csv:
+    name: Combined CSV results
     if: ${{ !cancelled() }}
     needs: conformance-ptq
     runs-on: ubuntu-latest
@@ -180,14 +180,14 @@ jobs:
             echo 'No PTQ results.csv files were uploaded.' >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          cat "${files[0]}" > combined-results.csv
-          for file in "${files[@]:1}"; do
-            tail -n +2 "$file" >> combined-results.csv
-          done
+          head -n 1 "${files[0]}" > combined-results.csv
+          for file in "${files[@]}"; do
+            tail -n +2 "$file"
+          done | LC_ALL=C sort -t, -k1,1 -k2,2 >> combined-results.csv
           {
             echo '### PTQ results'
             echo '```text'
-            cat combined-results.csv
+            column -s, -t < combined-results.csv
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload combined results

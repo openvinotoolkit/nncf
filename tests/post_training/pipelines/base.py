@@ -481,6 +481,11 @@ class PTQTestPipeline(BaseTestPipeline):
         Save compressed model to IR.
         """
         print("Saving quantized model...")
+        if self.backend == BackendType.FP32:
+            # To validate not compressed model
+            self.path_compressed_ir = self.fp32_model_dir / "model_fp32.xml"
+            return
+
         self.path_compressed_ir = self.output_model_dir / "model.xml"
         if self.backend == BackendType.OPTIMUM:
             self.path_compressed_ir = self.output_model_dir / "openvino_model.xml"
