@@ -7,7 +7,6 @@ endif
 GENERAL_PYTEST_ARGS := $(NUM_WORKERS_ARG) -ra --durations=30
 CMD_INSTALL := uv pip install
 CMD_PYTEST := python -m pytest
-MAX_CPU_ISA := ONEDNN_MAX_CPU_ISA=AVX2 OV_CPU_MAX_ISA=AVX2
 
 ###############################################################################
 # Common part
@@ -26,7 +25,7 @@ install-openvino:
 	$(CMD_INSTALL) -e . -r tests/openvino/requirements.txt
 
 test-openvino:
-	$(MAX_CPU_ISA) $(CMD_PYTEST) tests/openvino $(GENERAL_PYTEST_ARGS) $(ARGS)
+	ONEDNN_MAX_CPU_ISA=AVX2 OV_CPU_MAX_ISA=AVX2 $(CMD_PYTEST) tests/openvino $(GENERAL_PYTEST_ARGS) $(ARGS)
 
 
 ###############################################################################
