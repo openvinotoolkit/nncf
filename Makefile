@@ -1,4 +1,4 @@
-ARGS := $(wordlist 2, $(words $(MAKECMDGOALS)), $(MAKECMDGOALS))
+ARGS ?=
 
 ifdef NUM_WORKERS
 	NUM_WORKERS_ARG := -n${NUM_WORKERS}
@@ -74,11 +74,11 @@ test-examples:
 install-conformance:
 	$(CMD_INSTALL) -e . -r tests/post_training/requirements.txt
 
-test-conformance-ptq:
-	$(CMD_PYTEST) $(GENERAL_PYTEST_ARGS) -s tests/post_training/test_quantize_conformance.py::test_ptq_quantization $(ARGS)
+test-ptq:
+	$(MAX_CPU_ISA) $(CMD_PYTEST) $(GENERAL_PYTEST_ARGS) -s tests/post_training/test_quantize_conformance.py::test_ptq_quantization $(ARGS)
 
-test-conformance-wc:
-	$(CMD_PYTEST) $(GENERAL_PYTEST_ARGS) -s tests/post_training/test_quantize_conformance.py::test_weight_compression $(ARGS)
+test-wc:
+	$(MAX_CPU_ISA) $(CMD_PYTEST) $(GENERAL_PYTEST_ARGS) -s tests/post_training/test_quantize_conformance.py::test_weight_compression $(ARGS)
 
 
 ###############################################################################
@@ -109,17 +109,3 @@ install-pre-commit:
 
 pre-commit:
 	pre-commit run -a
-
-
-###############################################################################
-# Conformance
-###############################################################################
-
-install-conformance:
-	$(CMD_INSTALL) -e . -r tests/post_training/requirements.txt
-
-test-ptq:
-	$(MAX_CPU_ISA) $(CMD_PYTEST) $(GENERAL_PYTEST_ARGS) -s tests/post_training/test_quantize_conformance.py::test_ptq_quantization $(ARGS)
-
-test-wc:
-	$(MAX_CPU_ISA) $(CMD_PYTEST) $(GENERAL_PYTEST_ARGS) -s tests/post_training/test_quantize_conformance.py::test_weight_compression $(ARGS)

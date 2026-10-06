@@ -127,13 +127,12 @@ jobs:
       - name: Run PTQ test scope
         run: |
           set +e
-          make test-ptq -- \
-            --junit-xml=${{ env.RESULT_XML }} \
+          make test-ptq ARGS="--junit-xml=${RESULT_XML} \
             --durations-path=tests/post_training/data/ptq_test_durations.json \
             --splitting-algorithm=least_duration \
             --splits 20 \
             --group ${{ matrix.group }} \
-            ${{ env.PYTEST_ARGS }}
+            ${PYTEST_ARGS}"
           ret=$?
           [ $ret -eq 5 ] && [ -n "${{ env.PYTEST_ARGS }}" ]  && exit 0 || exit $ret
       - name: Print results.csv
