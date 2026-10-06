@@ -201,9 +201,9 @@ timm/mobilenetv2_050_backend_CUDA_TORCH:
 timm/mobilenetv2_050_backend_FP32:
   metric_value: 0.6594
 timm/mobilenetv2_050_backend_ONNX:
-  metric_value: 0.64454
+  metric_value: 0.65498
 timm/mobilenetv2_050_backend_OV:
-  metric_value: 0.64386
+  metric_value: 0.65422
 timm/mobilenetv2_050_backend_TORCH:
   metric_value: 0.64506
 timm/mobilenetv3_small_050_backend_CUDA_TORCH:
