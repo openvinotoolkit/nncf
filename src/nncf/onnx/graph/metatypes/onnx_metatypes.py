@@ -732,7 +732,7 @@ def get_tensor_edge_name(
     parents_node_mapping: dict[str, onnx.NodeProto],
 ) -> str | None:
     """
-    Returns an edge name associated with a weight of a node laying on  an input port_id.
+    Returns an edge name associated with a weight of a node laying on an input port_id.
 
     Checks whether a node has a tensor on input port_id.
     If does then it is a weight and returns corresponding edge name.
