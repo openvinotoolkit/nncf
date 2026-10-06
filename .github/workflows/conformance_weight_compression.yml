@@ -32,14 +32,15 @@ defaults:
     shell: bash
 
 env:
-  PYTHON_VERSION: "3.12"
-  PYTEST_ARGS: ${{ inputs.pytest_args || '' }}
-  TQDM_DISABLE: 1
-  RESULT_XML: "pytest-results.xml"
-  HOME_HF: "/home/runner/hf_home"
-  HF_TOKEN: ${{ secrets.HF_TOKEN }}
-  UV_SYSTEM_PYTHON: 'true'
   DEBIAN_FRONTEND: noninteractive
+  HF_TOKEN: ${{ secrets.HF_TOKEN }}
+  HOME_HF: "/home/runner/hf_home"
+  PIP_ROOT_USER_ACTION: ignore
+  PYTEST_ARGS: ${{ inputs.pytest_args || '' }}
+  PYTHON_VERSION: "3.12"
+  RESULT_XML: "pytest-results.xml"
+  TQDM_DISABLE: 1
+  UV_SYSTEM_PYTHON: true
 
 jobs:
   conformance-wc:
