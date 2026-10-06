@@ -1,7 +1,7 @@
-transformers==5.5.0
-datasets==5.0.1
+transformers==5.10.1
+datasets==5.1.0
 openvino==2026.4.1
 optimum==2.3.0
-torch==2.14.0
+torch==2.14.1
 torchvision==0.29.0
 torchao==0.18.0

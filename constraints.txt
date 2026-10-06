@@ -2,12 +2,12 @@
 openvino==2026.4.1
 
 # Pytorch
-torch==2.14.0
+torch==2.14.1
 torchvision==0.29.0
 torchao==0.18.0
 
 # ONNX
-onnx==1.22.0
+onnx==1.23.2
 onnx-ir==1.0.0
 onnxruntime==1.24.3
 onnxscript==0.7.1
@@ -21,7 +21,7 @@ pytest-xdist==3.8.0
 pytest-forked==1.6.0
 pytest-split==0.11.0
 
-datasets==5.0.1
+datasets==5.1.0
 matplotlib==3.11.2
 pandas==2.3.3
 fastprogress==1.0.5
