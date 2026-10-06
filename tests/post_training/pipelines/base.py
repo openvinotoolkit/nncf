@@ -360,9 +360,9 @@ class BaseTestPipeline(ABC):
             atol = reference_data.get("atol", 0.001)
             if not np.isclose(metric_value, metric_reference, atol=atol):
                 status_msg = (
-                    f"Regression: Metric value is less than reference {metric_value:0.5f} < {metric_reference}"
+                    f"Regression: {metric_value:0.5f} < {metric_reference}; Metric value is less than reference"
                     if metric_value < metric_reference
-                    else f"Improvement: Metric value is better than reference {metric_value:0.5f} > {metric_reference}"
+                    else f"Improvement: {metric_value:0.5f} > {metric_reference}; Metric value is better than reference"
                 )
                 errors.append(ErrorReport(ErrorReason.METRICS, status_msg))
 

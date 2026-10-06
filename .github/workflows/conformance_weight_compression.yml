@@ -160,3 +160,39 @@ jobs:
     uses: ./.github/workflows/call_summary.yml
     with:
       artifact_pattern: ptq-pytest-results-*
+
+  combine-ptq-results:
+    name: Combined PTQ results
+    if: ${{ !cancelled() }}
+    needs: conformance-ptq
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: ptq_results_*
+          path: ptq-results
+      - name: Combine and print results
+        run: |
+          shopt -s nullglob
+          files=(ptq-results/ptq_results_*/results.csv)
+          if (( ${#files[@]} == 0 )); then
+            echo 'No PTQ results.csv files were uploaded.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          cat "${files[0]}" > combined-results.csv
+          for file in "${files[@]:1}"; do
+            tail -n +2 "$file" >> combined-results.csv
+          done
+          {
+            echo '### PTQ results'
+            echo '```text'
+            cat combined-results.csv
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload combined results
+        if: ${{ hashFiles('combined-results.csv') != '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ptq-results-combined
+          path: combined-results.csv
