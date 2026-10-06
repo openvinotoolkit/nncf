@@ -20,11 +20,13 @@ Keep behavior the same whenever possible.
 - **PR input contract**: for PR-targeted workflows, use `inputs.pr_num` consistently.
 - **Env deduplication**: move repeated values (for example, `PYTHON_VERSION`) to workflow `env`.
 - **Timeouts**: every job must define `timeout-minutes`.
+- **Shell**: configure shells only at workflow level with `defaults.run.shell`; never set `shell` at job or step level.
 
 ## Rules to avoid forcing (default/optional)
 
 - Do not add `run-name` if no dynamic context is needed.
 - Do not add `defaults.run.shell` when default runner shell is acceptable.
+- If a shell setting is needed, set it only in the workflow-level `defaults.run.shell`.
 - Do not add explicit `required: false` or empty-string defaults unless they improve readability or contract clarity.
 - Do not add checkout flags like `fetch-depth`/`lfs` unless needed.
 - Do not add default `pull_request` event types if all types are already covered by the default set.
@@ -49,7 +51,7 @@ Place these steps before the checkout step.
   run: nvidia-smi
 ```
 
-- Use `shell: bash` on the `CPU Info` step so the same command works on both Linux and Windows (git-bash exposes `/proc/cpuinfo`).
+- For Windows jobs, set workflow-level `defaults.run.shell: bash` so the CPU Info command works (git-bash exposes `/proc/cpuinfo`); do not set `shell` on the step.
 - Add the `GPU Info` step only for GPU runners (runner name or label contains `gpu`).
 - Checklist: a job counts as a test job if any step runs `pytest`, `make test-*`, or an equivalent test command. Confirm each Linux/Windows test job has a `CPU Info` step before wrapping up.
 
