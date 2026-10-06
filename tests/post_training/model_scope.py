@@ -618,18 +618,30 @@ def generate_tests_scope(models_list: list[dict]) -> dict[str, dict]:
     """
     Generate tests by names "{reported_name}_backend_{backend}"
     """
-    reported_name_to_model_id_mapping = {mc["reported_name"]: mc["model_id"] for mc in models_list}
+    import sys
+
+    run_fp32_backend = "--fp32" in sys.argv
+    run_cuda_backend = "--cuda" in sys.argv
     tests_scope = {}
     fp32_models = set()
     for test_model_param in models_list:
-        for backend in test_model_param["backends"] + [BackendType.FP32]:
+        backends = list(test_model_param["backends"])
+        if not run_fp32_backend:
+            backends = [backend for backend in backends if backend != BackendType.FP32]
+        elif BackendType.FP32 not in backends:
+            backends.append(BackendType.FP32)
+        if not run_cuda_backend:
+            backends = [
+                backend for backend in backends if backend not in (BackendType.CUDA_TORCH, BackendType.CUDA_FX_TORCH)
+            ]
+        for backend in backends:
             model_param = copy.deepcopy(test_model_param)
             if "is_batch_size_supported" not in model_param:  # Set default value of is_batch_size_supported.
                 model_param["is_batch_size_supported"] = True
             reported_name = model_param["reported_name"]
-            model_id = reported_name_to_model_id_mapping[reported_name]
             if backend == BackendType.FP32:
                 # Some test cases may share the same model_id, therefore fp32 test case is added only once for model_id.
+                model_id = model_param["model_id"]
                 if model_id not in fp32_models:
                     fp32_models.add(model_id)
                 else:
