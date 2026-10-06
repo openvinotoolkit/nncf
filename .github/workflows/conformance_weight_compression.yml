@@ -99,14 +99,14 @@ jobs:
   #   with:
   #     artifact_pattern: weight-compression-pytest-results-*
 
-  ptq-quantization-cpu:
-    name: PTQ quantization [${{ matrix.group }}/10]
+  conformance-ptq:
+    name: PTQ conformance [${{ matrix.group }}/20]
     runs-on: ubuntu-latest-16-cores
     timeout-minutes: 100
     strategy:
       fail-fast: false
       matrix:
-        group: [1, 2, 3, 4, 5, 6, 7, 8 , 9, 10]
+        group: [1, 2, 3, 4, 5, 6, 7, 8 , 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
     steps:
       - name: CPU Info
         run: awk 'BEGIN{RS=""} END{print}' /proc/cpuinfo
@@ -130,7 +130,7 @@ jobs:
             --junit-xml=${{ env.RESULT_XML }} \
             --durations-path=tests/post_training/data/ptq_test_durations.json \
             --splitting-algorithm=least_duration \
-            --splits 10 \
+            --splits 20 \
             --group ${{ matrix.group }} \
             ${{ env.PYTEST_ARGS }}
           ret=$?
@@ -149,14 +149,14 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ptq-quantization-pytest-results-${{ matrix.group }}
+          name: ptq-pytest-results-${{ matrix.group }}
           path: ${{ env.RESULT_XML }}
           retention-days: 7
 
   summary:
     name: Summary PTQ
     if: ${{ !cancelled() }}
-    needs: ptq-quantization-cpu
+    needs: conformance-ptq
     uses: ./.github/workflows/call_summary.yml
     with:
-      artifact_pattern: ptq-quantization-pytest-results-*
+      artifact_pattern: ptq-pytest-results-*
