@@ -48,7 +48,7 @@ jobs:
     name: Conformance WC [${{ matrix.group }}/8]
     runs-on: aks-linux-16-cores-64gb
     container:
-      image: openvinogithubactions.azurecr.io/dockerhub/ubuntu:20.04
+      image: openvinogithubactions.azurecr.io/dockerhub/ubuntu:24.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
