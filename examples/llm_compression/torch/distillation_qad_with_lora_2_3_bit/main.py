@@ -559,7 +559,7 @@ def equalize_up_gate_with_layernorm(model: nn.Module, eps: float = 1e-5, use_ali
         # Standard RMSNorm (e.g. Llama) uses weight*x (weight initialized to ones):
         #   effective multiplier = weight
         #   to scale output by s: w_new = s * w_old
-        if "gemma" in type(producer).__name__.lower():
+        if "gemma" in type(producer).__name__.lower() or "qwen3nextrmsnorm" in type(producer).__name__.lower():
             _set_weight_data(producer, s_dev * (1.0 + w_prod) - 1.0)
         else:
             _set_weight_data(producer, w_prod * s_dev)
