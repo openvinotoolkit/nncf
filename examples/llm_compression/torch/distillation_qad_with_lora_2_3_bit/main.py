@@ -692,7 +692,8 @@ def run_training(
                         targets = targets / fls
                         targets = torch.tanh(targets)
                         targets = targets * fls
-            outputs = model(**inputs).logits
+            with torch.autocast(device_type=device, dtype=torch_dtype):
+                outputs = model(**inputs).logits
             loss = kl_div(outputs, targets.to(dtype=torch_dtype, device=device))
 
             # Perform an optimization step after accumulating gradients over multiple minibatches.
