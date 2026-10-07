@@ -7,7 +7,6 @@ endif
 GENERAL_PYTEST_ARGS := $(NUM_WORKERS_ARG) -ra --durations=30
 CMD_INSTALL := uv pip install
 CMD_PYTEST := python -m pytest
-MAX_CPU_ISA := ONEDNN_MAX_CPU_ISA=AVX2 OV_CPU_MAX_ISA=AVX2
 
 ###############################################################################
 # Common part
@@ -26,7 +25,7 @@ install-openvino:
 	$(CMD_INSTALL) -e . -r tests/openvino/requirements.txt
 
 test-openvino:
-	$(MAX_CPU_ISA) $(CMD_PYTEST) tests/openvino $(GENERAL_PYTEST_ARGS) $(ARGS)
+	ONEDNN_MAX_CPU_ISA=AVX2 OV_CPU_MAX_ISA=AVX2 $(CMD_PYTEST) tests/openvino $(GENERAL_PYTEST_ARGS) $(ARGS)
 
 
 ###############################################################################
@@ -75,10 +74,10 @@ install-conformance:
 	$(CMD_INSTALL) -e . -r tests/post_training/requirements.txt
 
 test-ptq:
-	$(MAX_CPU_ISA) $(CMD_PYTEST) $(GENERAL_PYTEST_ARGS) -s tests/post_training/test_quantize_conformance.py::test_ptq_quantization $(ARGS)
+	ONEDNN_MAX_CPU_ISA=AVX512_VNNI OV_CPU_MAX_ISA=AVX512_VNNI $(CMD_PYTEST) $(GENERAL_PYTEST_ARGS) -s tests/post_training/test_quantize_conformance.py::test_ptq_quantization $(ARGS)
 
 test-wc:
-	$(MAX_CPU_ISA) $(CMD_PYTEST) $(GENERAL_PYTEST_ARGS) -s tests/post_training/test_quantize_conformance.py::test_weight_compression $(ARGS)
+	ONEDNN_MAX_CPU_ISA=AVX512_VNNI OV_CPU_MAX_ISA=AVX512_VNNI $(CMD_PYTEST) $(GENERAL_PYTEST_ARGS) -s tests/post_training/test_quantize_conformance.py::test_weight_compression $(ARGS)
 
 
 ###############################################################################
