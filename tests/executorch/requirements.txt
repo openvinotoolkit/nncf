@@ -25,5 +25,5 @@ fastprogress==1.0.5
 # ONNX
 onnx==1.23.0
 onnx-ir==1.0.0
-onnxruntime==1.30.0
+onnxruntime==1.24.3
 onnxscript==0.7.1
