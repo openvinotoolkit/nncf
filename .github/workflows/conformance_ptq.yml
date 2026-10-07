@@ -32,26 +32,37 @@ defaults:
     shell: bash
 
 env:
-  PYTHON_VERSION: "3.12"
-  PYTEST_ARGS: ${{ inputs.pytest_args || '' }}
-  TQDM_DISABLE: 1
-  RESULT_XML: "pytest-results.xml"
-  HOME_HF: "/home/runner/hf_home"
+  DEBIAN_FRONTEND: noninteractive
   HF_TOKEN: ${{ secrets.HF_TOKEN }}
-  UV_SYSTEM_PYTHON: 'true'
+  HOME_HF: "/home/runner/hf_home"
+  PIP_CACHE_DIR: "/tmp/pip-cache"
+  PIP_ROOT_USER_ACTION: ignore
+  PYTEST_ARGS: ${{ inputs.pytest_args || '' }}
+  PYTHON_VERSION: "3.12"
+  RESULT_XML: "pytest-results.xml"
+  TQDM_DISABLE: 1
+  UV_SYSTEM_PYTHON: true
 
 jobs:
   conformance-ptq:
-    name: Conformance PTQ [${{ matrix.group }}/20]
-    runs-on: ubuntu-latest-16-cores
+    name: Conformance PTQ [${{ matrix.group }}/16]
+    runs-on: aks-linux-16-cores-64gb
+    container:
+      image: openvinogithubactions.azurecr.io/dockerhub/ubuntu:24.04
+      options: --shm-size=4g
     timeout-minutes: 100
     strategy:
       fail-fast: false
       matrix:
-        group: [1, 2, 3, 4, 5, 6, 7, 8 , 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+        group: [1, 2, 3, 4, 5, 6, 7, 8 , 9, 10, 11, 12, 13, 14, 15, 16]
     steps:
       - name: CPU Info
         run: awk 'BEGIN{RS=""} END{print}' /proc/cpuinfo
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make git git-lfs bsdextrautils
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.pr_num != '' && format('refs/pull/{0}/head', inputs.pr_num) || github.ref }}
@@ -71,7 +82,7 @@ jobs:
           make test-ptq ARGS="--junit-xml=${RESULT_XML} \
             --durations-path=tests/post_training/data/ptq_test_durations.json \
             --splitting-algorithm=least_duration \
-            --splits 20 \
+            --splits 16 \
             --group ${{ matrix.group }} \
             ${PYTEST_ARGS}"
           ret=$?
