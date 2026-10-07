@@ -46,6 +46,7 @@ jobs:
     runs-on: aks-linux-16-cores-32gb
     container:
       image: openvinogithubactions.azurecr.io/dockerhub/ubuntu:24.04
+      options: --shm-size=4g
     timeout-minutes: 100
     strategy:
       fail-fast: false
