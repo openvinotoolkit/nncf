@@ -211,11 +211,11 @@ timm/mobilenetv3_small_050_backend_CUDA_TORCH:
 timm/mobilenetv3_small_050_backend_FP32:
   metric_value: 0.57906
 timm/mobilenetv3_small_050_backend_ONNX:
-  metric_value: 0.41804
+  metric_value: 0.41992
 timm/mobilenetv3_small_050_backend_OV:
-  metric_value: 0.41436
+  metric_value: 0.42126
 timm/mobilenetv3_small_050_backend_TORCH:
-  metric_value: 0.42482
+  metric_value: 0.42850
 timm/mobilenetv3_small_050_BC_backend_FP32:
   metric_value: 0.57906
 timm/mobilenetv3_small_050_BC_backend_ONNX:
