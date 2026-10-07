@@ -49,11 +49,7 @@ def validate(
     input_name = model.graph.input[0].name
     serialized_model = model.SerializeToString()
 
-    session_options = onnxruntime.SessionOptions()
-    session_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_BASIC
-    session = onnxruntime.InferenceSession(
-        serialized_model, sess_options=session_options, providers=["CPUExecutionProvider"]
-    )
+    session = onnxruntime.InferenceSession(serialized_model, providers=["CPUExecutionProvider"])
     output_names = [output.name for output in session.get_outputs()]
     num_outputs = len(output_names)
 
@@ -155,12 +151,9 @@ def quantize_ac(
         validator.batch_i = 1
         validator.confusion_matrix = ConfusionMatrix(names=validator.names)
 
-        session_options = onnxruntime.SessionOptions()
-        session_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_BASIC
+        rt_session_options = {"providers": ["CPUExecutionProvider"]}
         serialized_model = val_model.SerializeToString()
-        session = onnxruntime.InferenceSession(
-            serialized_model, sess_options=session_options, providers=["CPUExecutionProvider"]
-        )
+        session = onnxruntime.InferenceSession(serialized_model, **rt_session_options)
         output_names = [output.name for output in session.get_outputs()]
         num_outputs = len(output_names)
 
