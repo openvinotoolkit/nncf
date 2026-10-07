@@ -67,7 +67,7 @@ from nncf.quantization.advanced_parameters import AdvancedScaleEstimationParamet
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters as AdvancedSmoothQuantParameters
 from nncf.quantization.advanced_parameters import GroupSizeFallbackMode as GroupSizeFallbackMode
 from nncf.quantization.advanced_parameters import OverflowFix as OverflowFix
-from nncf.quantization.algorithms.weight_compression.openvino_backend import repack_weights as repack_weights
+from nncf.quantization.repack_weights import repack_weights as repack_weights
 from nncf.scopes import IgnoredScope as IgnoredScope
 from nncf.scopes import Subgraph as Subgraph
 from nncf.version import __version__ as __version__

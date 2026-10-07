@@ -13,7 +13,6 @@ from typing import Callable, Iterable
 import openvino as ov
 from openvino import opset13 as opset
 
-from nncf.common.factory import build_graph
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -29,14 +28,10 @@ from nncf.common.tensor_statistics.statistics import MaxVarianceTensorStatistic
 from nncf.common.tensor_statistics.statistics import MeanMagnitudeTensorStatistic
 from nncf.common.tensor_statistics.statistics import MeanVarianceTensorStatistic
 from nncf.common.tensor_statistics.statistics import WCTensorStatistic
-from nncf.common.utils.api_marker import api
-from nncf.common.utils.backend import BackendType
-from nncf.common.utils.backend import get_backend
 from nncf.common.utils.caching import disable_results_caching
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.openvino.graph.model_transformer import OVModelTransformer
-from nncf.openvino.graph.model_utils import remove_friendly_name_duplicates
 from nncf.openvino.graph.node_utils import convert_op
 from nncf.openvino.graph.node_utils import create_ov_codebook_subgraph
 from nncf.openvino.graph.node_utils import create_ov_const_from_tensor
@@ -548,9 +543,9 @@ class OVMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, OVWeightCompression
         return collector
 
 
-@api(canonical_alias="nncf.repack_weights")
 def repack_weights(
     model: ov.Model,
+    graph: NNCFGraph,
 ) -> ov.Model:
     """
     Looking for 4 and 8 bit weights in OV model and repack them if maximal absolute value corresponds
@@ -558,17 +553,10 @@ def repack_weights(
 
     :param model: A model to be repacked.
     :type model: ov.Model
+    :param graph: The NNCF graph corresponding to the model.
+    :type graph: NNCFGraph
     :return: The non-trainable model with repacked weights or the same model.
     """
-    backend = get_backend(model)
-
-    if backend != BackendType.OPENVINO:
-        msg = f"Unsupported type of backend: {backend}"
-        raise Exception(msg)
-
-    model = remove_friendly_name_duplicates(model)
-    graph = build_graph(model)
-
     backend_entity = OVWeightCompressionAlgoBackend(model)
 
     n_repacked_tensors = 0
