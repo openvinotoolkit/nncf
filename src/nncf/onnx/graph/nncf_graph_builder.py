@@ -408,11 +408,21 @@ class GraphConverter:
 
             if weight_port_ids:  # If node has weight
                 for weight_port_id in weight_port_ids:
+                    weight_input_shape = get_edge_shape(edge_info_mapping[node.input[weight_port_id]])
                     weight_edge_name = get_tensor_edge_name(onnx_model, node, weight_port_id, parents_node_mapping)
                     edge = edge_info_mapping[weight_edge_name]
                     weight_shape = get_edge_shape(edge)
                     dtype = get_edge_dtype(edge)
-                    weight_attrs[weight_port_id] = {"name": weight_edge_name, "shape": weight_shape, "dtype": dtype}
+
+                    # `weight_shape` describes the original shape of the weight tensor.
+                    # `weight_input_shape` describes the shape of the weight as consumed by the node's weight input.
+                    # The two shapes may differ if the weight is reshaped or transformed before being consumed.
+                    weight_attrs[weight_port_id] = {
+                        "name": weight_edge_name,
+                        "shape": weight_shape,
+                        "dtype": dtype,
+                        "weight_input_shape": weight_input_shape,
+                    }
 
                     # The weight tensor is shared if there is more than one consumer of this weight tensor.
                     is_weight_shared = len(children_node_mapping[weight_edge_name]) > 1
