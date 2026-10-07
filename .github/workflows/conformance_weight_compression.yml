@@ -35,6 +35,7 @@ env:
   DEBIAN_FRONTEND: noninteractive
   HF_TOKEN: ${{ secrets.HF_TOKEN }}
   HOME_HF: "/home/runner/hf_home"
+  PIP_CACHE_DIR: "/tmp/pip-cache"
   PIP_ROOT_USER_ACTION: ignore
   PYTEST_ARGS: ${{ inputs.pytest_args || '' }}
   PYTHON_VERSION: "3.12"
