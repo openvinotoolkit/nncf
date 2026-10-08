@@ -16,7 +16,6 @@ from nncf.common.factory import build_graph
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.openvino.graph.model_utils import remove_friendly_name_duplicates
 
 TModel = TypeVar("TModel")
 
@@ -38,6 +37,8 @@ def repack_weights(
     if backend != BackendType.OPENVINO:
         msg = f"Unsupported type of backend: {backend}"
         raise nncf.UnsupportedBackendError(msg)
+
+    from nncf.openvino.graph.model_utils import remove_friendly_name_duplicates
 
     model = remove_friendly_name_duplicates(model)
     graph = build_graph(model)
