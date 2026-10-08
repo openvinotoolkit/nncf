@@ -354,59 +354,6 @@ class QuantizerSetupBase:
             nncf_logger.debug(f"Removed last entry from a unified scale group {gid} - removing group itself")
             self.unified_scale_groups.pop(gid)
 
-    def equivalent_to(self, other: "QuantizerSetupBase") -> bool:
-        this_qp_id_to_other_qp_id_dict: dict[QuantizationPointId, QuantizationPointId] = {}
-
-        def _compare_qps(first: "QuantizerSetupBase", second: "QuantizerSetupBase") -> bool:
-            for this_qp_id, this_qp in first.quantization_points.items():
-                matches: list[QuantizationPointId] = []
-                for other_qp_id, other_qp in second.quantization_points.items():
-                    if this_qp == other_qp:
-                        matches.append(other_qp_id)
-                if len(matches) == 0:
-                    return False
-                assert len(matches) == 1  # separate quantization points should not compare equal to each other
-                this_qp_id_to_other_qp_id_dict[this_qp_id] = matches[0]
-            return True
-
-        def _compare_shared_input_groups(first: "QuantizerSetupBase", second: "QuantizerSetupBase") -> bool:
-            for this_same_input_group_set in first.shared_input_operation_set_groups.values():
-                translated_id_set = set(
-                    this_qp_id_to_other_qp_id_dict[this_qp_id] for this_qp_id in this_same_input_group_set
-                )
-                matches = []
-
-                for other_shared_inputs_group in second.shared_input_operation_set_groups.values():
-                    if translated_id_set == other_shared_inputs_group:
-                        matches.append(other_shared_inputs_group)
-                if not matches:
-                    return False
-                assert len(matches) == 1  # shared inputs group entries should be present in only one group
-            return True
-
-        def _compare_unified_scale_groups(first: "QuantizerSetupBase", second: "QuantizerSetupBase") -> bool:
-            for this_unified_scales_group in first.unified_scale_groups.values():
-                translated_id_set = set(
-                    this_qp_id_to_other_qp_id_dict[this_qp_id] for this_qp_id in this_unified_scales_group
-                )
-                matches = []
-                for other_unified_scales_group in second.unified_scale_groups.values():
-                    if translated_id_set == other_unified_scales_group:
-                        matches.append(other_unified_scales_group)
-                if not matches:
-                    return False
-                assert len(matches) == 1  # unified scale group entries should be present in only one group
-            return True
-
-        return (
-            _compare_qps(self, other)
-            and _compare_qps(other, self)
-            and _compare_shared_input_groups(self, other)
-            and _compare_shared_input_groups(self, other)
-            and _compare_unified_scale_groups(self, other)
-            and _compare_unified_scale_groups(self, other)
-        )
-
 
 class SCQSetupStateNames:
     SHARED_INPUT_OPERATION_SET_GROUPS = "shared_input_operation_set_groups"

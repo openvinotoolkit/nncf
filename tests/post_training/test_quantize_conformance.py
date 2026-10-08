@@ -36,16 +36,12 @@ DATA_ROOT = Path(__file__).parent / "data"
 
 
 @pytest.fixture(scope="function", name="use_avx2")
-def fixture_use_avx2():
-    old_value = os.environ.get("ONEDNN_MAX_CPU_ISA")
-    os.environ["ONEDNN_MAX_CPU_ISA"] = "AVX2"
-    if old_value is not None and old_value != "AVX2":
-        print(f"Warning: ONEDNN_MAX_CPU_ISA is overriding to AVX2, was {old_value}")
-    yield
-    if old_value is None:
-        del os.environ["ONEDNN_MAX_CPU_ISA"]
-    else:
-        os.environ["ONEDNN_MAX_CPU_ISA"] = old_value
+def fixture_use_avx2(monkeypatch: pytest.MonkeyPatch) -> None:
+    for env_var in ("ONEDNN_MAX_CPU_ISA", "OV_CPU_MAX_ISA"):
+        old_value = os.environ.get(env_var)
+        monkeypatch.setenv(env_var, "AVX2")
+        if old_value is not None and old_value != "AVX2":
+            print(f"Warning: overriding {env_var} with AVX2; previous value was {old_value}")
 
 
 def _parse_version(s: Path):
@@ -196,7 +192,6 @@ def run_pipeline(
     test_cases: dict,
     result_data: dict[str, RunInfo],
     output_dir: Path,
-    data_dir: Path | None,
     no_eval: bool,
     batch_size: int | None,
     run_fp32_backend: bool,
@@ -219,7 +214,6 @@ def run_pipeline(
     pipeline_kwargs.update(
         {
             "output_dir": output_dir,
-            "data_dir": data_dir,
             "no_eval": no_eval,
             "run_benchmark_app": run_benchmark_app,
             "batch_size": batch_size or test_model_param.get("batch_size", 1),
@@ -227,6 +221,7 @@ def run_pipeline(
         }
     )
     pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
+
     try:
         pipeline.run()
     except Exception as e:
@@ -264,7 +259,6 @@ def run_pipeline(
 def test_ptq_quantization(
     ptq_reference_data: dict,
     test_case_name: str,
-    data_dir: Path,
     output_dir: Path,
     result_data: dict[str, RunInfo],
     no_eval: bool,
@@ -283,7 +277,6 @@ def test_ptq_quantization(
         PTQ_TEST_CASES,
         result_data,
         output_dir,
-        data_dir,
         no_eval,
         batch_size,
         run_fp32_backend,
@@ -319,7 +312,6 @@ def test_weight_compression(
         WC_TEST_CASES,
         result_data,
         output_dir,
-        None,  # data_dir is not used in WC
         no_eval,
         batch_size,
         run_fp32_backend,

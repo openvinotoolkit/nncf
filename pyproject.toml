@@ -8,33 +8,34 @@ description = "Neural Networks Compression Framework"
 readme = "docs/PyPiPublishing.md"
 license = "Apache-2.0"
 authors = [{ name = "Intel" }, { email = "maksim.proshin@intel.com" }]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dynamic = ["version"]
 keywords = [
-    "bert",
-    "classification",
-    "compression",
-    "hawq",
-    "mixed-precision-training",
-    "mmdetection",
-    "nas",
-    "nlp",
-    "object-detection",
-    "pruning",
-    "quantization",
+    "neural-network-compression",
+    "model-optimization",
+    "post-training-quantization",
     "quantization-aware-training",
-    "semantic-segmentation",
-    "sparsity",
-    "transformers",
+    "weight-compression",
+    "compression",
+    "quantization",
+    "pruning",
+    "openvino",
+    "pytorch",
+    "onnx",
 ]
 classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
     "networkx>=2.6, <=3.6.1",
     "ninja>=1.10.0.post2, <1.14",
-    "numpy>=1.24.0, <2.5.0",
+    "numpy>=1.24.0, <2.6.0",
     "openvino-telemetry>=2023.2.0",
     "packaging>=20.0",
     "psutil",
@@ -43,7 +44,6 @@ dependencies = [
     "safetensors>=0.4.1",
     "scikit-learn>=0.24.0",
     "scipy>=1.3.2",
-    "tabulate>=0.9.0",
 ]
 
 [project.optional-dependencies]
@@ -185,7 +185,10 @@ ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 120
-exclude = ["src/nncf/torch/function_hook/handle_inner_functions.py"]
+exclude = [
+    "src/nncf/torch/function_hook/handle_inner_functions.py",
+    "docs/styleguide/PyGuide.md",
+]
 
 [tool.ruff.lint]
 preview = true
@@ -277,6 +280,9 @@ single-line-exclusions = ["typing"]
 
 [tool.pytest.ini_options]
 pythonpath = "."
+filterwarnings = [
+    "ignore:'setParseAction' deprecated - use 'set_parse_action':pyparsing.PyparsingDeprecationWarning:pydot.dot_parser",
+]
 
 [tool.bandit]
 exclude_dirs = ["tools", "tests", "**/venv*", "build"]
