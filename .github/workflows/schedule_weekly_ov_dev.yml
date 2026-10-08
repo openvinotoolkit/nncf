@@ -43,5 +43,12 @@ jobs:
         run: make install-openvino
       - name: Print installed modules
         run: pip list
+      - name: Summarize OpenVINO version
+        run: |
+          {
+            printf '### OpenVINO packages\n\n```text\n'
+            pip list | grep openvino
+            printf '```\n'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Run OpenVINO tests
         run: make test-openvino
