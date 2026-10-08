@@ -32,12 +32,7 @@ def main():
             message = f"Invalid requirement: {new_requirement}"
             raise ValueError(message)
         package_name = match.group(1)
-        content = re.sub(
-            rf"^{re.escape(package_name)}.*",
-            "",
-            content,
-            flags=re.MULTILINE,
-        )
+        content = re.sub(rf"^{re.escape(package_name)}.*", "", content, flags=re.MULTILINE)
         content += f"\n{new_requirement}"
 
     print("New constraints:")

@@ -37,8 +37,6 @@ jobs:
           python-version: '3.12'
       - name: Install uv
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-        with:
-          enable_cache: false
       - name: Allow nightly OpenVINO
         run: python .github/scripts/override_constraints.py 'openvino>=0'
       - name: Install NNCF and OpenVINO test requirements
