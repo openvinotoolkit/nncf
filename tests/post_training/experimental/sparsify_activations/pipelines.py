@@ -17,7 +17,6 @@ import numpy as np
 import openvino as ov
 import torch
 import torch.utils.data
-import torchvision
 from datasets import load_dataset
 from optimum.exporters.openvino.convert import export_from_model
 from optimum.intel.openvino import OVModelForCausalLM
@@ -38,6 +37,7 @@ from tests.post_training.pipelines.base import ErrorReport
 from tests.post_training.pipelines.base import PTQNumCompressNodes
 from tests.post_training.pipelines.base import RunInfo
 from tests.post_training.pipelines.base import get_num_fq_int4_int8
+from tests.post_training.pipelines.image_classification_base import hf_imagenet_1k_val
 from tests.post_training.pipelines.image_classification_timm import ImageClassificationTimm
 from tests.post_training.pipelines.lm_weight_compression import LMWeightCompression
 from tests.post_training.pipelines.lm_weight_compression import WCNumCompressNodes
@@ -81,7 +81,6 @@ class SAPipelineMixin(BaseTestPipeline):
         backend: BackendType,
         compression_params: dict,
         output_dir: Path,
-        data_dir: Path,
         reference_data: dict,
         no_eval: bool,
         run_benchmark_app: bool,
@@ -95,7 +94,6 @@ class SAPipelineMixin(BaseTestPipeline):
             backend,
             compression_params,
             output_dir,
-            data_dir,
             reference_data,
             no_eval,
             run_benchmark_app,
@@ -284,9 +282,7 @@ class ImageClassificationTimmSparsifyActivations(SAPipelineMixin, ImageClassific
 
     def prepare_calibration_dataset(self):
         subset_size = self.compression_params.get("subset_size") or self.DEFAULT_SUBSET_SIZE
-        val_dataset = torchvision.datasets.ImageFolder(
-            root=self.data_dir / "imagenet" / "val", transform=self.transform
-        )
+        val_dataset = hf_imagenet_1k_val(self.transform)
         indices = np.random.default_rng(42).choice(len(val_dataset), size=subset_size, replace=False)
         subset = torch.utils.data.Subset(val_dataset, indices=indices)
         loader = torch.utils.data.DataLoader(subset, batch_size=self.batch_size, num_workers=2, shuffle=False)

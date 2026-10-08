@@ -228,7 +228,6 @@ class BaseTestPipeline(ABC):
         backend: BackendType,
         compression_params: dict,
         output_dir: Path,
-        data_dir: Path,
         reference_data: dict,
         no_eval: bool,
         run_benchmark_app: bool,
@@ -241,7 +240,6 @@ class BaseTestPipeline(ABC):
         self.backend = backend
         self.compression_params = compression_params
         self.output_dir = output_dir
-        self.data_dir = data_dir
         self.reference_data = reference_data
         self.params = params or {}
         self.batch_size = batch_size
@@ -407,7 +405,6 @@ class PTQTestPipeline(BaseTestPipeline):
         backend,
         compression_params,
         output_dir,
-        data_dir,
         reference_data,
         no_eval,
         run_benchmark_app,
@@ -421,7 +418,6 @@ class PTQTestPipeline(BaseTestPipeline):
             backend,
             compression_params,
             output_dir,
-            data_dir,
             reference_data,
             no_eval,
             run_benchmark_app,

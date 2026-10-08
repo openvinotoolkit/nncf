@@ -9,20 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
+from enum import StrEnum
 from enum import auto
-from typing import Any
 
 from nncf.common.utils.api_marker import api
-
-
-class StrEnum(str, Enum):
-    def __str__(self) -> str:
-        return str(self.value)
-
-    @staticmethod
-    def _generate_next_value_(name: str, start: int, count: int, last_values: list[Any]) -> Any:
-        return name.lower()
 
 
 @api(canonical_alias="nncf.TargetDevice")
