@@ -1,5 +1,5 @@
-name: "[Schedule] Weekly - OpenVino DEV"
-run-name: "[Schedule] Weekly - OpenVino DEV${{ inputs.pr_num != '' && format(' PR#{0}', inputs.pr_num) || '' }}"
+name: "[Schedule] Weekly - OpenVINO DEV"
+run-name: "[Schedule] Weekly - OpenVINO DEV${{ inputs.pr_num != '' && format(' PR#{0}', inputs.pr_num) || '' }}"
 permissions: read-all
 
 on:
