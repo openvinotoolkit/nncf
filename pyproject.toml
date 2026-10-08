@@ -50,7 +50,7 @@ dependencies = [
 plots = [
     "kaleido>=0.2.1",
     "matplotlib>=3.3.4",
-    "pandas>=1.1.5,<2.4",
+    "pandas>=1.1.5,<3.1",
     "pillow>=9.0.0",
     "plotly-express>=0.4.1",
 ]
