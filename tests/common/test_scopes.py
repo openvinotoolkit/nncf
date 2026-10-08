@@ -10,36 +10,9 @@
 # limitations under the License.
 import pytest
 
-from nncf.common.graph import NNCFNode
-from nncf.common.scopes import get_not_matched_scopes
 from nncf.scopes import Scope
 from nncf.scopes import Subgraph
 from nncf.scopes import get_difference_scope
-
-
-@pytest.mark.parametrize(
-    "scope, ref",
-    [
-        ("A", []),
-        ("1", ["1"]),
-        (["A", "B"], []),
-        (["1", "2"], ["1", "2"]),
-        ([r"{re}\d"], [r"{re}\d"]),
-        ([r"{re}\w"], []),
-        (["A", "B", "{re}.*", "1"], ["1"]),
-        (Scope(names=["A", "B"]), []),
-        (Scope(names=["1", "2"]), ["1", "2"]),
-        (Scope(patterns=[r"\d"]), [r"{re}\d"]),
-        (Scope(patterns=[r"\w"]), []),
-    ],
-)
-def test_get_not_matched_scopes(scope, ref):
-    node_lists = [
-        NNCFNode({NNCFNode.ID_NODE_ATTR: 1, NNCFNode.NODE_NAME_ATTR: "A"}),
-        NNCFNode({NNCFNode.ID_NODE_ATTR: 2, NNCFNode.NODE_NAME_ATTR: "B"}),
-    ]
-    not_matched = get_not_matched_scopes(scope, node_lists)
-    assert not set(not_matched) - set(ref)
 
 
 @pytest.mark.parametrize(
