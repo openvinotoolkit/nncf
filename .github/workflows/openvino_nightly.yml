@@ -17,6 +17,7 @@ env:
   UV_EXTRA_INDEX_URL: https://storage.openvinotoolkit.org/simple/wheels/nightly
   UV_INDEX_STRATEGY: "unsafe-best-match"
   UV_NO_CACHE: 'true'
+  UV_PRERELEASE: 'allow'
 
 jobs:
   openvino:
