@@ -764,7 +764,12 @@ class MinMaxQuantization(Algorithm):
         weight_quantization_target_points = []
         node_name = quantization_point.insertion_point.target_node_name
         node = nncf_graph.get_node_by_name(node_name)
-        weights_port_ids = self._backend_entity.get_weight_tensor_port_ids(node, nncf_graph)
+        input_port_id = quantization_point.insertion_point.input_port_id
+        weights_port_ids = (
+            [input_port_id]
+            if input_port_id is not None
+            else self._backend_entity.get_weight_tensor_port_ids(node, nncf_graph)
+        )
         for port_id in weights_port_ids:
             weight_quantization_target_points.append(
                 self._backend_entity.target_point(TargetType.OPERATION_WITH_WEIGHTS, node_name, port_id)
