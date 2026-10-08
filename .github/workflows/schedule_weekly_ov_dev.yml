@@ -9,13 +9,13 @@ on:
         description: 'The pull request number'
         default: ''
   schedule:
-    - cron: '0 0 * * 0'
-  pull_request:
+    - cron: '0 15 * * 0'
 
 env:
   UV_SYSTEM_PYTHON: 'true'
   UV_EXTRA_INDEX_URL: https://storage.openvinotoolkit.org/simple/wheels/nightly
   UV_INDEX_STRATEGY: "unsafe-best-match"
+  UV_PRERELEASE: 'allow'
 
 jobs:
   openvino:
@@ -51,5 +51,5 @@ jobs:
             printf '  openvino-tokenizers==%s\n' "$(pip list | awk '$1 == "openvino-tokenizers" {print $2}')"
             printf '```\n'
           } >> "$GITHUB_STEP_SUMMARY"
-      # - name: Run OpenVINO tests
-      #   run: make test-openvino
+      - name: Run OpenVINO tests
+        run: make test-openvino
