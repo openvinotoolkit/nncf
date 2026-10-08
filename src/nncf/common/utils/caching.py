@@ -12,7 +12,7 @@ import copy
 import inspect
 from contextlib import contextmanager
 from functools import wraps
-from typing import Any, Callable, Iterator, TypeVar, cast
+from typing import Any, Callable, Generator, TypeVar, cast
 
 
 class ResultsCache:
@@ -89,7 +89,7 @@ def cache_results(cache: ResultsCache) -> Callable[[TFunc], TFunc]:
 
 
 @contextmanager
-def disable_results_caching(cache: ResultsCache) -> Iterator[None]:
+def disable_results_caching(cache: ResultsCache) -> Generator[None, None, None]:
     """
     Context manager to disable caching of results for a block of code.
 

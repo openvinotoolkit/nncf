@@ -3,6 +3,7 @@ matplotlib
 optimum-intel[openvino]
 psutil
 pytest
+pytest-xdist
 pandas
 tabulate==0.10.0
 

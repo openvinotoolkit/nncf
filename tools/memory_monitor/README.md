@@ -47,20 +47,16 @@ def allocate_memory():
         time.sleep(1)
     return a
 
+
 # Define a helper logging function
 def log(mm, fz):
     mm.save_memory_logs(
-        *mm.get_data(memory_from_zero=fz),
-        save_dir=save_dir,
-        filename_suffix="_from-zero" if fz else ""
+        *mm.get_data(memory_from_zero=fz), save_dir=save_dir, filename_suffix="_from-zero" if fz else ""
     )
 
+
 # Create three memory monitors with different memory types and logging parameters
-memory_monitor_configurations = [
-    (MemoryType.RSS, False),
-    (MemoryType.SYSTEM, False),
-    (MemoryType.SYSTEM, True)
-]
+memory_monitor_configurations = [(MemoryType.RSS, False), (MemoryType.SYSTEM, False), (MemoryType.SYSTEM, True)]
 for memory_type, mem_from_zero in memory_monitor_configurations:
     memory_monitor = MemoryMonitor(memory_type=memory_type)
     # Start logging and register a logging function that will save logs at exit
@@ -97,6 +93,7 @@ def allocate_memory():
         a.append(np.random.random((1 << 25,)))
         time.sleep(1)
     return a
+
 
 with memory_monitor_context(return_max_value=True, save_dir="memory_logs") as mmc:
     a = allocate_memory()
