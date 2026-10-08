@@ -1,5 +1,5 @@
-name: OpenVINO Nightly
-run-name: "OpenVINO Nightly${{ inputs.pr_num != '' && format(' PR#{0}', inputs.pr_num) || '' }}"
+name: "[Schedule] Weekly - OpenVino DEV"
+run-name: "[Schedule] Weekly - OpenVino DEV${{ inputs.pr_num != '' && format(' PR#{0}', inputs.pr_num) || '' }}"
 permissions: read-all
 
 on:
@@ -9,7 +9,7 @@ on:
         description: 'The pull request number'
         default: ''
   schedule:
-    - cron: '0 2 * * *'
+    - cron: '0 0 * * 0'
   pull_request:
 
 env:
