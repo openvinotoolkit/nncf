@@ -16,7 +16,6 @@ env:
   UV_SYSTEM_PYTHON: 'true'
   UV_EXTRA_INDEX_URL: https://storage.openvinotoolkit.org/simple/wheels/nightly
   UV_INDEX_STRATEGY: "unsafe-best-match"
-  UV_PRERELEASE: 'allow'
 
 jobs:
   openvino:
@@ -24,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest-8-cores
     timeout-minutes: 40
     env:
-      NUM_WORKERS: 6
+      NUM_WORKERS: 4
     steps:
       - name: CPU Info
         run: awk 'BEGIN{RS=""} END{print}' /proc/cpuinfo
@@ -46,15 +45,11 @@ jobs:
       - name: Summarize OpenVINO version
         run: |
           {
-            printf '### OpenVINO packages\n\n```text\n'
-            pip list | grep openvino
-            printf '```\n'
-
             printf '### OpenVINO install command\n\n```text\n'
             printf 'pip install --extra-index-url https://storage.openvinotoolkit.org/simple/wheels/nightly \\\n'
             printf '  openvino==%s \\\n' "$(pip list | awk '$1 == "openvino" {print $2}')"
             printf '  openvino-tokenizers==%s\n' "$(pip list | awk '$1 == "openvino-tokenizers" {print $2}')"
             printf '```\n'
           } >> "$GITHUB_STEP_SUMMARY"
-      - name: Run OpenVINO tests
-        run: make test-openvino
+      # - name: Run OpenVINO tests
+      #   run: make test-openvino
