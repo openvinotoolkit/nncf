@@ -15,6 +15,7 @@ on:
 env:
   UV_SYSTEM_PYTHON: 'true'
   UV_EXTRA_INDEX_URL: https://storage.openvinotoolkit.org/simple/wheels/nightly
+  UV_INDEX_STRATEGY: "unsafe-first-match"
   UV_NO_CACHE: 'true'
 
 jobs:
