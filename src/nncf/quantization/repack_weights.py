@@ -45,4 +45,4 @@ def repack_weights(
 
     from nncf.quantization.algorithms.weight_compression.openvino_backend import repack_weights as repack_weights_impl
 
-    return repack_weights_impl(model, graph)
+    return repack_weights_impl(model, graph)  # type: ignore[no-any-return]
