@@ -19,6 +19,7 @@ from nncf.errors import ValidationError
 from nncf.torch.quantization.extensions import QuantizedFunctionsCPU
 from nncf.torch.quantization.extensions import QuantizedFunctionsCUDA
 from nncf.torch.quantization.reference import ReferenceQuantizedFunctions as RQ
+from nncf.torch.utils import CompilationWrapper
 from nncf.torch.utils import add_ov_domain
 
 
@@ -302,6 +303,32 @@ def asymmetric_quantize_lora(
         )
     if skip:
         return input_
+    return _asymmetric_quantize_lora(
+        input_,
+        input_shape,
+        A,
+        B,
+        input_low_,
+        input_range_,
+        level_low,
+        level_high,
+        levels,
+        eps,
+    )
+
+
+def _asymmetric_quantize_lora(
+    input_,
+    input_shape,
+    A,
+    B,
+    input_low_,
+    input_range_,
+    level_low,
+    level_high,
+    levels,
+    eps,
+):
     input_range_safe = abs(input_range_) + eps
     input_low, input_range = TuneRange.apply(input_low_, input_range_safe, levels)
     input_ = (input_ + B @ A).type(input_.dtype)  # input(float16) + lora(bfloat16) = float32, need a cast to float16
@@ -334,6 +361,10 @@ def symmetric_quantize_lora(input_, input_shape, A, B, scale, level_low, level_h
         )
     if skip:
         return input_
+    return _symmetric_quantize_lora(input_, input_shape, A, B, scale, level_low, level_high, levels, eps)
+
+
+def _symmetric_quantize_lora(input_, input_shape, A, B, scale, level_low, level_high, levels, eps):
     scale_safe = torch.where(torch.abs(scale) < eps, eps, scale)
     input_ = (input_ + B @ A).type(input_.dtype)  # input(float16) + lora(bfloat16) = float32, need a cast to float16
     return QuantizeSymmetricTorch.apply(
@@ -471,3 +502,7 @@ def unpack_int4(packed_tensor: torch.Tensor) -> torch.Tensor:
     """
     t = unpack_uint4(packed_tensor)
     return t.type(torch.int8) - 8
+
+
+_asymmetric_quantize_lora = CompilationWrapper(_asymmetric_quantize_lora)
+_symmetric_quantize_lora = CompilationWrapper(_symmetric_quantize_lora)
