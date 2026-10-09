@@ -54,6 +54,7 @@ from nncf.quantization import QuantizationPreset as QuantizationPreset
 from nncf.quantization import compress_weights as compress_weights
 from nncf.quantization import quantize as quantize
 from nncf.quantization import quantize_with_accuracy_control as quantize_with_accuracy_control
+from nncf.quantization import repack_weights as repack_weights
 from nncf.quantization.advanced_parameters import (
     AdvancedAccuracyRestorerParameters as AdvancedAccuracyRestorerParameters,
 )

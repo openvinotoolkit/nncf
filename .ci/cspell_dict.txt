@@ -231,6 +231,7 @@ logicalnot
 logicalor
 logicalxor
 logit
+logits
 loglikelihoods
 lspec
 lstmsequence
@@ -253,6 +254,7 @@ metatype
 metatypes
 metzen
 mhsa
+microbatch
 microscaling
 minfo
 minfos
@@ -425,6 +427,7 @@ segm
 selu
 senina
 sess
+seqlen
 sgraph
 shamporov
 shapeof
@@ -479,6 +482,7 @@ togethercomputer
 torchdynamo
 truncnorm
 tupled
+ultrachat
 unet
 unflatten
 unpatch
