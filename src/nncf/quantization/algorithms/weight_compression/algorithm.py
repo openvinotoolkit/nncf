@@ -1034,6 +1034,18 @@ class WeightCompression(Algorithm):
                         )
 
                     model_backend = get_backend(model)
+                    if model_backend == BackendType.TORCH and (
+                        self._data_aware_compression or self._data_aware_mixed_precision
+                    ):
+                        from nncf.torch.graph.operator_metatypes import PTGroupedMatMulMetatype
+
+                        if node.metatype == PTGroupedMatMulMetatype:
+                            msg = (
+                                "Data-aware weight compression is not supported for GroupedMatMul in the Torch "
+                                f"backend. Node with weight: {node.node_name}."
+                            )
+                            raise nncf.ParameterNotSupportedError(msg)
+
                     ov_version = self._maybe_get_ov_version()
                     if (
                         model_backend == BackendType.OPENVINO
