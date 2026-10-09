@@ -41,6 +41,8 @@ jobs:
     uses: ./.github/workflows/conformance_weight_compression.yml
     with:
       pr_num: ${{ inputs.pr_num }}
+    secrets:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
   precommit-windows:
     if: github.repository_owner == 'openvinotoolkit'

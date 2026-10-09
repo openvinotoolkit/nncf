@@ -5,7 +5,7 @@ on:
       - "[Schedule] Nightly"
       - "[Schedule] Weekly"
       - "Test examples"
-      - "Weight compression"
+      - "Conformance WC"
     types:
       - requested
       - completed
