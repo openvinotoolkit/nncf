@@ -1,6 +1,6 @@
-# Quantization Aware Distillation with absorbable LoRA for 2/3-bit LLM compression
+# Quantization Aware Distillation (QAD) with absorbable LoRA for 2/3-bit LLM compression
 
-This example trains a Hugging Face causal LM with NNCF weight compression in `FQ_LORA` mode. The script does not just run a static example; it performs an end-to-end compression + fine-tuning pipeline for 2-bit or 3-bit quantized weights.
+This example trains a Hugging Face causal LM with NNCF weight compression in `FQ_LORA` mode. The script does not just run a static example; it performs an end-to-end compression + fine-tuning pipeline for 2-bit or 3-bit quantized weights. The QAD is a technique used to recover the accuracy of low-precision neural network models (such as 4-bit or 8-bit quantized Large Language Models and Vision-Language Models) by guiding a quantized student model with a high-precision teacher model via knowledge distillation.
 
 ## What the script actually does
 
@@ -27,7 +27,7 @@ This is a real training pipeline for low-bit LLM optimization, not a simple infe
 
 ## Prerequisites
 
-Before running this example, ensure you have Python 3.10+ installed and set up your environment:
+Before running this example, ensure you have Python 3.10+ installed, GPU with cuda support and set up your environment:
 
 ### 1. Create and activate a virtual environment
 
@@ -54,7 +54,7 @@ python main.py
 
 ### Model and compression
 
-- `--pretrained`: HF model ID or local path.
+- `--pretrained`: HF model ID or local path (only AutoModelForCausalLM are supported).
 - `--bits`: `2` or `3` bits per weight.
 - `--lora_rank`: rank of absorbable LoRA adapters.
 - `--basic_init`: use a simpler initialization without AWQ / scale estimation.
