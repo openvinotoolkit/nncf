@@ -121,3 +121,5 @@ This makes the example a low-bit QAD + LoRA distillation workflow rather than a 
 - Default model is `meta-llama/Llama-3.2-1B-Instruct`.
 - OpenVINO export is always performed at the end of the run, after checkpoint restoration and stripping.
 - `--resume` reuses the checkpoint if present; otherwise the script initializes from scratch.
+- In case of an out-of-memory error, try reducing `--lora_rank`.
+- `--equalize_mlp` option might be incorrectly applied in the case of new normalization layer architectures preceding an MLP.
