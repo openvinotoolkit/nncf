@@ -4,5 +4,5 @@ openvino==2026.4.1
 matplotlib==3.11.2
 numpy==2.4.6
 safetensors==0.8.0
-onnx==1.22.0
+onnx==1.23.0
 timm==1.0.30
