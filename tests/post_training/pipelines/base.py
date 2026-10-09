@@ -360,9 +360,9 @@ class BaseTestPipeline(ABC):
             atol = reference_data.get("atol", 0.001)
             if not np.isclose(metric_value, metric_reference, atol=atol):
                 status_msg = (
-                    f"Regression: Metric value is less than reference {metric_value:0.5f} < {metric_reference}"
+                    f"Regression: {metric_value:0.5f} < {metric_reference}; Metric value is less than reference"
                     if metric_value < metric_reference
-                    else f"Improvement: Metric value is better than reference {metric_value:0.5f} > {metric_reference}"
+                    else f"Improvement: {metric_value:0.5f} > {metric_reference}; Metric value is better than reference"
                 )
                 errors.append(ErrorReport(ErrorReason.METRICS, status_msg))
 
@@ -481,6 +481,11 @@ class PTQTestPipeline(BaseTestPipeline):
         Save compressed model to IR.
         """
         print("Saving quantized model...")
+        if self.backend == BackendType.FP32:
+            # To validate not compressed model
+            self.path_compressed_ir = self.fp32_model_dir / "model_fp32.xml"
+            return
+
         self.path_compressed_ir = self.output_model_dir / "model.xml"
         if self.backend == BackendType.OPTIMUM:
             self.path_compressed_ir = self.output_model_dir / "openvino_model.xml"

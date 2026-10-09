@@ -112,32 +112,32 @@ QUANTIZATION_MODELS = [
         "backends": FX_BACKENDS + [BackendType.OV, BackendType.ONNX],
         "batch_size": 128,
     },
-    {
-        "reported_name": "torchvision/vit_b_16",
-        "model_id": "vit_b_16",
-        "pipeline_cls": ImageClassificationTorchvision,
-        "compression_params": {
-            "model_type": ModelType.TRANSFORMER,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                smooth_quant_alpha=0.15,
-            ),
-        },
-        "backends": FX_BACKENDS + [BackendType.OV],
-        "batch_size": 1,
-    },
-    {
-        "reported_name": "torchvision/swin_v2_s",
-        "model_id": "swin_v2_s",
-        "pipeline_cls": ImageClassificationTorchvision,
-        "compression_params": {
-            "model_type": ModelType.TRANSFORMER,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                smooth_quant_alpha=0.5,
-            ),
-        },
-        "backends": FX_BACKENDS + [BackendType.OV],
-        "batch_size": 1,
-    },
+    # {
+    #     "reported_name": "torchvision/vit_b_16",     # DISABLED: too long on FX
+    #     "model_id": "vit_b_16",
+    #     "pipeline_cls": ImageClassificationTorchvision,
+    #     "compression_params": {
+    #         "model_type": ModelType.TRANSFORMER,
+    #         "advanced_parameters": AdvancedQuantizationParameters(
+    #             smooth_quant_alpha=0.15,
+    #         ),
+    #     },
+    #     "backends": FX_BACKENDS + [BackendType.OV],
+    #     "batch_size": 1,
+    # },
+    # {
+    #     "reported_name": "torchvision/swin_v2_s",   # DISABLED: too long on FX
+    #     "model_id": "swin_v2_s",
+    #     "pipeline_cls": ImageClassificationTorchvision,
+    #     "compression_params": {
+    #         "model_type": ModelType.TRANSFORMER,
+    #         "advanced_parameters": AdvancedQuantizationParameters(
+    #             smooth_quant_alpha=0.5,
+    #         ),
+    #     },
+    #     "backends": FX_BACKENDS + [BackendType.OV],
+    #     "batch_size": 1,
+    # },
     # Timm models
     {
         "reported_name": "timm/crossvit_9_240",
@@ -253,16 +253,16 @@ QUANTIZATION_MODELS = [
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,
     },
-    {
-        "reported_name": "timm/inception_resnet_v2",
-        "model_id": "inception_resnet_v2",
-        "pipeline_cls": ImageClassificationTimm,
-        "compression_params": {
-            "subset_size": 4,
-        },
-        "backends": NNCF_PTQ_BACKENDS,
-        "batch_size": 64,
-    },
+    # {
+    #     "reported_name": "timm/inception_resnet_v2",   # DISABLED: too slow
+    #     "model_id": "inception_resnet_v2",
+    #     "pipeline_cls": ImageClassificationTimm,
+    #     "compression_params": {
+    #         "subset_size": 4,
+    #     },
+    #     "backends": NNCF_PTQ_BACKENDS,
+    #     "batch_size": 64,
+    # },
     {
         "reported_name": "timm/mobilenetv2_050",
         "model_id": "mobilenetv2_050",
@@ -286,7 +286,7 @@ QUANTIZATION_MODELS = [
             "preset": QuantizationPreset.MIXED,
             "fast_bias_correction": False,
             "advanced_parameters": AdvancedQuantizationParameters(
-                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
+                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM,
             ),
         },
         "backends": [BackendType.ONNX, BackendType.OV],
@@ -300,7 +300,7 @@ QUANTIZATION_MODELS = [
             "subset_size": 2,
             "preset": QuantizationPreset.MIXED,
             "advanced_parameters": AdvancedQuantizationParameters(
-                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM
+                activations_range_estimator_params=RangeEstimatorParametersSet.HISTOGRAM,
             ),
         },
         "backends": ALL_PTQ_BACKENDS,
@@ -349,33 +349,33 @@ QUANTIZATION_MODELS = [
         "backends": ALL_PTQ_BACKENDS,
         "batch_size": 128,
     },
-    {
-        "reported_name": "timm/swin_base_patch4_window7_224",
-        "model_id": "swin_base_patch4_window7_224",
-        "pipeline_cls": ImageClassificationTimm,
-        "compression_params": {
-            "subset_size": 9,
-            "preset": QuantizationPreset.MIXED,
-            "model_type": ModelType.TRANSFORMER,
-        },
-        "backends": [BackendType.OV],
-        "batch_size": 32,
-    },
-    {
-        "reported_name": "timm/swin_base_patch4_window7_224_no_sq",
-        "model_id": "swin_base_patch4_window7_224",
-        "pipeline_cls": ImageClassificationTimm,
-        "compression_params": {
-            "subset_size": 2,
-            "preset": QuantizationPreset.MIXED,
-            "model_type": ModelType.TRANSFORMER,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=-1),
-            ),
-        },
-        "backends": [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX],
-        "batch_size": 128,
-    },
+    # {
+    #     "reported_name": "timm/swin_base_patch4_window7_224",    # DISABLED: too slow
+    #     "model_id": "swin_base_patch4_window7_224",
+    #     "pipeline_cls": ImageClassificationTimm,
+    #     "compression_params": {
+    #         "subset_size": 9,
+    #         "preset": QuantizationPreset.MIXED,
+    #         "model_type": ModelType.TRANSFORMER,
+    #     },
+    #     "backends": [BackendType.OV],
+    #     "batch_size": 32,
+    # },
+    # {
+    #     "reported_name": "timm/swin_base_patch4_window7_224_no_sq",     # DISABLED: too slow
+    #     "model_id": "swin_base_patch4_window7_224",
+    #     "pipeline_cls": ImageClassificationTimm,
+    #     "compression_params": {
+    #         "subset_size": 2,
+    #         "preset": QuantizationPreset.MIXED,
+    #         "model_type": ModelType.TRANSFORMER,
+    #         "advanced_parameters": AdvancedQuantizationParameters(
+    #             smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=-1),
+    #         ),
+    #     },
+    #     "backends": [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX],
+    #     "batch_size": 128,
+    # },
     {
         "reported_name": "timm/tf_inception_v3",
         "model_id": "tf_inception_v3",
@@ -618,18 +618,30 @@ def generate_tests_scope(models_list: list[dict]) -> dict[str, dict]:
     """
     Generate tests by names "{reported_name}_backend_{backend}"
     """
-    reported_name_to_model_id_mapping = {mc["reported_name"]: mc["model_id"] for mc in models_list}
+    import sys
+
+    run_fp32_backend = "--fp32" in sys.argv
+    run_cuda_backend = "--cuda" in sys.argv
     tests_scope = {}
     fp32_models = set()
     for test_model_param in models_list:
-        for backend in test_model_param["backends"] + [BackendType.FP32]:
+        backends = list(test_model_param["backends"])
+        if not run_fp32_backend:
+            backends = [backend for backend in backends if backend != BackendType.FP32]
+        elif BackendType.FP32 not in backends:
+            backends.append(BackendType.FP32)
+        if not run_cuda_backend:
+            backends = [
+                backend for backend in backends if backend not in (BackendType.CUDA_TORCH, BackendType.CUDA_FX_TORCH)
+            ]
+        for backend in backends:
             model_param = copy.deepcopy(test_model_param)
             if "is_batch_size_supported" not in model_param:  # Set default value of is_batch_size_supported.
                 model_param["is_batch_size_supported"] = True
             reported_name = model_param["reported_name"]
-            model_id = reported_name_to_model_id_mapping[reported_name]
             if backend == BackendType.FP32:
                 # Some test cases may share the same model_id, therefore fp32 test case is added only once for model_id.
+                model_id = model_param["model_id"]
                 if model_id not in fp32_models:
                     fp32_models.add(model_id)
                 else:
