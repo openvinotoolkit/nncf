@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import copy
+import sys
 
 import nncf
 from nncf import ModelType
@@ -618,8 +619,6 @@ def generate_tests_scope(models_list: list[dict]) -> dict[str, dict]:
     """
     Generate tests by names "{reported_name}_backend_{backend}"
     """
-    import sys
-
     run_fp32_backend = "--fp32" in sys.argv
     run_cuda_backend = "--cuda" in sys.argv
     tests_scope = {}
