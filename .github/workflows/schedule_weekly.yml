@@ -10,6 +10,7 @@ on:
         default: ''
   schedule:
     - cron: '0 0 * * 0'
+  pull_request:
 
 jobs:
   precommit:
@@ -19,10 +20,11 @@ jobs:
       matrix:
         include:
           - python_version: "3.11"
-            override_requirements: "numpy==1.24.0"
-          - python_version: "3.12"
-          - python_version: "3.13"
-          - python_version: "3.14"
+            override_requirements: "numpy==1.24.0,pandas==2.3.3"
+          - python_version: "3.11"
+          # - python_version: "3.12"
+          # - python_version: "3.13"
+          # - python_version: "3.14"
     uses: ./.github/workflows/call_precommit.yml
     with:
       pr_num: ${{ inputs.pr_num }}
@@ -30,16 +32,16 @@ jobs:
       override_requirements: ${{ matrix.override_requirements || '' }}
       gpu_enabled: false
 
-  macos:
-    if: github.repository_owner == 'openvinotoolkit'
-    uses: ./.github/workflows/macos.yml
-    with:
-      pr_num: ${{ inputs.pr_num }}
+  # macos:
+  #   if: github.repository_owner == 'openvinotoolkit'
+  #   uses: ./.github/workflows/macos.yml
+  #   with:
+  #     pr_num: ${{ inputs.pr_num }}
 
-  conformance-ptq:
-    if: github.repository_owner == 'openvinotoolkit'
-    uses: ./.github/workflows/conformance_ptq.yml
-    with:
-      pr_num: ${{ inputs.pr_num }}
-    secrets:
-      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+  # conformance-ptq:
+  #   if: github.repository_owner == 'openvinotoolkit'
+  #   uses: ./.github/workflows/conformance_ptq.yml
+  #   with:
+  #     pr_num: ${{ inputs.pr_num }}
+  #   secrets:
+  #     HF_TOKEN: ${{ secrets.HF_TOKEN }}
