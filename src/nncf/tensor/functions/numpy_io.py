@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from numpy.typing import NDArray
 from safetensors.numpy import load_file as np_load_file
 from safetensors.numpy import save_file as np_save_file
 
@@ -22,7 +21,7 @@ from nncf.tensor.definitions import TensorDeviceType
 from nncf.tensor.functions import io as io
 from nncf.tensor.functions.numpy_numeric import validate_device
 
-T_NUMPY_ARRAY = NDArray[Any]
+T_NUMPY_ARRAY = np.ndarray[Any, np.dtype[Any]]
 T_NUMPY = T_NUMPY_ARRAY | np.generic  # type: ignore[type-arg]
 
 

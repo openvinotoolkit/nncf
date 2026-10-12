@@ -33,6 +33,8 @@ from config import Config
 from openvino import Dimension
 from openvino import PartialShape
 
+from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationRule
+
 try:
     from accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
     from accuracy_checker.evaluators.quantization_model_evaluator import create_model_evaluator
@@ -126,6 +128,7 @@ class CustomJSONEncoder(json.JSONEncoder):
                 DropType,
                 QuantizationMode,
                 RestoreMode,
+                QuantizerPropagationRule,
             ),
         ):
             return o.value

@@ -20,9 +20,7 @@ ignored_scope = nncf.IgnoredScope(patterns=["node_\\d"])
 ignored_scope = nncf.IgnoredScope(types=["Multiply"])
 
 # Exclude by subgraph
-ignored_scope = nncf.IgnoredScope(
-    subgraphs=nncf.Subgraph(inputs=["start_node"], outputs=["end_node"])
-)
+ignored_scope = nncf.IgnoredScope(subgraphs=nncf.Subgraph(inputs=["start_node"], outputs=["end_node"]))
 ```
 
 ## Inspecting and Visualizing the NNCFGraph
@@ -45,5 +43,5 @@ graph.dump_graph("model.dot")
 ### Convert dot to svg file
 
 ```sh
-python tools/render_dot_to_svg.py -m model.dot
+python tools/other/render_dot_to_svg.py -i model.dot
 ```

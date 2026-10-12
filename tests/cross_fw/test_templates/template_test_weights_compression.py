@@ -10,6 +10,7 @@
 # limitations under the License.
 import math
 import os
+import re
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
@@ -908,14 +909,14 @@ class TemplateWeightCompression(ABC):
             )
             assert any(info_msg in msg for msg in info_messages)
             if expected_outcome == "info_adjusted_group_size":
-                table_rows = [
-                    "int8_asym, per-channel    │ 50% (1 / 9)                 │ 50% (1 / 9)",
-                    "int4_asym, group size 8   │ 25% (7 / 9)                 │ 25% (7 / 9)",
-                    "int4_asym, group size 16  │ 25% (1 / 9)                 │ 25% (1 / 9)",
+                table_row_patterns = [
+                    r"int8_asym, per-channel.*50% \(1 / 9\).*50% \(1 / 9\)",
+                    r"int4_asym, group size 8\s.*25% \(7 / 9\).*25% \(7 / 9\)",
+                    r"int4_asym, group size 16\s.*25% \(1 / 9\).*25% \(1 / 9\)",
                 ]
-                for row in table_rows:
+                for pattern in table_row_patterns:
                     # On Windows "|" is printed instead of "│"
-                    assert any(row in msg.replace("|", "│") for msg in info_messages), "\n".join(info_messages)
+                    assert any(re.search(pattern, msg) for msg in info_messages), "\n".join(info_messages)
 
     @pytest.mark.parametrize(
         [

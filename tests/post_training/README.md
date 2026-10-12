@@ -23,17 +23,13 @@ pip install -r requirements.txt
 
 ## Data preparation
 
-## Imagenet
+Using datasets from huggingface, required set HF_TOKEN environment variable.
+For using imagenet-1k need to sign licence https://huggingface.co/datasets/mlx-vision/imagenet-1k.
 
-<data>/imagenet/val - name of path
-Since Torchvision `ImageFolder` class is used to work with data the ImageNet validation dataset should be structured accordingly. Below is an example of the `val` folder:
-
-```text
-n01440764
-n01695060
-n01843383
-...
-```
+> [!IMPORTANT]
+> Used modified version of loader imagenet-1k to download only validation subset.
+> To avoid any conflict with full dataset set another cache directory for this test.
+> https://huggingface.co/docs/datasets/en/cache#cache-directory
 
 ## Usage
 
@@ -41,7 +37,7 @@ Once the environment is installed use the following command to run all tests, in
 and weight compression:
 
 ```bash
-NUM_VAL_THREADS=8 pytest --data=<path_to_datasets> --output=./tmp tests/post_training/test_quantize_conformance.py
+NUM_VAL_THREADS=8 pytest --output=./tmp tests/post_training/test_quantize_conformance.py
 ```
 
 It's possible to run a suite of tests for the specific compression algorithm only.
@@ -52,7 +48,7 @@ For instance:
 > It is recommended to run the test with a specific test function specified, running all tests at the same time is not tested.
 
 ```bash
-NUM_VAL_THREADS=8 pytest --data=<path_to_datasets> --output=./tmp tests/post_training/test_quantize_conformance.py::test_weight_compression
+NUM_VAL_THREADS=8 pytest --output=./tmp tests/post_training/test_quantize_conformance.py::test_weight_compression
 ```
 
 `NUM_VAL_THREADS` environment variable controls the number of parallel streams when validating the model.
@@ -66,68 +62,68 @@ Additional arguments:
 - `--batch-size=N` to use batch_size for calibration. Some of the models do not support --batch-size > 1. For such models, please, use --batch-size=1.
 - `--benchmark` to collect throughput statistics, add `FPS` column to result.csv
 - `--extra-columns` to add additional columns to reports.csv, like time for each algorithms
-- `--memory-monitor` to using MemoryMonitor from tools/memory_monitor.py
+- `--memory-monitor` to using MemoryMonitor from tools/memory_monitor/memory_monitor.py
 
 ### Examples
 
 Run for only OV backend:
 
 ```bash
-pytest --data=<path_to_datasets> -k backend_OV tests/post_training/test_quantize_conformance.py::test_weight_compression
+pytest -k backend_OV tests/post_training/test_quantize_conformance.py::test_weight_compression
 ```
 
 Run for only one model:
 
 ```bash
-pytest --data=<path_to_datasets> -k timm/crossvit_9_240 tests/post_training/test_quantize_conformance.py::test_weight_compression
+pytest -k timm/crossvit_9_240 tests/post_training/test_quantize_conformance.py::test_weight_compression
 ```
 
 Run for only one model for OV backend:
 
 ```bash
-pytest --data=<path_to_datasets> -k timm/crossvit_9_240_backend_OV tests/post_training/test_quantize_conformance.py::test_weight_compression
+pytest -k timm/crossvit_9_240_backend_OV tests/post_training/test_quantize_conformance.py::test_weight_compression
 ```
 
 Only dump models:
 
 ```bash
-pytest --data=<path_to_datasets> --no-eval tests/post_training/test_quantize_conformance.py::test_weight_compression
+pytest --no-eval tests/post_training/test_quantize_conformance.py::test_weight_compression
 ```
 
 Fast dump models with `subset_size=1` for all models:
 
 ```bash
-pytest --data=<path_to_datasets> --no-eval --subset-size 1 tests/post_training/test_quantize_conformance.py::test_weight_compression
+pytest --no-eval --subset-size 1 tests/post_training/test_quantize_conformance.py::test_weight_compression
 ```
 
 Run test with collection of throughput statistics:
 
 ```bash
-pytest --data=<path_to_datasets> --benchmark tests/post_training/test_quantize_conformance.py::test_weight_compression
+pytest --benchmark tests/post_training/test_quantize_conformance.py::test_weight_compression
 ```
 
 Fast collection of throughput statistics:
 
 ```bash
-pytest --data=<path_to_datasets> --benchmark --no-eval --subset-size 1 tests/post_training/test_quantize_conformance.py::test_weight_compression
+pytest --benchmark --no-eval --subset-size 1 tests/post_training/test_quantize_conformance.py::test_weight_compression
 ```
 
 Run test with additional columns:
 
 ```bash
-pytest --data=<path_to_datasets> --extra-columns tests/post_training/test_quantize_conformance.py::test_weight_compression
+pytest --extra-columns tests/post_training/test_quantize_conformance.py::test_weight_compression
 ```
 
 Run test with calibration dataset having batch-size=10 for all models:
 
 ```bash
-pytest --data=<path_to_datasets> --batch-size 10 tests/post_training/test_quantize_conformance.py::test_weight_compression
+pytest --batch-size 10 tests/post_training/test_quantize_conformance.py::test_weight_compression
 ```
 
 Run test as in benchmark jobs:
 
 ```bash
-pytest --data=<path_to_datasets> --forked --no-eval --subset-size 300 --batch-size 1 --benchmark --extra-columns --memory-monitor tests/post_training/test_quantize_conformance.py::test_ptq_quantization
+pytest --forked --no-eval --subset-size 300 --batch-size 1 --benchmark --extra-columns --memory-monitor tests/post_training/test_quantize_conformance.py::test_ptq_quantization
 ```
 
 ## Reference data

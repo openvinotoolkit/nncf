@@ -11,9 +11,8 @@
 
 from dataclasses import dataclass
 from enum import Enum
+from enum import StrEnum
 from enum import auto
-
-from nncf.parameters import StrEnum
 
 T_SHAPE_ARRAY = tuple[int, ...]
 T_SHAPE = int | T_SHAPE_ARRAY

@@ -11,13 +11,13 @@
 
 from dataclasses import dataclass
 from dataclasses import field
+from enum import StrEnum
 from itertools import product
 from typing import Any
 
 from nncf.common.hardware.opset import HWOpName
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.parameters import StrEnum
 
 SCALES = "scales"
 UNIFIED = "unified"

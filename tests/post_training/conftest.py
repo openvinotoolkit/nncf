@@ -15,7 +15,8 @@ import pytest
 
 
 def pytest_addoption(parser):
-    parser.addoption("--data", action="store", help="Data directory")
+    # TODO(AlexanderDokuchaev): Remove --data after update CI pipelines
+    parser.addoption("--data", action="store", help="Data directory [Deprecated]")
     parser.addoption("--output", action="store", default="./tmp/", help="Directory to store artifacts")
     parser.addoption("--no-eval", action="store_true", help="Skip validation step")
     parser.addoption("--batch-size", action="store", default=None, type=int, help="Batch size of calibration dataset")
@@ -36,17 +37,9 @@ def pytest_addoption(parser):
     parser.addoption(
         "--memory-monitor",
         action="store_true",
-        help="Report memory using MemoryMonitor from tools/memory_monitor.py. "
+        help="Report memory using MemoryMonitor from tools/memory_monitor/memory_monitor.py. "
         "Warning: currently, reported memory values are not always reproducible.",
     )
-
-
-@pytest.fixture(scope="session", name="data_dir")
-def fixture_data(pytestconfig):
-    if pytestconfig.getoption("data") is None:
-        msg = "This test requires the --data argument to be specified."
-        raise ValueError(msg)
-    return Path(pytestconfig.getoption("data"))
 
 
 @pytest.fixture(scope="session", name="output_dir")
