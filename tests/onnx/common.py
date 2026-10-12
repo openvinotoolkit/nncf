@@ -315,3 +315,25 @@ class ModelBuilder:
             )
         )
         return output
+
+    # Required for `TestONNXTemplateWeightCompression`
+    def add_matmul_v2(
+        self, input: str, shape: tuple[int], output: str | None = None, data: np.ndarray | None = None
+    ) -> str:
+        i = len(self._nodes)
+
+        w_name = f"W_{i}"
+        if data is None:
+            w_values = np.random.rand(*shape).astype(np.float32)
+        else:
+            w_values = data
+        w_initializer = onnx.helper.make_tensor(
+            name=w_name, data_type=onnx.TensorProto.FLOAT, dims=shape, vals=w_values.tobytes(), raw=True
+        )
+        self._initializers.append(w_initializer)
+
+        output = f"MatMul_{i}_output" if output is None else output
+        self._nodes.append(
+            onnx.helper.make_node(op_type="MatMul", inputs=[input, w_name], outputs=[output], name=f"MatMul_{i}")
+        )
+        return output
