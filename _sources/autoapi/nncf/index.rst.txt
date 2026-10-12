@@ -39,7 +39,7 @@ Classes
    nncf.TargetDevice
    nncf.QuantizationPreset
    nncf.OverflowFix
-   nncf.IgnoredScope
+   nncf.Scope
    nncf.Subgraph
 
 
@@ -539,12 +539,9 @@ Functions
    :param DISABLE: All weights are quantized using the full 8-bit quantization range.
 
 
-.. py:class:: IgnoredScope
+.. py:class:: Scope
 
-   Provides an option to specify portions of model to be excluded from compression.
-
-   The ignored scope defines model sub-graphs that should be excluded from the compression process such as
-   quantization, pruning and etc.
+   Defines a portion of a model by a set of matching rules against the model graph.
 
    Example:
 
@@ -552,37 +549,40 @@ Functions
 
            import nncf
 
-           # Exclude by node name:
+           # Specify by node name:
            node_names = ['node_1', 'node_2', 'node_3']
-           ignored_scope = nncf.IgnoredScope(names=node_names)
+           scope = nncf.Scope(names=node_names)
 
-           # Exclude using regular expressions:
+           # Specify using regular expressions:
            patterns = ['node_\\d']
-           ignored_scope = nncf.IgnoredScope(patterns=patterns)
+           scope = nncf.Scope(patterns=patterns)
 
-           # Exclude by operation type:
+           # Specify by operation type:
 
            # OpenVINO opset https://docs.openvino.ai/latest/openvino_docs_ops_opset.html
            operation_types = ['Multiply', 'GroupConvolution', 'Interpolate']
-           ignored_scope = nncf.IgnoredScope(types=operation_types)
+           scope = nncf.Scope(types=operation_types)
 
            # ONNX opset https://github.com/onnx/onnx/blob/main/docs/Operators.md
            operation_types = ['Mul', 'Conv', 'Resize']
-           ignored_scope = nncf.IgnoredScope(types=operation_types)
+           scope = nncf.Scope(types=operation_types)
+
+           # Specify by subgraph:
+           scope = nncf.Scope(subgraphs=[nncf.Subgraph(inputs=['node_1'], outputs=['node_3'])])
 
    **Note:** Operation types must be specified according to the model framework.
 
-   :param names: List of ignored node names.
+   :param names: List of node names.
    :type names: List[str]
-   :param patterns: List of regular expressions that define patterns for names of ignored nodes.
+   :param patterns: List of regular expressions that define patterns for names of nodes.
    :type patterns: List[str]
-   :param types: List of ignored operation types.
+   :param types: List of operation types.
    :type types: List[str]
-   :param subgraphs: List of ignored subgraphs.
+   :param subgraphs: List of subgraphs.
    :type subgraphs: List[Subgraph]
-   :param validate: If set to True, then a RuntimeError will be raised if any ignored scope does not match
+   :param validate: If set to True, then a RuntimeError will be raised if any rule does not match
      in the model graph.
-   :type types: bool
+   :type validate: bool
 
 
 .. py:class:: Subgraph

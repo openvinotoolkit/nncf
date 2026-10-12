@@ -319,8 +319,8 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.OverflowFix" title="nncf.OverflowFix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OverflowFix</span></code></a></p></td>
 <td><p>This option controls whether to apply the overflow issue fix for the 8-bit</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></p></td>
-<td><p>Provides an option to specify portions of model to be excluded from compression.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.Scope" title="nncf.Scope"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Scope</span></code></a></p></td>
+<td><p>Defines a portion of a model by a set of matching rules against the model graph.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.Subgraph" title="nncf.Subgraph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Subgraph</span></code></a></p></td>
 <td><p>Defines the ignored subgraph as follows: A subgraph comprises all nodes along</p></td>
@@ -827,7 +827,7 @@ The size of group is 16.</p>
 and the rest to INT8_ASYM).</p></li>
 <li><p><strong>group_size</strong> (<em>int</em>) – number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
 The value -1 means no grouping.</p></li>
-<li><p><strong>ignored_scope</strong> (<a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><em>nncf.IgnoredScope</em></a>) – An ignored scope that defined the list of model control
+<li><p><strong>ignored_scope</strong> (<em>nncf.IgnoredScope</em>) – An ignored scope that defined the list of model control
 flow graph nodes to be ignored during quantization.</p></li>
 <li><p><strong>all_layers</strong> (<em>bool</em>) – Indicates whether embeddings and last MatMul layers should be compressed to a primary
 precision. By default, the backup precision is assigned for the embeddings and last MatMul layers.</p></li>
@@ -892,7 +892,7 @@ bias correction method which is more accurate, in general, and takes
 more time but requires less memory.</p></li>
 <li><p><strong>model_type</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#nncf.ModelType" title="nncf.ModelType"><em>nncf.ModelType</em></a><em>]</em>) – Model type is needed to specify additional patterns
 in the model. Supported only <cite>transformer</cite> now.</p></li>
-<li><p><strong>ignored_scope</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><em>nncf.IgnoredScope</em></a><em>]</em>) – An ignored scope that defined the list of model control
+<li><p><strong>ignored_scope</strong> (<em>Optional</em><em>[</em><em>nncf.IgnoredScope</em><em>]</em>) – An ignored scope that defined the list of model control
 flow graph nodes to be ignored during quantization.</p></li>
 <li><p><strong>advanced_parameters</strong> (<a class="reference internal" href="quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.AdvancedQuantizationParameters" title="nncf.quantization.advanced_parameters.AdvancedQuantizationParameters"><em>nncf.quantization.advanced_parameters.AdvancedQuantizationParameters</em></a><em> | </em><em>None</em>) – Advanced quantization parameters for
 fine-tuning the quantization algorithm.</p></li>
@@ -945,7 +945,7 @@ bias correction method which is more accurate, in general, and takes
 more time but requires less memory.</p></li>
 <li><p><strong>model_type</strong> (<a class="reference internal" href="#nncf.ModelType" title="nncf.ModelType"><em>nncf.ModelType</em></a>) – Model type is needed to specify additional patterns
 in the model. Supported only <cite>transformer</cite> now.</p></li>
-<li><p><strong>ignored_scope</strong> (<a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><em>nncf.IgnoredScope</em></a>) – An ignored scope that defined the list of model control
+<li><p><strong>ignored_scope</strong> (<em>nncf.IgnoredScope</em>) – An ignored scope that defined the list of model control
 flow graph nodes to be ignored during quantization.</p></li>
 <li><p><strong>advanced_quantization_parameters</strong> (<a class="reference internal" href="quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.AdvancedQuantizationParameters" title="nncf.quantization.advanced_parameters.AdvancedQuantizationParameters"><em>nncf.quantization.advanced_parameters.AdvancedQuantizationParameters</em></a><em> | </em><em>None</em>) – Advanced quantization parameters for
 fine-tuning the quantization algorithm.</p></li>
@@ -992,42 +992,43 @@ are quantized using a half of the 8-bit quantization range.</p></li>
 </dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py" id="nncf.IgnoredScope">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">IgnoredScope</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/scopes.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.IgnoredScope" title="Link to this definition">¶</a></dt>
-<dd><p>Provides an option to specify portions of model to be excluded from compression.</p>
-<p>The ignored scope defines model sub-graphs that should be excluded from the compression process such as
-quantization, pruning and etc.</p>
+<dt class="sig sig-object py" id="nncf.Scope">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">Scope</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/scopes.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.Scope" title="Link to this definition">¶</a></dt>
+<dd><p>Defines a portion of a model by a set of matching rules against the model graph.</p>
 <p>Example:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">nncf</span>
 
-<span class="c1"># Exclude by node name:</span>
+<span class="c1"># Specify by node name:</span>
 <span class="n">node_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'node_1'</span><span class="p">,</span> <span class="s1">'node_2'</span><span class="p">,</span> <span class="s1">'node_3'</span><span class="p">]</span>
-<span class="n">ignored_scope</span> <span class="o">=</span> <span class="n">nncf</span><span class="o">.</span><span class="n">IgnoredScope</span><span class="p">(</span><span class="n">names</span><span class="o">=</span><span class="n">node_names</span><span class="p">)</span>
+<span class="n">scope</span> <span class="o">=</span> <span class="n">nncf</span><span class="o">.</span><span class="n">Scope</span><span class="p">(</span><span class="n">names</span><span class="o">=</span><span class="n">node_names</span><span class="p">)</span>
 
-<span class="c1"># Exclude using regular expressions:</span>
+<span class="c1"># Specify using regular expressions:</span>
 <span class="n">patterns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'node_</span><span class="se">\\</span><span class="s1">d'</span><span class="p">]</span>
-<span class="n">ignored_scope</span> <span class="o">=</span> <span class="n">nncf</span><span class="o">.</span><span class="n">IgnoredScope</span><span class="p">(</span><span class="n">patterns</span><span class="o">=</span><span class="n">patterns</span><span class="p">)</span>
+<span class="n">scope</span> <span class="o">=</span> <span class="n">nncf</span><span class="o">.</span><span class="n">Scope</span><span class="p">(</span><span class="n">patterns</span><span class="o">=</span><span class="n">patterns</span><span class="p">)</span>
 
-<span class="c1"># Exclude by operation type:</span>
+<span class="c1"># Specify by operation type:</span>
 
 <span class="c1"># OpenVINO opset https://docs.openvino.ai/latest/openvino_docs_ops_opset.html</span>
 <span class="n">operation_types</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'Multiply'</span><span class="p">,</span> <span class="s1">'GroupConvolution'</span><span class="p">,</span> <span class="s1">'Interpolate'</span><span class="p">]</span>
-<span class="n">ignored_scope</span> <span class="o">=</span> <span class="n">nncf</span><span class="o">.</span><span class="n">IgnoredScope</span><span class="p">(</span><span class="n">types</span><span class="o">=</span><span class="n">operation_types</span><span class="p">)</span>
+<span class="n">scope</span> <span class="o">=</span> <span class="n">nncf</span><span class="o">.</span><span class="n">Scope</span><span class="p">(</span><span class="n">types</span><span class="o">=</span><span class="n">operation_types</span><span class="p">)</span>
 
 <span class="c1"># ONNX opset https://github.com/onnx/onnx/blob/main/docs/Operators.md</span>
 <span class="n">operation_types</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'Mul'</span><span class="p">,</span> <span class="s1">'Conv'</span><span class="p">,</span> <span class="s1">'Resize'</span><span class="p">]</span>
-<span class="n">ignored_scope</span> <span class="o">=</span> <span class="n">nncf</span><span class="o">.</span><span class="n">IgnoredScope</span><span class="p">(</span><span class="n">types</span><span class="o">=</span><span class="n">operation_types</span><span class="p">)</span>
+<span class="n">scope</span> <span class="o">=</span> <span class="n">nncf</span><span class="o">.</span><span class="n">Scope</span><span class="p">(</span><span class="n">types</span><span class="o">=</span><span class="n">operation_types</span><span class="p">)</span>
+
+<span class="c1"># Specify by subgraph:</span>
+<span class="n">scope</span> <span class="o">=</span> <span class="n">nncf</span><span class="o">.</span><span class="n">Scope</span><span class="p">(</span><span class="n">subgraphs</span><span class="o">=</span><span class="p">[</span><span class="n">nncf</span><span class="o">.</span><span class="n">Subgraph</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="s1">'node_1'</span><span class="p">],</span> <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="s1">'node_3'</span><span class="p">])])</span>
 </pre></div>
 </div>
 <p><strong>Note:</strong> Operation types must be specified according to the model framework.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>names</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of ignored node names.</p></li>
-<li><p><strong>patterns</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of regular expressions that define patterns for names of ignored nodes.</p></li>
-<li><p><strong>types</strong> (<em>bool</em>) – List of ignored operation types.</p></li>
-<li><p><strong>subgraphs</strong> (<em>List</em><em>[</em><a class="reference internal" href="#nncf.Subgraph" title="nncf.Subgraph"><em>Subgraph</em></a><em>]</em>) – List of ignored subgraphs.</p></li>
-<li><p><strong>validate</strong> – If set to True, then a RuntimeError will be raised if any ignored scope does not match
+<li><p><strong>names</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of node names.</p></li>
+<li><p><strong>patterns</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of regular expressions that define patterns for names of nodes.</p></li>
+<li><p><strong>types</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of operation types.</p></li>
+<li><p><strong>subgraphs</strong> (<em>List</em><em>[</em><a class="reference internal" href="#nncf.Subgraph" title="nncf.Subgraph"><em>Subgraph</em></a><em>]</em>) – List of subgraphs.</p></li>
+<li><p><strong>validate</strong> (<em>bool</em>) – If set to True, then a RuntimeError will be raised if any rule does not match
 in the model graph.</p></li>
 </ul>
 </dd>
@@ -1138,7 +1139,7 @@ all simple paths in the graph from input to output nodes.</p>
 <li><a class="reference internal" href="#nncf.quantize"><code class="docutils literal notranslate"><span class="pre">quantize()</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantize_with_accuracy_control"><code class="docutils literal notranslate"><span class="pre">quantize_with_accuracy_control()</span></code></a></li>
 <li><a class="reference internal" href="#nncf.OverflowFix"><code class="docutils literal notranslate"><span class="pre">OverflowFix</span></code></a></li>
-<li><a class="reference internal" href="#nncf.IgnoredScope"><code class="docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></li>
+<li><a class="reference internal" href="#nncf.Scope"><code class="docutils literal notranslate"><span class="pre">Scope</span></code></a></li>
 <li><a class="reference internal" href="#nncf.Subgraph"><code class="docutils literal notranslate"><span class="pre">Subgraph</span></code></a></li>
 </ul>
 </li>
