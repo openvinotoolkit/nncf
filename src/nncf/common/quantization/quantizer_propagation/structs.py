@@ -16,7 +16,6 @@ from enum import Enum
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.utils.api_marker import api
-from nncf.parameters import StrEnum
 
 
 class QuantizationTrait(Enum):
@@ -116,7 +115,7 @@ PropagationPath = list[tuple[str, str]]
 
 
 @api()
-class QuantizerPropagationRule(StrEnum):
+class QuantizerPropagationRule(Enum):
     # While propagating up through a downward-branching node:
     # ... do not merge at all
     DO_NOT_MERGE_BRANCHES = 0

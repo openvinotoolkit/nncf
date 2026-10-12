@@ -11,7 +11,22 @@
 
 import os
 
+from nncf.common.utils.helpers import create_table
 from nncf.common.utils.helpers import set_env_variable
+
+
+def test_create_table_ascii():
+    table_fmt = "grid"
+    table = create_table(["Name", "Ratio"], [["layer", 0.125], ["total", 1.0]], table_fmt=table_fmt)
+    assert table == (
+        "+---------------+\n"
+        "| Name  | Ratio |\n"
+        "|-------+-------|\n"
+        "| layer | 0.125 |\n"
+        "|-------+-------|\n"
+        "| total | 1.000 |\n"
+        "+---------------+"
+    )
 
 
 def test_set_env_variable():

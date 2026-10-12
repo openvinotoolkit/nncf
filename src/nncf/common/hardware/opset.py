@@ -9,9 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import StrEnum
 from enum import auto
-
-from nncf.parameters import StrEnum
 
 
 class HWOpName(StrEnum):

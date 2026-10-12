@@ -18,12 +18,12 @@ from dataclasses import field
 from dataclasses import fields
 from dataclasses import is_dataclass
 from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationRule
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.utils.api_marker import api
-from nncf.parameters import StrEnum
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.tensor import TensorDataType
 

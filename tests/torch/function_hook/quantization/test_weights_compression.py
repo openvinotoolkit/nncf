@@ -48,6 +48,7 @@ from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.cross_fw.test_templates.helpers import RoPEModel
 from tests.cross_fw.test_templates.helpers import SAMPEModel
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
+from tests.torch.test_models.synthetic import GroupedMatMulModel
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
 
@@ -410,6 +411,39 @@ def test_compress_weights_conv():
                 n_compressed_weights += 1
 
     assert n_compressed_weights == n_target_modules
+
+
+@pytest.mark.parametrize("transposed_weight", (False, True), ids=("native_weight", "transposed_weight"))
+@pytest.mark.parametrize("mode", SUPPORTED_MODES)
+def test_compress_weights_grouped_matmul(mode, transposed_weight):
+    model = GroupedMatMulModel(transposed_weight=transposed_weight)
+    example_input = torch.ones(model.INPUT_SHAPE, dtype=model.INPUT_DTYPE)
+    wrapped_model = GraphModelWrapper(wrap_model(model), example_input=example_input)
+
+    kwargs = {"group_size": 4, "all_layers": True} if mode in INT4_MODES else {}
+    compressed_model = compress_weights(wrapped_model, mode=mode, **kwargs)
+
+    n_compressed_weights = 0
+    for module in compressed_model.modules():
+        if isinstance(module, BaseWeightsDecompressor):
+            n_compressed_weights += 1
+    assert n_compressed_weights == 1
+
+
+@pytest.mark.parametrize("algorithm", ("awq", "scale_estimation"))
+def test_raise_error_for_data_aware_grouped_matmul(algorithm):
+    model = GroupedMatMulModel()
+    example_input = torch.ones(model.INPUT_SHAPE, dtype=model.INPUT_DTYPE)
+    wrapped_model = GraphModelWrapper(wrap_model(model), example_input=example_input)
+    with pytest.raises(nncf.ParameterNotSupportedError, match="GroupedMatMul"):
+        compress_weights(
+            wrapped_model,
+            mode=CompressWeightsMode.INT4_SYM,
+            group_size=4,
+            all_layers=True,
+            dataset=nncf.Dataset([example_input]),
+            **{algorithm: True},
+        )
 
 
 @pytest.mark.parametrize("mode", SUPPORTED_MODES)

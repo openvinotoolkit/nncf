@@ -51,8 +51,10 @@ from nncf.torch.graph.operator_metatypes import CONVOLUTION_METATYPES
 from nncf.torch.graph.operator_metatypes import EMBEDDING_METATYPES
 from nncf.torch.graph.operator_metatypes import MATMUL_METATYPES
 from nncf.torch.graph.operator_metatypes import PTDropoutMetatype
+from nncf.torch.graph.operator_metatypes import PTGroupedMatMulMetatype
 from nncf.torch.graph.operator_metatypes import PTMulMetatype
 from nncf.torch.graph.operator_metatypes import PTNoopMetatype
+from nncf.torch.graph.operator_metatypes import PTTransposeMetatype
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTransformationCommand
@@ -134,6 +136,10 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         ndims = len(weight_node.layer_attributes.shape)
         reduction_axes = get_weight_compression_reduction_axes(node_with_weight_metatype, weight_port_id, ndims)
+        weight_input_metatype = graph.get_input_edge_by_port_id(node_with_weight, weight_port_id).from_node.metatype
+        if node_with_weight_metatype == PTGroupedMatMulMetatype and weight_input_metatype != PTTransposeMetatype:
+            # A weight that is not transposed is consumed with the [num_groups, C_IN, C_OUT] layout.
+            reduction_axes = [ndims - 2]
         return tuple(reduction_axes)
 
     @staticmethod
@@ -220,14 +226,14 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         :param rank: The rank for the decomposition. If None, the full rank is used.
         :return: A tuple containing the U and V matrices from the SVD.
         """
-        # O stands for output dimension, H - input dimension or hidden size, R - rank.
+        # O stands for output dimension, H - input dimension or hidden size, R - rank, B - batch dimension.
         U_full, S_full, V_full = torch.linalg.svd(svd_residual, full_matrices=False)
-        U = U_full[:, :rank]  # [H, R]
+        U = U_full[..., :rank]  # [H, R] or [B, H, R]
         S_sqrt = torch.sqrt(S_full)
-        S = torch.diag(S_sqrt[:rank])  # [R, R]
-        V = V_full[:rank, :]  # [R, O]
-        V = S @ V  # [R, O]
-        U = U @ S  # [H, R]
+        S = torch.diag_embed(S_sqrt[..., :rank])  # [R, R] or [B, R, R]
+        V = V_full[..., :rank, :]  # [R, O] or [B, R, O]
+        V = S @ V  # [R, O] or [B, R, O]
+        U = U @ S  # [H, R] or [B, H, R]
         return U, V
 
     @staticmethod
