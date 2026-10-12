@@ -192,7 +192,6 @@ def run_pipeline(
     test_cases: dict,
     result_data: dict[str, RunInfo],
     output_dir: Path,
-    data_dir: Path | None,
     no_eval: bool,
     batch_size: int | None,
     run_fp32_backend: bool,
@@ -215,7 +214,6 @@ def run_pipeline(
     pipeline_kwargs.update(
         {
             "output_dir": output_dir,
-            "data_dir": data_dir,
             "no_eval": no_eval,
             "run_benchmark_app": run_benchmark_app,
             "batch_size": batch_size or test_model_param.get("batch_size", 1),
@@ -223,6 +221,7 @@ def run_pipeline(
         }
     )
     pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
+
     try:
         pipeline.run()
     except Exception as e:
@@ -260,7 +259,6 @@ def run_pipeline(
 def test_ptq_quantization(
     ptq_reference_data: dict,
     test_case_name: str,
-    data_dir: Path,
     output_dir: Path,
     result_data: dict[str, RunInfo],
     no_eval: bool,
@@ -279,7 +277,6 @@ def test_ptq_quantization(
         PTQ_TEST_CASES,
         result_data,
         output_dir,
-        data_dir,
         no_eval,
         batch_size,
         run_fp32_backend,
@@ -315,7 +312,6 @@ def test_weight_compression(
         WC_TEST_CASES,
         result_data,
         output_dir,
-        None,  # data_dir is not used in WC
         no_eval,
         batch_size,
         run_fp32_backend,
