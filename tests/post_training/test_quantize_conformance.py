@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import re
+import sys
 import time
 import traceback
 from collections import OrderedDict
@@ -225,6 +226,12 @@ def run_pipeline(
 
             captured = capsys.readouterr()
             write_logs(captured, pipeline)
+
+            with capsys.disabled():
+                sys.stdout.write(captured.out)
+                sys.stdout.flush()
+                sys.stderr.write(captured.err)
+                sys.stderr.flush()
 
             if extra_columns:
                 pipeline.collect_data_from_stdout(captured.out)

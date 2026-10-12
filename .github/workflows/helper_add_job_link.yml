@@ -6,6 +6,7 @@ on:
       - "[Schedule] Weekly"
       - "Test examples"
       - "Conformance WC"
+      - "Conformance PTQ"
     types:
       - requested
       - completed
