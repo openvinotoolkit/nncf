@@ -1,4 +1,4 @@
-ARGS := $(wordlist 2, $(words $(MAKECMDGOALS)), $(MAKECMDGOALS))
+ARGS ?=
 
 ifdef NUM_WORKERS
 	NUM_WORKERS_ARG := -n${NUM_WORKERS}
@@ -7,7 +7,6 @@ endif
 GENERAL_PYTEST_ARGS := $(NUM_WORKERS_ARG) -ra --durations=30
 CMD_INSTALL := uv pip install
 CMD_PYTEST := python -m pytest
-
 
 ###############################################################################
 # Common part
@@ -74,11 +73,11 @@ test-examples:
 install-conformance:
 	$(CMD_INSTALL) -e . -r tests/post_training/requirements.txt
 
-test-conformance-ptq:
-	$(CMD_PYTEST) $(GENERAL_PYTEST_ARGS) -s tests/post_training/test_quantize_conformance.py::test_ptq_quantization $(ARGS)
+test-ptq:
+	ONEDNN_MAX_CPU_ISA=AVX512_VNNI OV_CPU_MAX_ISA=AVX512_VNNI $(CMD_PYTEST) $(GENERAL_PYTEST_ARGS) -s tests/post_training/test_quantize_conformance.py::test_ptq_quantization $(ARGS)
 
-test-conformance-wc:
-	$(CMD_PYTEST) $(GENERAL_PYTEST_ARGS) -s tests/post_training/test_quantize_conformance.py::test_weight_compression $(ARGS)
+test-wc:
+	ONEDNN_MAX_CPU_ISA=AVX512_VNNI OV_CPU_MAX_ISA=AVX512_VNNI $(CMD_PYTEST) $(GENERAL_PYTEST_ARGS) -s tests/post_training/test_quantize_conformance.py::test_weight_compression $(ARGS)
 
 
 ###############################################################################

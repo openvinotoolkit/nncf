@@ -6,6 +6,7 @@ on:
       - "[Schedule] Weekly"
       - "Test examples"
       - "Weight compression"
+      - "Conformance PTQ"
     types:
       - requested
       - completed
