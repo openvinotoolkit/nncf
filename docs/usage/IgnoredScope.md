@@ -43,5 +43,5 @@ graph.dump_graph("model.dot")
 ### Convert dot to svg file
 
 ```sh
-python tools/render_dot_to_svg.py -m model.dot
+python tools/other/render_dot_to_svg.py -i model.dot
 ```
