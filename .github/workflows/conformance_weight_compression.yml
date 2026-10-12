@@ -77,14 +77,14 @@ jobs:
         run: column -s, -t < tmp/results.csv || echo "no file"
       - name: Upload artifact
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 #v7.0.2
         with:
           name: wc_results_${{ matrix.group }}
           path: tmp/results.csv
           if-no-files-found: ignore
       - name: Upload test results
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: weight-compression-pytest-results-${{ matrix.group }}
           path: ${{ env.RESULT_XML }}
