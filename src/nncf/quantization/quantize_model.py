@@ -406,7 +406,6 @@ def _validate_compression_modes_supported_by_backend(
     :param backend: Name of the backend to use in the error message.
     :param not_supported_modes: List of the compression modes that are not supported by the backend.
     :param mode: Compression mode of the algorithm.
-    :param scoped_configs: List of the user-defined weight compression configurations, if given.
     :param msg: Error message to use instead of the default one
     :raises nncf.ParameterNotSupportedError: If any of the given modes is not supported by the backend.
     """
