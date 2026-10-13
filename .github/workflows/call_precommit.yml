@@ -104,11 +104,11 @@ jobs:
       - name: Download CUDA
         run: |
           wget -q https://developer.download.nvidia.com/compute/cuda/13.2.1/local_installers/cuda_13.2.1_595.58.03_linux.run
-          sudo sh cuda_13.2.1_595.58.03_linux.run --toolkit --silent
+          sudo sh cuda_13.2.1_595.58.03_linux.run --toolkit
       - name: CPU Info
         run: awk 'BEGIN{RS=""} END{print}' /proc/cpuinfo
       - name: GPU Info
-        run: nvidia-smi
+        run: nvidia-smi; nvcc -V
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: true
