@@ -22,12 +22,6 @@ from nncf.parameters import CompressWeightsMode
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
 
-FIXED_GROUP_SIZE_MODES = {
-    CompressWeightsMode.MXFP4: 32,
-    CompressWeightsMode.MXFP8_E4M3: 32,
-    CompressWeightsMode.NVFP4: 16,
-}
-
 
 @dataclass
 class WeightCompressionConfig:

@@ -42,7 +42,6 @@ from nncf.quantization.advanced_parameters import GroupSizeFallbackMode
 from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
-from nncf.quantization.algorithms.weight_compression.config import FIXED_GROUP_SIZE_MODES
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.constants import CB4_QUANTILES
 from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
@@ -71,6 +70,34 @@ SUPPORTED_DATA_TYPES = [
     TensorDataType.f8e4m3,
     TensorDataType.f8e5m2,
 ]
+FIXED_GROUP_SIZE_MODES = {
+    CompressWeightsMode.MXFP4: 32,
+    CompressWeightsMode.MXFP8_E4M3: 32,
+    CompressWeightsMode.NVFP4: 16,
+}
+PER_CHANNEL_BY_DEFAULT_MODES = [
+    INT8_MODES,
+    CompressWeightsMode.CODEBOOK,
+    CompressWeightsMode.CB4,
+    CompressWeightsMode.ADAPTIVE_CODEBOOK,
+]
+DEFAULT_GROUP_SIZE_FOR_NON_INT8_MODES = 128
+
+
+def get_default_group_size(mode: CompressWeightsMode, group_size: int) -> int:
+    """
+    Returns the group size to use for the given mode when no group size is requested explicitly.
+
+    :param mode: Compression mode to get the default group size for.
+    :return: Default group size for the given mode.
+    """
+    if group_size is not None:
+        return group_size
+    if mode in FIXED_GROUP_SIZE_MODES:
+        return FIXED_GROUP_SIZE_MODES[mode]
+    if mode in PER_CHANNEL_BY_DEFAULT_MODES:
+        return -1
+    return DEFAULT_GROUP_SIZE_FOR_NON_INT8_MODES
 
 
 def get_weight_compression_configuration(
@@ -91,6 +118,7 @@ def get_weight_compression_configuration(
     """
     Generates a configuration dictionary for weight compression based on the provided parameters.
     """
+    group_size = get_default_group_size(mode, group_size)
     if backup_mode is None:
         if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
             backup_mode = BackupMode.MXFP8_E4M3
