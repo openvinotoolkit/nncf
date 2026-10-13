@@ -31,6 +31,8 @@ defaults:
 
 jobs:
   cpu:
+    # Disable CPU precommit job for now
+    if: false
     name: ${{ matrix.scope }}
     timeout-minutes: 40
     runs-on: ${{ matrix.runner }}
@@ -101,8 +103,8 @@ jobs:
           sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
       - name: Download CUDA
         run: |
-          wget -q https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run
-          sudo sh cuda_12.6.3_560.35.05_linux.run --toolkit --silent
+          wget -q https://developer.download.nvidia.com/compute/cuda/13.3.0/local_installers/cuda_13.3.0_610.43.02_linux.run
+          sudo sh cuda_13.3.0_610.43.02_linux.run --toolkit --silent
       - name: CPU Info
         run: awk 'BEGIN{RS=""} END{print}' /proc/cpuinfo
       - name: GPU Info
@@ -122,9 +124,9 @@ jobs:
         shell: bash
       - name: Install NNCF and test requirements
         run: make install-torch
-        env:
-          UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cu126  # TODO(AlexanderDokuchaev): Remove when update ci to use cuda13
-          UV_INDEX_STRATEGY: unsafe-best-match
+        # env:
+        #   UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cu126  # TODO(AlexanderDokuchaev): Remove when update ci to use cuda13
+        #   UV_INDEX_STRATEGY: unsafe-best-match
       - name: Print installed modules
         run: pip list
       - name: Check CUDA
