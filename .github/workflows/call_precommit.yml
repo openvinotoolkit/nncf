@@ -114,9 +114,9 @@ jobs:
         run: awk 'BEGIN{RS=""} END{print}' /proc/cpuinfo
       - name: GPU Info
         run: |
-          nvidia-smi | echo "no"
-          ls -ls /usr/local/ | echo "no"
-          nvcc -V | echo "no nvcc"
+          nvidia-smi || echo "no nvidia-smi"
+          ls -ls /usr/local/ || echo "no ls"
+          nvcc -V || echo "no nvcc"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: true
