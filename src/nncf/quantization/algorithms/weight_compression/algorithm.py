@@ -76,7 +76,7 @@ FIXED_GROUP_SIZE_MODES = {
     CompressWeightsMode.NVFP4: 16,
 }
 PER_CHANNEL_BY_DEFAULT_MODES = [
-    INT8_MODES,
+    *INT8_MODES,
     CompressWeightsMode.CODEBOOK,
     CompressWeightsMode.CB4,
     CompressWeightsMode.ADAPTIVE_CODEBOOK,
