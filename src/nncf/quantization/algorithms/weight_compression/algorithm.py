@@ -44,7 +44,6 @@ from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import FIXED_GROUP_SIZE_MODES
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
-from nncf.quantization.algorithms.weight_compression.config import get_default_group_size
 from nncf.quantization.algorithms.weight_compression.constants import CB4_QUANTILES
 from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.quantization.algorithms.weight_compression.lora_correction import LoraCorrectionAlgorithm
@@ -92,9 +91,6 @@ def get_weight_compression_configuration(
     """
     Generates a configuration dictionary for weight compression based on the provided parameters.
     """
-    if group_size is None:
-        group_size = get_default_group_size(mode)
-
     if backup_mode is None:
         if mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
             backup_mode = BackupMode.MXFP8_E4M3

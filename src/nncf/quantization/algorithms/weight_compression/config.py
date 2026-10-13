@@ -27,28 +27,6 @@ FIXED_GROUP_SIZE_MODES = {
     CompressWeightsMode.MXFP8_E4M3: 32,
     CompressWeightsMode.NVFP4: 16,
 }
-PER_CHANNEL_BY_DEFAULT_MODES = [
-    CompressWeightsMode.INT8_ASYM,
-    CompressWeightsMode.INT8_SYM,
-    CompressWeightsMode.CODEBOOK,
-    CompressWeightsMode.CB4,
-    CompressWeightsMode.ADAPTIVE_CODEBOOK,
-]
-DEFAULT_GROUP_SIZE = 128
-
-
-def get_default_group_size(mode: CompressWeightsMode) -> int:
-    """
-    Returns the group size to use for the given mode when no group size is requested explicitly.
-
-    :param mode: Compression mode to get the default group size for.
-    :return: Default group size for the given mode.
-    """
-    if mode in FIXED_GROUP_SIZE_MODES:
-        return FIXED_GROUP_SIZE_MODES[mode]
-    if mode in PER_CHANNEL_BY_DEFAULT_MODES:
-        return -1
-    return DEFAULT_GROUP_SIZE
 
 
 @dataclass
@@ -66,12 +44,10 @@ class WeightCompressionConfig:
     """
 
     mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM
-    group_size: int | None = None
+    group_size: int = -1
     codebook_values: Tensor | None = None
 
     def __post_init__(self) -> None:
-        if self.group_size is None:
-            self.group_size = get_default_group_size(self.mode)
         if self.group_size == 0 or self.group_size < -1:
             msg = f"Invalid group_size={self.group_size}. Group size must be a positive integer or -1."
             raise ValidationError(msg)
