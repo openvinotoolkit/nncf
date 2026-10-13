@@ -30,8 +30,7 @@ class WeightCompressionConfig:
 
     :param mode: Defines a mode for weight compression. Defaults to INT8_ASYM mode.
     :param group_size: Number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
-        The value -1 means no grouping. Defaults to None, which means that the default group size of the given
-        mode is used, e.g. -1 for the INT8 modes, 32 for MXFP4 and 128 for INT4_SYM.
+        The value -1 means no grouping. Defaults to -1.
     :param codebook_values: Optional codebook values for CODEBOOK compression mode.
         Must be nncf.tensor.Tensor which wraps numpy array or ov tensor. Storing ov tensor is useful for having
         destination data type information available.
