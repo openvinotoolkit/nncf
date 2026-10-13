@@ -16,6 +16,7 @@ import openvino as ov
 
 import nncf
 from nncf.common.logging import nncf_logger
+from nncf.quantization.advanced_parameters import ScopedConfig
 from nncf.scopes import Scope
 
 
@@ -51,10 +52,25 @@ def dump_parameters(
             if isinstance(value, Scope):
                 value = exclude_empty_fields(asdict(value))
                 if bool(value):
-                    dump_parameters(model, value, algo_name, [key])
+                    dump_parameters(model, value, algo_name, path + [key])
                     continue
                 # The default value in case empty ignored_scope parameter passed
                 value = []
+            # Special condition for the list of scoped configs
+            elif isinstance(value, (list, tuple)) and any(isinstance(item, ScopedConfig) for item in value):
+                for i, scoped_config in enumerate(value):
+                    # Index each scoped config so scoped configs do not overwrite each other,
+                    # e.g. scoped_configs/0/{scope/patterns,compression_config}.
+                    dump_parameters(
+                        model,
+                        {
+                            "scope": scoped_config.scope,
+                            "compression_config": scoped_config.compression_config,
+                        },
+                        algo_name,
+                        path + [key, str(i)],
+                    )
+                continue
 
             rt_path = ["nncf", algo_name] + path + [key]
             model.set_rt_info(str(value), rt_path)

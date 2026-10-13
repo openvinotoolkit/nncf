@@ -67,6 +67,7 @@ from nncf.quantization.advanced_parameters import AdvancedScaleEstimationParamet
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters as AdvancedSmoothQuantParameters
 from nncf.quantization.advanced_parameters import GroupSizeFallbackMode as GroupSizeFallbackMode
 from nncf.quantization.advanced_parameters import OverflowFix as OverflowFix
+from nncf.quantization.advanced_parameters import ScopedConfig as ScopedConfig
 from nncf.scopes import IgnoredScope as IgnoredScope  # Deprecated alias for nncf.Scope
 from nncf.scopes import Scope as Scope
 from nncf.scopes import Subgraph as Subgraph
