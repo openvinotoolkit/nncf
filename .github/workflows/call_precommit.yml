@@ -104,7 +104,7 @@ jobs:
       - name: Download CUDA
         run: |
           wget -q https://developer.download.nvidia.com/compute/cuda/13.2.1/local_installers/cuda_13.2.1_595.58.03_linux.run
-          sudo sh cuda_13.2.1_595.58.03_linux.run --toolkit
+          sudo sh cuda_13.2.1_595.58.03_linux.run --toolkit --silent
       - name: CPU Info
         run: awk 'BEGIN{RS=""} END{print}' /proc/cpuinfo
       - name: GPU Info
