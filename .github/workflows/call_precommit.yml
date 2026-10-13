@@ -105,12 +105,17 @@ jobs:
         run: |
           wget -q https://developer.download.nvidia.com/compute/cuda/13.2.1/local_installers/cuda_13.2.1_595.58.03_linux.run
           sudo sh cuda_13.2.1_595.58.03_linux.run --toolkit --silent
+          cuda_home=/usr/local/cuda-13.2
+          test -f "$cuda_home/targets/x86_64-linux/lib/libcudart.so.13"
+          echo "CUDA_HOME=$cuda_home" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=$cuda_home/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
+          echo "$cuda_home/bin" >> "$GITHUB_PATH"
       - name: CPU Info
         run: awk 'BEGIN{RS=""} END{print}' /proc/cpuinfo
       - name: GPU Info
         run: |
           nvidia-smi | echo "no"
-          ll -ls /usr/local/
+          ls -ls /usr/local/ | echo "no"
           nvcc -V | echo "no nvcc"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
