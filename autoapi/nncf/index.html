@@ -319,10 +319,13 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.OverflowFix" title="nncf.OverflowFix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OverflowFix</span></code></a></p></td>
 <td><p>This option controls whether to apply the overflow issue fix for the 8-bit</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.Scope" title="nncf.Scope"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Scope</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.ScopedConfig" title="nncf.ScopedConfig"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ScopedConfig</span></code></a></p></td>
+<td><p>Applies a user-defined weight compression configuration to a portion of a model.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.Scope" title="nncf.Scope"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Scope</span></code></a></p></td>
 <td><p>Defines a portion of a model by a set of matching rules against the model graph.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.Subgraph" title="nncf.Subgraph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Subgraph</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.Subgraph" title="nncf.Subgraph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Subgraph</span></code></a></p></td>
 <td><p>Defines the ignored subgraph as follows: A subgraph comprises all nodes along</p></td>
 </tr>
 </tbody>
@@ -791,7 +794,7 @@ Insert binary masks for the parameters and calculate the initial masks by the gi
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nncf.compress_weights">
-<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">compress_weights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">CompressWeightsMode.INT8_ASYM</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignored_scope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_layers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sensitivity_metric</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">128</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">awq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_estimation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gptq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lora_correction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backup_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compression_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">CompressionFormat.DQ</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">advanced_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/quantization/quantize_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.compress_weights" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">compress_weights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">CompressWeightsMode.INT8_ASYM</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignored_scope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_layers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sensitivity_metric</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">128</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">awq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_estimation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gptq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lora_correction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backup_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compression_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">CompressionFormat.DQ</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">advanced_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scoped_configs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/quantization/quantize_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.compress_weights" title="Link to this definition">¶</a></dt>
 <dd><p>Compress model weights.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -854,6 +857,15 @@ FP8_E4M3 stands for FP8 format with E4M3 values sharing group-level fp16 scale.<
 <li><p><strong>compression_format</strong> (<a class="reference internal" href="#nncf.CompressionFormat" title="nncf.CompressionFormat"><em>nncf.CompressionFormat</em></a>) – Describes the format in which the model is saved after weight compression.
 Defaults to nncf.CompressionFormat.DQ.</p></li>
 <li><p><strong>advanced_parameters</strong> (<em>nncf.AdvancedCompressionParameters</em>) – Advanced parameters for compression algorithms.</p></li>
+<li><p><strong>scoped_configs</strong> (<em>list</em><em>[</em><a class="reference internal" href="#nncf.ScopedConfig" title="nncf.ScopedConfig"><em>nncf.ScopedConfig</em></a><em>]</em>) – A list of user-defined weight compression configurations bound to portions of the
+model. For all the matched nodes the given configuration is used instead of the one assigned by the
+algorithm, which makes it possible to compress certain layers, e.g. attention or MoE router layers, to a
+precision different from the one defined by <cite>mode</cite>, <cite>ratio</cite> and <cite>backup_mode</cite>. The scoped config
+takes precedence over the mixed precision assignment, the <cite>ignored_scope</cite> and the <cite>all_layers</cite> options.
+If several scoped configs match the same node, the last one in the list takes precedence. For example, a
+scoped config of a whole block followed by a scoped config of a single layer of this block compresses the block
+with the first configuration, except for this layer, while the opposite order compresses the whole block
+with the second configuration.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -989,6 +1001,63 @@ are quantized using a half of the 8-bit quantization range.</p></li>
 </ul>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="nncf.ScopedConfig">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">ScopedConfig</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/quantization/advanced_parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.ScopedConfig" title="Link to this definition">¶</a></dt>
+<dd><p>Applies a user-defined weight compression configuration to a portion of a model.
+It overrides the configuration assigned by the weight compression algorithm, including the mixed precision
+algorithm and the <cite>ignored_scope</cite>, <cite>all_layers</cite> and <cite>backup_mode</cite> options.</p>
+<p>Example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">nncf</span>
+
+<span class="n">scoped_config</span> <span class="o">=</span> <span class="n">nncf</span><span class="o">.</span><span class="n">ScopedConfig</span><span class="p">(</span>
+    <span class="n">patterns</span><span class="o">=</span><span class="p">[</span><span class="s1">'.*self_attn.*'</span><span class="p">,</span> <span class="s1">'.*router.*'</span><span class="p">],</span>
+    <span class="n">mode</span><span class="o">=</span><span class="n">nncf</span><span class="o">.</span><span class="n">CompressWeightsMode</span><span class="o">.</span><span class="n">INT8_ASYM</span><span class="p">,</span>
+    <span class="n">group_size</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>The portion of a model is defined by the same rules as <a class="reference internal" href="#nncf.Scope" title="nncf.Scope"><code class="xref py py-class docutils literal notranslate"><span class="pre">nncf.Scope</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>names</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of node names.</p></li>
+<li><p><strong>patterns</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of regular expressions that define patterns for names of nodes.</p></li>
+<li><p><strong>types</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of operation types.</p></li>
+<li><p><strong>subgraphs</strong> (<em>List</em><em>[</em><a class="reference internal" href="#nncf.Subgraph" title="nncf.Subgraph"><em>nncf.Subgraph</em></a><em>]</em>) – List of subgraphs.</p></li>
+<li><p><strong>validate</strong> (<em>bool</em>) – If set to True, then a RuntimeError will be raised if any rule does not match
+in the model graph.</p></li>
+<li><p><strong>mode</strong> (<a class="reference internal" href="#nncf.CompressWeightsMode" title="nncf.CompressWeightsMode"><em>nncf.CompressWeightsMode</em></a>) – Weight compression mode to apply to the matched nodes. Defaults to INT8_ASYM mode.</p></li>
+<li><p><strong>group_size</strong> (<em>int</em>) – Number of weights in the channel dimension that share quantization parameters (scale).
+The value -1 means no grouping. Defaults to None, which means that the default group size of the given
+mode is used.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="nncf.ScopedConfig.scope">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">scope</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">nncf.scopes.Scope</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/quantization/advanced_parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.ScopedConfig.scope" title="Link to this definition">¶</a></dt>
+<dd><p>Scope that defines the portion of a model to apply the configuration to.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>nncf.scopes.Scope</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="nncf.ScopedConfig.compression_config">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">compression_config</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">nncf.quantization.algorithms.weight_compression.config.WeightCompressionConfig</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/src/nncf/quantization/advanced_parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.ScopedConfig.compression_config" title="Link to this definition">¶</a></dt>
+<dd><p>Weight compression configuration to apply to the nodes matched by the scope.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>nncf.quantization.algorithms.weight_compression.config.WeightCompressionConfig</p>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -1139,6 +1208,11 @@ all simple paths in the graph from input to output nodes.</p>
 <li><a class="reference internal" href="#nncf.quantize"><code class="docutils literal notranslate"><span class="pre">quantize()</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantize_with_accuracy_control"><code class="docutils literal notranslate"><span class="pre">quantize_with_accuracy_control()</span></code></a></li>
 <li><a class="reference internal" href="#nncf.OverflowFix"><code class="docutils literal notranslate"><span class="pre">OverflowFix</span></code></a></li>
+<li><a class="reference internal" href="#nncf.ScopedConfig"><code class="docutils literal notranslate"><span class="pre">ScopedConfig</span></code></a><ul>
+<li><a class="reference internal" href="#nncf.ScopedConfig.scope"><code class="docutils literal notranslate"><span class="pre">ScopedConfig.scope</span></code></a></li>
+<li><a class="reference internal" href="#nncf.ScopedConfig.compression_config"><code class="docutils literal notranslate"><span class="pre">ScopedConfig.compression_config</span></code></a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#nncf.Scope"><code class="docutils literal notranslate"><span class="pre">Scope</span></code></a></li>
 <li><a class="reference internal" href="#nncf.Subgraph"><code class="docutils literal notranslate"><span class="pre">Subgraph</span></code></a></li>
 </ul>

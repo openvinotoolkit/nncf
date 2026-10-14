@@ -39,6 +39,7 @@ Classes
    nncf.TargetDevice
    nncf.QuantizationPreset
    nncf.OverflowFix
+   nncf.ScopedConfig
    nncf.Scope
    nncf.Subgraph
 
@@ -353,7 +354,7 @@ Functions
    An enum with values corresponding to the available quantization presets.
 
 
-.. py:function:: compress_weights(model, *, mode = CompressWeightsMode.INT8_ASYM, ratio = None, group_size = None, ignored_scope = None, all_layers = None, dataset = None, sensitivity_metric = None, subset_size = 128, awq = None, scale_estimation = None, gptq = None, lora_correction = None, backup_mode = None, compression_format = CompressionFormat.DQ, advanced_parameters = None)
+.. py:function:: compress_weights(model, *, mode = CompressWeightsMode.INT8_ASYM, ratio = None, group_size = None, ignored_scope = None, all_layers = None, dataset = None, sensitivity_metric = None, subset_size = 128, awq = None, scale_estimation = None, gptq = None, lora_correction = None, backup_mode = None, compression_format = CompressionFormat.DQ, advanced_parameters = None, scoped_configs = None)
 
    Compress model weights.
 
@@ -421,6 +422,16 @@ Functions
    :type compression_format: nncf.CompressionFormat
    :param advanced_parameters: Advanced parameters for compression algorithms.
    :type advanced_parameters: nncf.AdvancedCompressionParameters
+   :param scoped_configs: A list of user-defined weight compression configurations bound to portions of the
+       model. For all the matched nodes the given configuration is used instead of the one assigned by the
+       algorithm, which makes it possible to compress certain layers, e.g. attention or MoE router layers, to a
+       precision different from the one defined by `mode`, `ratio` and `backup_mode`. The scoped config
+       takes precedence over the mixed precision assignment, the `ignored_scope` and the `all_layers` options.
+       If several scoped configs match the same node, the last one in the list takes precedence. For example, a
+       scoped config of a whole block followed by a scoped config of a single layer of this block compresses the block
+       with the first configuration, except for this layer, while the opposite order compresses the whole block
+       with the second configuration.
+   :type scoped_configs: list[nncf.ScopedConfig]
    :return: The non-trainable model with compressed weights.
 
 
@@ -537,6 +548,57 @@ Functions
    :param FIRST_LAYER: Weights of the first Convolutions of each model inputs
        are quantized using a half of the 8-bit quantization range.
    :param DISABLE: All weights are quantized using the full 8-bit quantization range.
+
+
+.. py:class:: ScopedConfig
+
+   Applies a user-defined weight compression configuration to a portion of a model.
+   It overrides the configuration assigned by the weight compression algorithm, including the mixed precision
+   algorithm and the `ignored_scope`, `all_layers` and `backup_mode` options.
+
+   Example:
+
+   ..  code-block:: python
+
+           import nncf
+
+           scoped_config = nncf.ScopedConfig(
+               patterns=['.*self_attn.*', '.*router.*'],
+               mode=nncf.CompressWeightsMode.INT8_ASYM,
+               group_size=-1,
+           )
+
+   The portion of a model is defined by the same rules as :class:`nncf.Scope`.
+
+   :param names: List of node names.
+   :type names: List[str]
+   :param patterns: List of regular expressions that define patterns for names of nodes.
+   :type patterns: List[str]
+   :param types: List of operation types.
+   :type types: List[str]
+   :param subgraphs: List of subgraphs.
+   :type subgraphs: List[nncf.Subgraph]
+   :param validate: If set to True, then a RuntimeError will be raised if any rule does not match
+     in the model graph.
+   :type validate: bool
+   :param mode: Weight compression mode to apply to the matched nodes. Defaults to INT8_ASYM mode.
+   :type mode: nncf.CompressWeightsMode
+   :param group_size: Number of weights in the channel dimension that share quantization parameters (scale).
+       The value -1 means no grouping. Defaults to None, which means that the default group size of the given
+       mode is used.
+   :type group_size: int
+
+   .. py:property:: scope
+      :type: nncf.scopes.Scope
+
+      Scope that defines the portion of a model to apply the configuration to.
+
+
+   .. py:property:: compression_config
+      :type: nncf.quantization.algorithms.weight_compression.config.WeightCompressionConfig
+
+      Weight compression configuration to apply to the nodes matched by the scope.
+
 
 
 .. py:class:: Scope
