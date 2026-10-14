@@ -48,7 +48,7 @@ from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
 from nncf.quantization.algorithms.weight_compression.weight_lowering import integer_quantize_dequantize_weight
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from tests.cross_fw.shared.json import dump_to_json
@@ -758,7 +758,7 @@ class TemplateWeightCompression(ABC):
                 nncf.ScopedConfig(names=[excluded_node_name], mode=CompressWeightsMode.INT8_SYM, group_size=-1)
             ]
         else:
-            ignored_scope = IgnoredScope(names=[excluded_node_name])
+            ignored_scope = Scope(names=[excluded_node_name])
 
         with SpyWeightCompressionStatisticsContext(mocker):
             compressed_model = compress_weights(
@@ -1098,7 +1098,7 @@ class TemplateWeightCompression(ABC):
                 "sequential_matmul",
                 dict(ratio=1.0, all_layers=True),
                 [nncf.ScopedConfig(patterns=[".*1$"], mode=CompressWeightsMode.INT8_SYM, group_size=-1)],
-                IgnoredScope(patterns=[".*1$"]),
+                Scope(patterns=[".*1$"]),
                 id="ignored_scope",
             ),
             pytest.param(
@@ -1149,7 +1149,7 @@ class TemplateWeightCompression(ABC):
                 "shared_weight",
                 dict(ratio=1.0, all_layers=True),
                 [nncf.ScopedConfig(patterns=[".*"], mode=CompressWeightsMode.INT8_SYM, group_size=-1)],
-                IgnoredScope(patterns=[".*"]),
+                Scope(patterns=[".*"]),
                 id="shared_weight_with_ignored_scope",
             ),
             pytest.param(
@@ -1189,7 +1189,7 @@ class TemplateWeightCompression(ABC):
                     nncf.ScopedConfig(patterns=[".*"], mode=CompressWeightsMode.INT8_SYM, group_size=-1),
                     nncf.ScopedConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=2),
                 ],
-                IgnoredScope(patterns=[".*"]),
+                Scope(patterns=[".*"]),
                 id="shared_weight_ignored_other_node_matched_last",
             ),
             pytest.param(
@@ -1199,7 +1199,7 @@ class TemplateWeightCompression(ABC):
                     nncf.ScopedConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=2),
                     nncf.ScopedConfig(patterns=[".*"], mode=CompressWeightsMode.INT8_SYM, group_size=-1),
                 ],
-                IgnoredScope(patterns=[".*"]),
+                Scope(patterns=[".*"]),
                 id="shared_weight_ignored_other_node_matched_first",
             ),
             # The weight is compressed under the node that is not ignored, so the ignored one is not restored
@@ -1233,7 +1233,7 @@ class TemplateWeightCompression(ABC):
             for scoped_config in scoped_configs
         ]
         if test_id == "shared_weight_with_ignored_compressed_node":
-            ignored_scope = IgnoredScope(names=[self.get_node_with_shared_weight_name()])
+            ignored_scope = Scope(names=[self.get_node_with_shared_weight_name()])
 
         configs = self._compress_and_get_configs(
             model=model,
@@ -1265,7 +1265,7 @@ class TemplateWeightCompression(ABC):
             ),
             pytest.param(
                 [nncf.ScopedConfig(patterns=[".*1$"], mode=CompressWeightsMode.INT8_SYM, group_size=-1)],
-                IgnoredScope(patterns=[".*1$"]),
+                Scope(patterns=[".*1$"]),
                 "excluded from the compression",
                 id="ignored_scope",
             ),

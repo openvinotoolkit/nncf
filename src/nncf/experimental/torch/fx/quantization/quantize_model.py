@@ -41,6 +41,7 @@ from nncf.quantization.advanced_parameters import ScopedConfig
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 
 DEFAULT_RANGE_TYPE = "mean_min_max"
 
@@ -54,7 +55,7 @@ def quantize_impl(
     subset_size: int = 300,
     fast_bias_correction: bool = True,
     model_type: ModelType | None = None,
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
     advanced_parameters: AdvancedQuantizationParameters | None = None,
 ) -> torch.fx.GraphModule:
     """
@@ -122,7 +123,7 @@ def compress_weights_impl(
     mode: CompressWeightsMode,
     ratio: float,
     group_size: int,
-    ignored_scope: IgnoredScope,
+    ignored_scope: Scope | IgnoredScope,
     all_layers: bool,
     sensitivity_metric: SensitivityMetric,
     awq: bool,

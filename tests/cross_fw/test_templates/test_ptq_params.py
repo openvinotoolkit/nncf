@@ -39,7 +39,7 @@ from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.passes import transform_to_inference_graph
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.tensor import Tensor
 from tests.common.quantization.metatypes import CatTestMetatype
 from tests.common.quantization.metatypes import Conv2dTestMetatype
@@ -440,7 +440,7 @@ class TemplateTestPTQParams:
         )
         ignored_patterns = test_params["test_model_type_pass"]["ignored_patterns"]
         algo = MinMaxQuantization(
-            ignored_scope=IgnoredScope(names=["some_node"], validate=validate_scopes),
+            ignored_scope=Scope(names=["some_node"], validate=validate_scopes),
         )
         algo._backend_entity = self.get_algo_backend()
         if validate_scopes:

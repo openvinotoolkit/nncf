@@ -42,7 +42,7 @@ from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.quantization import compress_weights
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
@@ -810,7 +810,7 @@ def get_model_for_ignored_scope_test(tmp_path_factory) -> onnx.ModelProto:
 @dataclass
 class ParamIgnoredScope:
     name: str
-    ignored_scope: IgnoredScope
+    ignored_scope: Scope
     ref: set[str]
 
     def __str__(self) -> str:
@@ -820,17 +820,17 @@ class ParamIgnoredScope:
 @pytest.mark.parametrize(
     "param",
     (
-        ParamIgnoredScope("empty", IgnoredScope(), {"linear.weight_quantized"}),
+        ParamIgnoredScope("empty", Scope(), {"linear.weight_quantized"}),
         pytest.param(
-            ParamIgnoredScope("name_const", IgnoredScope(names=["linear.weight"]), set()),
+            ParamIgnoredScope("name_const", Scope(names=["linear.weight"]), set()),
             marks=pytest.mark.xfail(reason="See ticket 186262"),
         ),
-        ParamIgnoredScope("name_op", IgnoredScope(names=["node_linear"]), set()),
+        ParamIgnoredScope("name_op", Scope(names=["node_linear"]), set()),
         pytest.param(
-            ParamIgnoredScope("pattern_const", IgnoredScope(patterns=[".*weight"]), set()),
+            ParamIgnoredScope("pattern_const", Scope(patterns=[".*weight"]), set()),
             marks=pytest.mark.xfail(reason="See ticket 186262"),
         ),
-        ParamIgnoredScope("pattern_op", IgnoredScope(patterns=["node_li.*"]), set()),
+        ParamIgnoredScope("pattern_op", Scope(patterns=["node_li.*"]), set()),
     ),
     ids=str,
 )

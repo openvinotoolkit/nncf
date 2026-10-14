@@ -24,6 +24,7 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipeline
 from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 
 TModel = TypeVar("TModel")
 TPass = Callable[[TModel], TModel]
@@ -45,7 +46,7 @@ class PostTrainingQuantization(Algorithm):
         subset_size: int = 300,
         fast_bias_correction: bool = True,
         model_type: ModelType | None = None,
-        ignored_scope: IgnoredScope | None = None,
+        ignored_scope: Scope | IgnoredScope | None = None,
         advanced_parameters: AdvancedQuantizationParameters | None = None,
     ):
         """

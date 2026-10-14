@@ -29,7 +29,7 @@ from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.torch.function_hook import get_hook_storage
@@ -810,7 +810,7 @@ def test_half_precision_models(dtype):
 @dataclass
 class ParamIgnoredScope:
     name: str
-    ignored_scope: IgnoredScope
+    ignored_scope: Scope
     ref: set[str]
 
     def __str__(self) -> str:
@@ -820,11 +820,11 @@ class ParamIgnoredScope:
 @pytest.mark.parametrize(
     "param",
     (
-        ParamIgnoredScope("empty", IgnoredScope(), {"post_hooks.linear:weight__0.0"}),
-        ParamIgnoredScope("name_const", IgnoredScope(names=["linear.weight"]), set()),
-        ParamIgnoredScope("name_op", IgnoredScope(names=["linear/linear/0"]), set()),
-        ParamIgnoredScope("pattern_const", IgnoredScope(patterns=[".*weight"]), set()),
-        ParamIgnoredScope("pattern_op", IgnoredScope(patterns=["linear/*"]), set()),
+        ParamIgnoredScope("empty", Scope(), {"post_hooks.linear:weight__0.0"}),
+        ParamIgnoredScope("name_const", Scope(names=["linear.weight"]), set()),
+        ParamIgnoredScope("name_op", Scope(names=["linear/linear/0"]), set()),
+        ParamIgnoredScope("pattern_const", Scope(patterns=[".*weight"]), set()),
+        ParamIgnoredScope("pattern_op", Scope(patterns=["linear/*"]), set()),
     ),
     ids=str,
 )

@@ -71,7 +71,7 @@ def native_quantize_if_op_impl(
     subset_size: int = 300,
     fast_bias_correction: bool = True,
     model_type: ModelType | None = None,
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
     advanced_parameters: AdvancedQuantizationParameters | None = None,
 ) -> ov.Model:
     """
@@ -152,7 +152,7 @@ def native_quantize_impl(
     subset_size: int = 300,
     fast_bias_correction: bool = True,
     model_type: ModelType | None = None,
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
     advanced_parameters: AdvancedQuantizationParameters | None = None,
 ) -> ov.Model:
     """
@@ -202,7 +202,7 @@ def quantize_with_accuracy_control_impl(
     subset_size: int = 300,
     fast_bias_correction: bool = True,
     model_type: ModelType | None = None,
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
     advanced_quantization_parameters: AdvancedQuantizationParameters | None = None,
     advanced_accuracy_restorer_parameters: AdvancedAccuracyRestorerParameters | None = None,
 ) -> ov.Model:
@@ -338,7 +338,7 @@ def quantize_impl(
     subset_size: int = 300,
     fast_bias_correction: bool = True,
     model_type: ModelType | None = None,
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
     advanced_parameters: AdvancedQuantizationParameters | None = None,
 ) -> ov.Model:
     """
@@ -370,7 +370,7 @@ def compress_weights_impl(
     mode: CompressWeightsMode,
     ratio: float,
     group_size: int,
-    ignored_scope: IgnoredScope,
+    ignored_scope: Scope | IgnoredScope,
     all_layers: bool,
     sensitivity_metric: SensitivityMetric,
     awq: bool,
