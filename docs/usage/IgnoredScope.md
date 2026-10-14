@@ -20,7 +20,7 @@ ignored_scope = nncf.Scope(patterns=["node_\\d"])
 ignored_scope = nncf.Scope(types=["Multiply"])
 
 # Exclude by subgraph
-ignored_scope = nncf.Scope(subgraphs=nncf.Subgraph(inputs=["start_node"], outputs=["end_node"]))
+ignored_scope = nncf.Scope(subgraphs=[nncf.Subgraph(inputs=["start_node"], outputs=["end_node"])])
 ```
 
 ## Inspecting and Visualizing the NNCFGraph

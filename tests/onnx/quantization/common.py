@@ -106,7 +106,7 @@ def min_max_quantize_model(
     convert_model_opset: bool = True,
     dataset_has_batch_size: bool = False,
     quantization_params: dict[str, Any] = None,
-    ignored_scope: Scope = None,
+    ignored_scope: Scope | None = None,
 ) -> onnx.ModelProto:
     if convert_model_opset:
         original_model = convert_opset_version(original_model)
