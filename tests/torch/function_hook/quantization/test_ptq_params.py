@@ -19,7 +19,7 @@ from nncf.common.graph.transformations.commands import TransformationType
 from nncf.common.utils.backend import BackendType
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.torch.function_hook.commands import PT2InsertionCommand
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
@@ -135,6 +135,6 @@ class TestPTQParams(TemplateTestPTQParams):
             },
         }
 
-    @pytest.fixture(params=[(IgnoredScope([]), 1, 1), (IgnoredScope(["/Conv_1_0"]), 0, 0)])
+    @pytest.fixture(params=[(Scope([]), 1, 1), (Scope(["/Conv_1_0"]), 0, 0)])
     def ignored_scopes_data(self, request):
         return request.param

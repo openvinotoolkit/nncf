@@ -17,6 +17,7 @@ import nncf.torch.graph.operator_metatypes as om
 from nncf.common.logging import nncf_logger
 from nncf.parameters import PruneMode
 from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.scopes import get_node_names_from_scope
 from nncf.torch.function_hook.nncf_graph.layer_attributes import PT2OpLayerAttributes
 from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import build_nncf_graph
@@ -49,7 +50,7 @@ def prune(
     model: TModel,
     mode: PruneMode,
     ratio: float | None = None,
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
     examples_inputs: Any | None = None,
 ) -> TModel:
     if examples_inputs is None:
@@ -79,12 +80,12 @@ def prune(
     return model
 
 
-def get_prunable_parameters(graph: PTNNCFGraph, ignored_scope: IgnoredScope | None) -> set[str]:
+def get_prunable_parameters(graph: PTNNCFGraph, ignored_scope: Scope | IgnoredScope | None) -> set[str]:
     """
     Retrieves the names of constant nodes that are associated with prunable parameters in the given graph.
 
     :param graph: The NNCFGraph to analyze.
-    :param ignored_scope: The IgnoredScope to filter out nodes.
+    :param ignored_scope: The ignored scope to filter out nodes.
     :return: A set of names of constant nodes that are associated with prunable parameters.
     """
     ignored_names: set[str] = set()

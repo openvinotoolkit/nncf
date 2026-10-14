@@ -56,6 +56,7 @@ from nncf.quantization.algorithms.weight_compression.algorithm import WeightComp
 from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
 from nncf.quantization.quantize_model import warning_model_no_batchwise_support
 from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 
 TTensor = TypeVar("TTensor")
 
@@ -131,7 +132,7 @@ def quantize_impl(
     subset_size: int = 300,
     fast_bias_correction: bool = True,
     model_type: ModelType | None = None,
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
     advanced_parameters: AdvancedQuantizationParameters | None = None,
 ) -> onnx.ModelProto:
     """
@@ -202,7 +203,7 @@ def quantize_with_accuracy_control_impl(
     subset_size: int = 300,
     fast_bias_correction: bool = True,
     model_type: ModelType | None = None,
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
     advanced_quantization_parameters: AdvancedQuantizationParameters | None = None,
     advanced_accuracy_restorer_parameters: AdvancedAccuracyRestorerParameters | None = None,
 ) -> onnx.ModelProto:
@@ -319,7 +320,7 @@ def compress_weights_impl(
     mode: CompressWeightsMode,
     ratio: float,
     group_size: int,
-    ignored_scope: IgnoredScope,
+    ignored_scope: Scope | IgnoredScope,
     all_layers: bool,
     sensitivity_metric: SensitivityMetric,
     awq: bool,

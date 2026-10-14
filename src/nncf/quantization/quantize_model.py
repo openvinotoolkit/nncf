@@ -42,6 +42,7 @@ from nncf.quantization.telemetry_extractors import CompressionStartedWithCompres
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeWithAccuracyControlApi
 from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.telemetry.decorator import tracked_function
 from nncf.telemetry.events import MODEL_BASED_CATEGORY
 
@@ -137,7 +138,7 @@ def quantize(
     subset_size: int = 300,
     fast_bias_correction: bool = True,
     model_type: ModelType | None = None,
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
     advanced_parameters: AdvancedQuantizationParameters | None = None,
 ) -> TModel:
     """
@@ -171,7 +172,7 @@ def quantize(
     :type  model_type: Optional[nncf.ModelType]
     :param ignored_scope: An ignored scope that defined the list of model control
         flow graph nodes to be ignored during quantization.
-    :type  ignored_scope: Optional[nncf.IgnoredScope]
+    :type  ignored_scope: Optional[nncf.Scope]
     :param advanced_parameters: Advanced quantization parameters for
         fine-tuning the quantization algorithm.
     :return: The quantized model.
@@ -292,7 +293,7 @@ def quantize_with_accuracy_control(
     subset_size: int = 300,
     fast_bias_correction: bool = True,
     model_type: ModelType | None = None,
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
     advanced_quantization_parameters: AdvancedQuantizationParameters | None = None,
     advanced_accuracy_restorer_parameters: AdvancedAccuracyRestorerParameters | None = None,
 ) -> TModel:
@@ -335,7 +336,7 @@ def quantize_with_accuracy_control(
     :type model_type: nncf.ModelType
     :param ignored_scope: An ignored scope that defined the list of model control
         flow graph nodes to be ignored during quantization.
-    :type ignored_scope: nncf.IgnoredScope
+    :type ignored_scope: nncf.Scope
     :param advanced_quantization_parameters: Advanced quantization parameters for
         fine-tuning the quantization algorithm.
     :param advanced_accuracy_restorer_parameters: Advanced parameters for fine-tuning
@@ -414,7 +415,7 @@ def compress_weights(
     mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM,
     ratio: float | None = None,
     group_size: int | None = None,
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
     all_layers: bool | None = None,
     dataset: Dataset | None = None,
     sensitivity_metric: SensitivityMetric | None = None,
@@ -461,7 +462,7 @@ def compress_weights(
     :type group_size: int
     :param ignored_scope: An ignored scope that defined the list of model control
         flow graph nodes to be ignored during quantization.
-    :type ignored_scope: nncf.IgnoredScope
+    :type ignored_scope: nncf.Scope
     :param all_layers: Indicates whether embeddings and last MatMul layers should be compressed to a primary
         precision. By default, the backup precision is assigned for the embeddings and last MatMul layers.
     :type all_layers: bool
@@ -729,7 +730,7 @@ class InitQuantizationParameters(TypedDict):
     subset_size: int
     fast_bias_correction: bool
     model_type: ModelType | None
-    ignored_scope: IgnoredScope | None
+    ignored_scope: Scope | IgnoredScope | None
     advanced_parameters: AdvancedQuantizationParameters | None
 
 
@@ -746,7 +747,7 @@ def quantize_with_tune_hyperparams(
     subset_size: int = 300,
     fast_bias_correction: bool = True,
     model_type: ModelType | None = None,
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
     advanced_quantization_parameters: AdvancedQuantizationParameters | None = None,
 ) -> TModel:
     """

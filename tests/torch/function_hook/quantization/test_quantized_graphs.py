@@ -79,7 +79,7 @@ TEST_MODELS_DESC = [
             partial(ParallelEdgesModel, different_output_ports=True),
             ParallelEdgesModel.INPUT_SIZE,
         ),
-        {"ignored_scope": nncf.IgnoredScope(types=["split"])},
+        {"ignored_scope": nncf.Scope(types=["split"])},
     ),
     (
         ModelDesc("yolo26_attn_block", YOLO26AttentionBlock, YOLO26AttentionBlock.INPUT_SIZE),

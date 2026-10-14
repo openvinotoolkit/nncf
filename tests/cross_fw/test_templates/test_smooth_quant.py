@@ -15,7 +15,7 @@ from typing import Any, Callable, TypeVar
 import pytest
 
 import nncf
-from nncf import IgnoredScope
+from nncf import Scope
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.tensor_statistics.collectors import AbsMaxReducer
@@ -98,15 +98,15 @@ class TemplateTestSQAlgorithm:
         """
 
     @staticmethod
-    def get_ignored_scope(model_cls: Any) -> IgnoredScope:
+    def get_ignored_scope(model_cls: Any) -> Scope:
         """
         Returns quantization ignored scope for given model class.
         Default implementation is an empty ignored scope.
         """
-        return IgnoredScope()
+        return Scope()
 
     @staticmethod
-    def get_quantization_algorithm(ignored_scope: IgnoredScope):
+    def get_quantization_algorithm(ignored_scope: Scope):
         return PostTrainingQuantization(
             subset_size=1,
             model_type=ModelType.TRANSFORMER,

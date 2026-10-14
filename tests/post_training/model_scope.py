@@ -593,7 +593,7 @@ WEIGHT_COMPRESSION_MODELS = [
             "backup_mode": BackupMode.NONE,
             "mode": CompressWeightsMode.INT4_ASYM,
             "awq": True,
-            "ignored_scope": nncf.IgnoredScope(types=["Gather"]),
+            "ignored_scope": nncf.Scope(types=["Gather"]),
         },
         "backends": [BackendType.OV],
     },

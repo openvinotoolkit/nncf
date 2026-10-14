@@ -25,7 +25,7 @@ except ImportError:
     from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
 
 import nncf
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from tests.onnx.opset_converter import convert_opset_version
 
 # This import need to register custom Conerter
@@ -68,7 +68,7 @@ def run(
     model = convert_opset_version(original_model) if convert_model_opset else original_model
     # Execute the pipeline.
     quantized_model = nncf.quantize(
-        model, dataset, subset_size=num_init_samples, ignored_scope=IgnoredScope(names=ignored_scopes)
+        model, dataset, subset_size=num_init_samples, ignored_scope=Scope(names=ignored_scopes)
     )
     # Save the quantized model.
     onnx.save(quantized_model, output_model_path)

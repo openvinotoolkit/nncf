@@ -25,7 +25,7 @@ from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXAWQMultiply
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.torch.quantization.layers import BaseWeightsDecompressor
@@ -547,7 +547,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
 @dataclass
 class ParamIgnoredScope:
     name: str
-    ignored_scope: IgnoredScope
+    ignored_scope: Scope
     ref: int
 
     def __str__(self) -> str:
@@ -557,11 +557,11 @@ class ParamIgnoredScope:
 @pytest.mark.parametrize(
     "param",
     (
-        ParamIgnoredScope("empty", IgnoredScope(), 1),
-        ParamIgnoredScope("name_const", IgnoredScope(names=["linear_weight"]), 0),
-        ParamIgnoredScope("name_op", IgnoredScope(names=["linear"]), 0),
-        ParamIgnoredScope("pattern_const", IgnoredScope(patterns=[".*weight"]), 0),
-        ParamIgnoredScope("pattern_op", IgnoredScope(patterns=["linear*"]), 0),
+        ParamIgnoredScope("empty", Scope(), 1),
+        ParamIgnoredScope("name_const", Scope(names=["linear_weight"]), 0),
+        ParamIgnoredScope("name_op", Scope(names=["linear"]), 0),
+        ParamIgnoredScope("pattern_const", Scope(patterns=[".*weight"]), 0),
+        ParamIgnoredScope("pattern_op", Scope(patterns=["linear*"]), 0),
     ),
     ids=str,
 )

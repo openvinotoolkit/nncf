@@ -145,7 +145,7 @@ class MinMaxQuantization(Algorithm):
         target_device: TargetDevice = TargetDevice.ANY,
         subset_size: int = 300,
         model_type: ModelType | None = None,
-        ignored_scope: IgnoredScope | None = None,
+        ignored_scope: Scope | IgnoredScope | None = None,
         overflow_fix: OverflowFix | None = None,
         quantize_outputs: bool = False,
         inplace_statistics: bool = True,
@@ -333,7 +333,7 @@ class MinMaxQuantization(Algorithm):
         )
         self._unified_scale_groups = []
 
-    def set_ignored_scope(self, ignored_scope: IgnoredScope) -> None:
+    def set_ignored_scope(self, ignored_scope: Scope | IgnoredScope) -> None:
         """
         Set target ignored scope for the MinMax algorithm.
 

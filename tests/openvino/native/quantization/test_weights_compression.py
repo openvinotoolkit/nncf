@@ -58,7 +58,7 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import do_f
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from tests.cross_fw.shared.comparator import compare_stats
@@ -838,7 +838,7 @@ CALCULATE_SCALE_DESCS = [
 @dataclass
 class ParamIgnoredScope:
     name: str
-    ignored_scope: IgnoredScope
+    ignored_scope: Scope
     ref: set[str]
 
     def __str__(self) -> str:
@@ -848,12 +848,12 @@ class ParamIgnoredScope:
 @pytest.mark.parametrize(
     "param",
     (
-        ParamIgnoredScope(name="empty", ignored_scope=IgnoredScope(), ref=3),
-        ParamIgnoredScope(name="type", ignored_scope=IgnoredScope(types=["Gather"]), ref=2),
-        ParamIgnoredScope(name="name_const", ignored_scope=IgnoredScope(names=["matmul_1_data"]), ref=2),
-        ParamIgnoredScope(name="name_op", ignored_scope=IgnoredScope(names=["MatMul_1"]), ref=2),
-        ParamIgnoredScope(name="pattern_const", ignored_scope=IgnoredScope(patterns=[".*data"]), ref=0),
-        ParamIgnoredScope(name="pattern_op", ignored_scope=IgnoredScope(patterns=["Mat.*"]), ref=1),
+        ParamIgnoredScope(name="empty", ignored_scope=Scope(), ref=3),
+        ParamIgnoredScope(name="type", ignored_scope=Scope(types=["Gather"]), ref=2),
+        ParamIgnoredScope(name="name_const", ignored_scope=Scope(names=["matmul_1_data"]), ref=2),
+        ParamIgnoredScope(name="name_op", ignored_scope=Scope(names=["MatMul_1"]), ref=2),
+        ParamIgnoredScope(name="pattern_const", ignored_scope=Scope(patterns=[".*data"]), ref=0),
+        ParamIgnoredScope(name="pattern_op", ignored_scope=Scope(patterns=["Mat.*"]), ref=1),
     ),
     ids=str,
 )

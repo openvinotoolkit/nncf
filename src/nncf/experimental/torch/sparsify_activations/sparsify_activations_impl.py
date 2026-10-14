@@ -101,7 +101,7 @@ class SparsifyActivationsAlgorithm:
     def __init__(
         self,
         target_sparsity_by_scope: dict[TargetScope, float],
-        ignored_scope: IgnoredScope,
+        ignored_scope: Scope | IgnoredScope,
     ):
         """
         :param target_sparsity_by_scope: A dictionary that defines the target sparsity level for specified layers.
@@ -206,7 +206,7 @@ def sparsify_activations(
     model: TModel,
     dataset: Dataset,
     target_sparsity_by_scope: dict[TargetScope, float],
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
 ) -> TModel:
     """
     Post-training activation sparsification on the given model.

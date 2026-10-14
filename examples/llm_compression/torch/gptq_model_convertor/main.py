@@ -82,7 +82,7 @@ def main() -> str:
         model,
         dataset=nncf.Dataset([example_input]),
         mode=nncf.CompressWeightsMode.INT8_ASYM,
-        ignored_scope=nncf.IgnoredScope(
+        ignored_scope=nncf.Scope(
             patterns=[
                 "embed_tokens/.*",
                 "embed_positions/.*",

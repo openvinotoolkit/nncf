@@ -84,7 +84,7 @@ def get_weight_compression_configuration(
     scale_estimation: bool | None = None,
     gptq: bool | None = None,
     lora_correction: bool | None = None,
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
     sensitivity_metric: SensitivityMetric | None = None,
     backup_mode: BackupMode | None = None,
     advanced_parameters: AdvancedCompressionParameters | None = None,
@@ -214,7 +214,7 @@ def check_user_compression_configuration(
     scale_estimation: bool | None,
     gptq: bool | None,
     lora_correction: bool | None,
-    ignored_scope: IgnoredScope | None,
+    ignored_scope: Scope | IgnoredScope | None,
     sensitivity_metric: SensitivityMetric | None,
     backup_mode: BackupMode | None,
     compression_format: CompressionFormat | None,
@@ -361,7 +361,7 @@ class WeightCompression(Algorithm):
         mode: CompressWeightsMode,
         ratio: float,
         group_size: int,
-        ignored_scope: IgnoredScope,
+        ignored_scope: Scope | IgnoredScope,
         all_layers: bool,
         sensitivity_metric: SensitivityMetric,
         awq: bool,
@@ -520,7 +520,7 @@ class WeightCompression(Algorithm):
     def backup_mode(self) -> CompressWeightsMode:
         return self._backup_mode
 
-    def set_ignored_scope(self, ignored_scope: IgnoredScope) -> None:
+    def set_ignored_scope(self, ignored_scope: Scope | IgnoredScope) -> None:
         """
         Set target ignored scope for the Weight Compression algorithm.
 

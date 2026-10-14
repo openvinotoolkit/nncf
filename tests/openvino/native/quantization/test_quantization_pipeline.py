@@ -21,7 +21,7 @@ from nncf.openvino.quantization.quantize_model import quantize_impl
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import QuantizationParameters
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from tests.openvino.native.common import get_dataset_for_test
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import LinearModel
@@ -162,7 +162,7 @@ def test_overflow_fix_applied(model_creator_func, ref_nodes):
             assert np.max(vector) <= 64
 
 
-IGNORED_OPTIONS = [IgnoredScope(names=["MatMul"]), IgnoredScope(names=["Conv"], types=["Add"]), IgnoredScope()]
+IGNORED_OPTIONS = [Scope(names=["MatMul"]), Scope(names=["Conv"], types=["Add"]), Scope()]
 
 
 @pytest.mark.parametrize(
@@ -174,8 +174,8 @@ def test_meta_information(model_creator_func, ignored_options):
             rt_path = path + [key]
             if isinstance(value, TargetDevice):
                 value = value.value
-            if isinstance(value, IgnoredScope):
-                if value == IgnoredScope():
+            if isinstance(value, Scope):
+                if value == Scope():
                     check_parameters(quantized_model, {"ignored_scope": []}, path)
                     continue
                 check_parameters(quantized_model, value.__dict__, rt_path)
@@ -207,7 +207,7 @@ def test_meta_information(model_creator_func, ignored_options):
     "ignored_options, expected_dump",
     [
         (
-            IgnoredScope(names=["conv_weights_0", "conv_weights_1"]),
+            Scope(names=["conv_weights_0", "conv_weights_1"]),
             {
                 "validate": None,
                 "types": None,
@@ -217,7 +217,7 @@ def test_meta_information(model_creator_func, ignored_options):
             },
         ),
         (
-            IgnoredScope(
+            Scope(
                 subgraphs=[
                     nncf.Subgraph(
                         inputs=[
@@ -236,7 +236,7 @@ def test_meta_information(model_creator_func, ignored_options):
             },
         ),
         (
-            IgnoredScope(names=["MatMul"], types=["Add"]),
+            Scope(names=["MatMul"], types=["Add"]),
             {
                 "validate": None,
                 "types": "['Add']",
@@ -245,7 +245,7 @@ def test_meta_information(model_creator_func, ignored_options):
                 "names": "['MatMul']",
             },
         ),
-        (IgnoredScope(), {"": "[]"}),
+        (Scope(), {"": "[]"}),
     ],
 )
 def test_ignored_scope_dump(ignored_options, expected_dump, tmp_path):
