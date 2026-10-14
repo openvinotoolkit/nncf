@@ -755,7 +755,7 @@ Insert binary masks for the parameters and calculate the initial masks by the gi
 <li><p><strong>model</strong> (<em>TModel</em>) – The model to be pruned.</p></li>
 <li><p><strong>mode</strong> (<em>nncf.parameters.PruneMode</em>) – The mode of pruning to be applied.</p></li>
 <li><p><strong>ratio</strong> (<em>float</em><em> | </em><em>None</em>) – The ratio of parameters to prune from the model.</p></li>
-<li><p><strong>ignored_scope</strong> (<em>nncf.scopes.IgnoredScope</em><em> | </em><em>None</em>) – A scope of parameters to ignore during pruning. Defaults to None.</p></li>
+<li><p><strong>ignored_scope</strong> (<em>nncf.scopes.Scope</em><em> | </em><em>nncf.scopes.IgnoredScope</em><em> | </em><em>None</em>) – A scope of parameters to ignore during pruning. Defaults to None.</p></li>
 <li><p><strong>examples_inputs</strong> (<em>Any</em><em> | </em><em>None</em>) – Example inputs to guide the pruning process. Defaults to None.</p></li>
 </ul>
 </dd>
@@ -830,7 +830,7 @@ The size of group is 16.</p>
 and the rest to INT8_ASYM).</p></li>
 <li><p><strong>group_size</strong> (<em>int</em>) – number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
 The value -1 means no grouping.</p></li>
-<li><p><strong>ignored_scope</strong> (<em>nncf.IgnoredScope</em>) – An ignored scope that defined the list of model control
+<li><p><strong>ignored_scope</strong> (<a class="reference internal" href="#nncf.Scope" title="nncf.Scope"><em>nncf.Scope</em></a>) – An ignored scope that defined the list of model control
 flow graph nodes to be ignored during quantization.</p></li>
 <li><p><strong>all_layers</strong> (<em>bool</em>) – Indicates whether embeddings and last MatMul layers should be compressed to a primary
 precision. By default, the backup precision is assigned for the embeddings and last MatMul layers.</p></li>
@@ -904,7 +904,7 @@ bias correction method which is more accurate, in general, and takes
 more time but requires less memory.</p></li>
 <li><p><strong>model_type</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#nncf.ModelType" title="nncf.ModelType"><em>nncf.ModelType</em></a><em>]</em>) – Model type is needed to specify additional patterns
 in the model. Supported only <cite>transformer</cite> now.</p></li>
-<li><p><strong>ignored_scope</strong> (<em>Optional</em><em>[</em><em>nncf.IgnoredScope</em><em>]</em>) – An ignored scope that defined the list of model control
+<li><p><strong>ignored_scope</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#nncf.Scope" title="nncf.Scope"><em>nncf.Scope</em></a><em>]</em>) – An ignored scope that defined the list of model control
 flow graph nodes to be ignored during quantization.</p></li>
 <li><p><strong>advanced_parameters</strong> (<a class="reference internal" href="quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.AdvancedQuantizationParameters" title="nncf.quantization.advanced_parameters.AdvancedQuantizationParameters"><em>nncf.quantization.advanced_parameters.AdvancedQuantizationParameters</em></a><em> | </em><em>None</em>) – Advanced quantization parameters for
 fine-tuning the quantization algorithm.</p></li>
@@ -957,7 +957,7 @@ bias correction method which is more accurate, in general, and takes
 more time but requires less memory.</p></li>
 <li><p><strong>model_type</strong> (<a class="reference internal" href="#nncf.ModelType" title="nncf.ModelType"><em>nncf.ModelType</em></a>) – Model type is needed to specify additional patterns
 in the model. Supported only <cite>transformer</cite> now.</p></li>
-<li><p><strong>ignored_scope</strong> (<em>nncf.IgnoredScope</em>) – An ignored scope that defined the list of model control
+<li><p><strong>ignored_scope</strong> (<a class="reference internal" href="#nncf.Scope" title="nncf.Scope"><em>nncf.Scope</em></a>) – An ignored scope that defined the list of model control
 flow graph nodes to be ignored during quantization.</p></li>
 <li><p><strong>advanced_quantization_parameters</strong> (<a class="reference internal" href="quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.AdvancedQuantizationParameters" title="nncf.quantization.advanced_parameters.AdvancedQuantizationParameters"><em>nncf.quantization.advanced_parameters.AdvancedQuantizationParameters</em></a><em> | </em><em>None</em>) – Advanced quantization parameters for
 fine-tuning the quantization algorithm.</p></li>

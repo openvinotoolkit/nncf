@@ -388,7 +388,7 @@ Functions
    :type group_size: int
    :param ignored_scope: An ignored scope that defined the list of model control
        flow graph nodes to be ignored during quantization.
-   :type ignored_scope: nncf.IgnoredScope
+   :type ignored_scope: nncf.Scope
    :param all_layers: Indicates whether embeddings and last MatMul layers should be compressed to a primary
        precision. By default, the backup precision is assigned for the embeddings and last MatMul layers.
    :type all_layers: bool
@@ -467,7 +467,7 @@ Functions
    :type  model_type: Optional[nncf.ModelType]
    :param ignored_scope: An ignored scope that defined the list of model control
        flow graph nodes to be ignored during quantization.
-   :type  ignored_scope: Optional[nncf.IgnoredScope]
+   :type  ignored_scope: Optional[nncf.Scope]
    :param advanced_parameters: Advanced quantization parameters for
        fine-tuning the quantization algorithm.
    :return: The quantized model.
@@ -514,7 +514,7 @@ Functions
    :type model_type: nncf.ModelType
    :param ignored_scope: An ignored scope that defined the list of model control
        flow graph nodes to be ignored during quantization.
-   :type ignored_scope: nncf.IgnoredScope
+   :type ignored_scope: nncf.Scope
    :param advanced_quantization_parameters: Advanced quantization parameters for
        fine-tuning the quantization algorithm.
    :param advanced_accuracy_restorer_parameters: Advanced parameters for fine-tuning
