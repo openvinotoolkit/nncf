@@ -47,6 +47,7 @@ from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParame
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import QuantizationParameters
+from nncf.quantization.advanced_parameters import ScopedConfig
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
 from nncf.quantization.algorithms.accuracy_control.algorithm import calculate_accuracy_drop
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
@@ -329,6 +330,7 @@ def compress_weights_impl(
     backup_mode: BackupMode,
     compression_format: CompressionFormat,
     advanced_parameters: AdvancedCompressionParameters | None = None,
+    scoped_configs: list[ScopedConfig] | None = None,
 ) -> onnx.ModelProto:
     if model.opset_import[0].version < 13:
         msg = "ONNX models with opset version < 13 do not support per-channel quantization."
@@ -361,6 +363,7 @@ def compress_weights_impl(
         backup_mode,
         compression_format,
         advanced_parameters,
+        scoped_configs,
     )
     graph = build_graph(model)
 

@@ -46,5 +46,5 @@ from nncf.scopes import get_difference_scope
         ),
     ),
 )
-def test_ignored_scope_diff(scope_1, scope_2, ref):
+def test_scope_diff(scope_1, scope_2, ref):
     assert get_difference_scope(scope_1, scope_2) == ref

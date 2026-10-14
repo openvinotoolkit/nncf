@@ -30,12 +30,14 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import ScopedConfig
 from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
 from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_quantization_param_grids
 from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipeline
 from nncf.quantization.algorithms.weight_compression.algorithm import check_user_compression_configuration
 from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
+from nncf.quantization.algorithms.weight_compression.algorithm import validate_scoped_configs
 from nncf.quantization.telemetry_extractors import CompressionStartedWithCompressWeightsApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeWithAccuracyControlApi
@@ -424,6 +426,7 @@ def compress_weights(
     backup_mode: BackupMode | None = None,
     compression_format: CompressionFormat = CompressionFormat.DQ,
     advanced_parameters: AdvancedCompressionParameters | None = None,
+    scoped_configs: list[ScopedConfig] | None = None,
 ) -> TModel:
     """
     Compress model weights.
@@ -492,10 +495,23 @@ def compress_weights(
     :type compression_format: nncf.CompressionFormat
     :param advanced_parameters: Advanced parameters for compression algorithms.
     :type advanced_parameters: nncf.AdvancedCompressionParameters
+    :param scoped_configs: A list of user-defined weight compression configurations bound to portions of the
+        model. For all the matched nodes the given configuration is used instead of the one assigned by the
+        algorithm, which makes it possible to compress certain layers, e.g. attention or MoE router layers, to a
+        precision different from the one defined by `mode`, `ratio` and `backup_mode`. The scoped config
+        takes precedence over the mixed precision assignment, the `ignored_scope` and the `all_layers` options.
+        If several scoped configs match the same node, the last one in the list takes precedence. For example, a
+        scoped config of a whole block followed by a scoped config of a single layer of this block compresses the block
+        with the first configuration, except for this layer, while the opposite order compresses the whole block
+        with the second configuration.
+    :type scoped_configs: list[nncf.ScopedConfig]
     :return: The non-trainable model with compressed weights.
     """
     backend = get_backend(model)
     compression_weights_impl: Callable[..., Any] | None = None
+    # Validate the scoped configs here since we access the mode in the next line.
+    validate_scoped_configs(scoped_configs, advanced_parameters)
+    selected_modes = {mode} | {scoped_config.mode for scoped_config in scoped_configs or []}
 
     if backend == BackendType.TORCH:
         from nncf.torch.function_hook.quantization.quantize_model import (
@@ -503,7 +519,7 @@ def compress_weights(
         )
         from nncf.torch.model_creation import is_wrapped_model
 
-        not_supported_modes = [
+        not_supported_modes = {
             CompressWeightsMode.NF4,
             CompressWeightsMode.MXFP4,
             CompressWeightsMode.MXFP8_E4M3,
@@ -513,10 +529,12 @@ def compress_weights(
             CompressWeightsMode.CODEBOOK,
             CompressWeightsMode.ADAPTIVE_CODEBOOK,
             CompressWeightsMode.CB4,
-        ]
-        if mode in not_supported_modes:
+        }
+        unsupported_selected_modes = selected_modes & not_supported_modes
+        if unsupported_selected_modes:
             msg = (
-                f"Torch backend does not support {[m.value for m in not_supported_modes]} modes for weight compression."
+                f"Torch backend does not support {sorted(m.value for m in not_supported_modes)} modes "
+                "for weight compression."
             )
             raise nncf.ParameterNotSupportedError(msg)
 
@@ -530,7 +548,8 @@ def compress_weights(
             msg = "Torch backend does not support statistics caching."
             raise nncf.ParameterNotSupportedError(msg)
 
-        if compression_format == CompressionFormat.FQ and group_size != -1:
+        group_sizes = {group_size} | {sc.compression_config.group_size for sc in scoped_configs or []}
+        if compression_format == CompressionFormat.FQ and group_sizes != {-1}:
             msg = "Torch backend does not support FQ compression format for group-wise quantization."
             raise nncf.ParameterNotSupportedError(msg)
 
@@ -553,7 +572,7 @@ def compress_weights(
             compress_weights_impl as fx_compression_weights_impl,
         )
 
-        not_supported_modes = [
+        not_supported_modes = {
             CompressWeightsMode.NF4,
             CompressWeightsMode.MXFP4,
             CompressWeightsMode.MXFP8_E4M3,
@@ -563,10 +582,12 @@ def compress_weights(
             CompressWeightsMode.CODEBOOK,
             CompressWeightsMode.ADAPTIVE_CODEBOOK,
             CompressWeightsMode.CB4,
-        ]
-        if mode in not_supported_modes:
+        }
+        unsupported_selected_modes = selected_modes & not_supported_modes
+        if unsupported_selected_modes:
             msg = (
-                f"Torch backend does not support {[m.value for m in not_supported_modes]} modes for weight compression."
+                f"Torch backend does not support {sorted(m.value for m in not_supported_modes)} modes "
+                "for weight compression."
             )
             raise nncf.ParameterNotSupportedError(msg)
 
@@ -598,17 +619,18 @@ def compress_weights(
             raise nncf.ParameterNotSupportedError(msg)
 
         if any((awq, scale_estimation, gptq, lora_correction)):
-            not_supported_modes = [
+            not_supported_modes = {
                 CompressWeightsMode.MXFP4,
                 CompressWeightsMode.MXFP8_E4M3,
                 CompressWeightsMode.FP8_E4M3,
                 CompressWeightsMode.FP4,
                 CompressWeightsMode.NVFP4,
-            ]
-            if mode in not_supported_modes:
+            }
+            unsupported_selected_modes = selected_modes & not_supported_modes
+            if unsupported_selected_modes:
                 msg = (
                     "AWQ, Scale estimation, GPTQ or Lora Correction algorithm is defined,"
-                    f" but mode in {[m.value for m in not_supported_modes]}."
+                    f" but mode in {sorted(m.value for m in not_supported_modes)}."
                 )
                 raise nncf.ParameterNotSupportedError(msg)
 
@@ -625,7 +647,7 @@ def compress_weights(
     elif backend == BackendType.ONNX:
         from nncf.onnx.quantization.quantize_model import compress_weights_impl as onnx_compress_weights_impl
 
-        not_supported_modes = [
+        not_supported_modes = {
             CompressWeightsMode.NF4,
             CompressWeightsMode.MXFP4,
             CompressWeightsMode.MXFP8_E4M3,
@@ -634,10 +656,12 @@ def compress_weights(
             CompressWeightsMode.CODEBOOK,
             CompressWeightsMode.ADAPTIVE_CODEBOOK,
             CompressWeightsMode.CB4,
-        ]
-        if mode in not_supported_modes:
+        }
+        unsupported_selected_modes = selected_modes & not_supported_modes
+        if unsupported_selected_modes:
             msg = (
-                f"ONNX backend does not support {[m.value for m in not_supported_modes]} modes for weight compression."
+                f"ONNX backend does not support {sorted(m.value for m in not_supported_modes)} modes "
+                "for weight compression."
             )
             raise nncf.ParameterNotSupportedError(msg)
 
@@ -671,6 +695,7 @@ def compress_weights(
         backup_mode,
         compression_format,
         advanced_parameters,
+        scoped_configs,
     )
     weight_compression_configuration = get_weight_compression_configuration(
         mode,
@@ -686,6 +711,7 @@ def compress_weights(
         sensitivity_metric,
         backup_mode,
         advanced_parameters,
+        scoped_configs,
     )
 
     return compression_weights_impl(
