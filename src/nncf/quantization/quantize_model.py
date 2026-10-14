@@ -548,7 +548,8 @@ def compress_weights(
             msg = "Torch backend does not support statistics caching."
             raise nncf.ParameterNotSupportedError(msg)
 
-        if compression_format == CompressionFormat.FQ and group_size != -1:
+        group_sizes = {group_size} | {sc.compression_config.group_size for sc in scoped_configs or []}
+        if compression_format == CompressionFormat.FQ and group_sizes != {-1}:
             msg = "Torch backend does not support FQ compression format for group-wise quantization."
             raise nncf.ParameterNotSupportedError(msg)
 
