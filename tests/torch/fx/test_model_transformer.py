@@ -22,9 +22,11 @@ from torchao.quantization.pt2e.observer import PerChannelMinMaxObserver
 from torchao.quantization.pt2e.utils import create_getattr_from_value
 
 import nncf
+import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.experimental.torch.fx.commands import FXModelExtractionCommand
 from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
@@ -40,7 +42,7 @@ from nncf.experimental.torch.fx.transformations import module_insertion_transfor
 from nncf.experimental.torch.fx.transformations import node_removal_transformation_builder
 from nncf.experimental.torch.fx.transformations import output_insertion_transformation_builder
 from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder
-from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
+from nncf.experimental.torch.fx.transformations import remove_split_getitem_nodes
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.utils import get_model_device
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
@@ -55,6 +57,8 @@ from tests.torch.test_models.synthetic import ConvolutionWithSeveralOutputs
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModel
 from tests.torch.test_models.synthetic import MultiBranchesConnectedModelWithConcat
 from tests.torch.test_models.synthetic import ScalarCloneTestModel
+from tests.torch.test_models.synthetic import SplitBlockModel
+from tests.torch.test_models.synthetic import TopKModel
 
 REF_DIR = TEST_ROOT / "torch" / "data" / "fx"
 
@@ -66,42 +70,42 @@ TRANSFORMED_GRAPH_DIR_NAME = REF_DIR / "transformed"
 class ModelExtractionTestCase:
     model: torch.nn.Module
     input_shape: tuple[int, ...]
-    command: PTModelExtractionCommand
+    command: FXModelExtractionCommand
 
 
 MODEL_EXTRACTION_CASES = (
     ModelExtractionTestCase(
-        ConvolutionWithNotTensorBiasModel, (1, 1, 3, 3), PTModelExtractionCommand([("conv2d", 0)], [("conv2d", 0)])
+        ConvolutionWithNotTensorBiasModel, (1, 1, 3, 3), FXModelExtractionCommand([("conv2d", 0)], [("conv2d", 0)])
     ),
     ModelExtractionTestCase(
-        ConvolutionWithAllConstantInputsModel, (1, 1, 3, 3), PTModelExtractionCommand([("conv2d", 0)], [("conv2d", 0)])
+        ConvolutionWithAllConstantInputsModel, (1, 1, 3, 3), FXModelExtractionCommand([("conv2d", 0)], [("conv2d", 0)])
     ),
     ModelExtractionTestCase(
-        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand([("conv2d_1", 0)], [("add__1", 0)])
+        MultiBranchesConnectedModel, (1, 3, 3, 3), FXModelExtractionCommand([("conv2d_1", 0)], [("add__1", 0)])
     ),
     ModelExtractionTestCase(
-        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand([("conv2d", 0)], [("add_", 0), ("add", 0)])
+        MultiBranchesConnectedModel, (1, 3, 3, 3), FXModelExtractionCommand([("conv2d", 0)], [("add_", 0), ("add", 0)])
     ),
     ModelExtractionTestCase(
         MultiBranchesConnectedModel,
         (1, 3, 3, 3),
-        PTModelExtractionCommand([("conv2d", 0), ("conv2d_1", 0)], [("add_", 0), ("add__1", 0)]),
+        FXModelExtractionCommand([("conv2d", 0), ("conv2d_1", 0)], [("add_", 0), ("add__1", 0)]),
     ),
     ModelExtractionTestCase(
-        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand([("conv2d", 0)], [("conv2d_2", 0)])
+        MultiBranchesConnectedModel, (1, 3, 3, 3), FXModelExtractionCommand([("conv2d", 0)], [("conv2d_2", 0)])
     ),
     ModelExtractionTestCase(
-        MultiBranchesConnectedModel, (1, 3, 3, 3), PTModelExtractionCommand([("conv2d", 0)], [("add__1", 0)])
+        MultiBranchesConnectedModel, (1, 3, 3, 3), FXModelExtractionCommand([("conv2d", 0)], [("add__1", 0)])
     ),
     ModelExtractionTestCase(
         ConcatWithInput,
         ConcatWithInput.INPUT_SIZE,
-        PTModelExtractionCommand([("cat", 1), ("conv2d", 0)], [("cat", 0)]),
+        FXModelExtractionCommand([("cat", 1), ("conv2d", 0)], [("cat", 0)]),
     ),
     ModelExtractionTestCase(
         ConcatWithReluInput,
         ConcatWithReluInput.INPUT_SIZE,
-        PTModelExtractionCommand([("cat", 1), ("conv2d", 0)], [("cat", 0)]),
+        FXModelExtractionCommand([("cat", 1), ("conv2d", 0)], [("cat", 0)]),
     ),
 )
 
@@ -142,7 +146,7 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ModelExtractionTestCase(
                 ConvolutionWithNotTensorBiasModel,
                 (1, 1, 3, 3),
-                PTModelExtractionCommand([("conv2d", 0)], [("output", 0)]),
+                FXModelExtractionCommand([("conv2d", 0)], [("output", 0)]),
             ),
             False,
             "(conv2d,)",
@@ -151,14 +155,14 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ModelExtractionTestCase(
                 ConvolutionWithNotTensorBiasModel,
                 (1, 1, 3, 3),
-                PTModelExtractionCommand([("conv2d", 0)], [("conv2d", 0), ("output", 0), ("conv2d", 0)]),
+                FXModelExtractionCommand([("conv2d", 0)], [("conv2d", 0), ("output", 0), ("conv2d", 0)]),
             ),
             False,
             "(conv2d, conv2d, conv2d)",
         ),
         (
             ModelExtractionTestCase(
-                ConvolutionWithSeveralOutputs, (1, 1, 3, 3), PTModelExtractionCommand([("conv2d", 0)], [("output", 0)])
+                ConvolutionWithSeveralOutputs, (1, 1, 3, 3), FXModelExtractionCommand([("conv2d", 0)], [("output", 0)])
             ),
             False,
             "([conv2d, add],)",
@@ -167,7 +171,7 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ModelExtractionTestCase(
                 ConvolutionWithSeveralOutputs,
                 (1, 1, 3, 3),
-                PTModelExtractionCommand([("conv2d", 0)], [("conv2d", 0), ("output", 0), ("conv2d", 0)]),
+                FXModelExtractionCommand([("conv2d", 0)], [("conv2d", 0), ("output", 0), ("conv2d", 0)]),
             ),
             False,
             "(conv2d, [conv2d, add], conv2d)",
@@ -176,7 +180,7 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ModelExtractionTestCase(
                 ConvolutionWithNotTensorBiasModel,
                 (1, 1, 3, 3),
-                PTModelExtractionCommand([("conv2d", 0)], [("output", 0)]),
+                FXModelExtractionCommand([("conv2d", 0)], [("output", 0)]),
             ),
             True,
             "(conv2d,)",
@@ -185,7 +189,7 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ModelExtractionTestCase(
                 ConvolutionWithNotTensorBiasModel,
                 (1, 1, 3, 3),
-                PTModelExtractionCommand([("conv2d", 0)], [("conv2d", 0), ("output", 0), ("conv2d", 0)]),
+                FXModelExtractionCommand([("conv2d", 0)], [("conv2d", 0), ("output", 0), ("conv2d", 0)]),
             ),
             True,
             "(conv2d, conv2d, conv2d)",
@@ -194,7 +198,7 @@ def test_model_extraction(test_case: ModelExtractionTestCase):
             ModelExtractionTestCase(
                 ConcatWithReluInput,
                 ConcatWithReluInput.INPUT_SIZE,
-                PTModelExtractionCommand([("cat", 1)], [("output", 0)]),
+                FXModelExtractionCommand([("cat", 1)], [("output", 0)]),
             ),
             False,
             "(conv2d_1,)",
@@ -624,3 +628,38 @@ def test_constant_folding_with_constraints(is_per_channel):
     path_to_dot = TRANSFORMED_GRAPH_DIR_NAME / dot_file_name
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
     compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
+
+
+def test_remove_split_getitem_nodes():
+    ex_inputs = torch.ones(SplitBlockModel.INPUT_SHAPE)
+    captured_model = get_torch_fx_model(SplitBlockModel(), ex_inputs)
+    nncf_graph = GraphConverter.create_nncf_graph(captured_model)
+
+    split_nodes = nncf_graph.get_nodes_by_metatypes([om.PTSplitMetatype])
+    getitem_nodes = [node for node in nncf_graph.get_all_nodes() if node.node_type == "__getitem__"]
+
+    getitem_consumers = {n.node_name for getitem_node in getitem_nodes for n in nncf_graph.get_next_nodes(getitem_node)}
+
+    remove_split_getitem_nodes(nncf_graph)
+
+    # All getitem nodes are removed
+    assert [node for node in nncf_graph.get_all_nodes() if node.node_type == "__getitem__"] == []
+    # The split node now connects exactly to the consumers of the getitem nodes.
+    split_next = {node.node_name for node in nncf_graph.get_next_nodes(split_nodes[0])}
+    assert split_next == getitem_consumers
+
+
+def test_remove_split_getitem_nodes_keeps_non_split_getitems():
+    model = TopKModel()
+    ex_inputs = torch.ones(TopKModel.INPUT_SHAPE)
+    captured_model = get_torch_fx_model(model, ex_inputs)
+    nncf_graph = GraphConverter.create_nncf_graph(captured_model)
+    getitem_nodes_before = {node.node_name for node in nncf_graph.get_all_nodes() if node.node_type == "__getitem__"}
+    nodes_before = len(nncf_graph.get_all_nodes())
+
+    remove_split_getitem_nodes(nncf_graph)
+
+    # getitem nodes that are not after a split are not removed.
+    getitem_nodes_after = {node.node_name for node in nncf_graph.get_all_nodes() if node.node_type == "__getitem__"}
+    assert getitem_nodes_after == getitem_nodes_before
+    assert len(nncf_graph.get_all_nodes()) == nodes_before

@@ -23,6 +23,8 @@ from torchao.quantization.pt2e.utils import _fuse_conv_bn_
 from torchao.quantization.pt2e.utils import create_getattr_from_value
 
 import nncf
+import nncf.torch.graph.operator_metatypes as om
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.torch.fx.constant_folding import constant_fold
@@ -867,3 +869,17 @@ class DuplicateDQPassNoAnnotations(PassBase):
         graph_module.graph.eliminate_dead_code()
         graph_module.recompile()
         return PassResult(graph_module, True)
+
+
+def remove_split_getitem_nodes(graph: NNCFGraph) -> None:
+    """
+    Removes __getitem__ nodes that unpack a tensor from a split operation, reconnecting the split
+    directly to the getitem's consumers. A statistics/quantizer point placed on such a getitem would
+    receive the split's output tuple instead of a tensor and fail at collection time.
+
+    :param graph: The NNCFGraph to be modified in place.
+    """
+    for split_node in graph.get_nodes_by_metatypes([om.PTSplitMetatype]):
+        for getitem_node in graph.get_next_nodes(split_node):
+            if getitem_node.node_type == "__getitem__":
+                graph.remove_passthrough_node(getitem_node)

@@ -12,7 +12,7 @@ Please refer to this [document](/docs/usage/Quantization.md) for details of the 
 Quantize the model using the [Post Training Quantization](../../post_training_compression/post_training_quantization/Usage.md) method.
 
 ```python
-model = TorchModel() # instance of torch.nn.Module
+model = TorchModel()  # instance of torch.nn.Module
 quantized_model = nncf.quantize(model, ...)
 ```
 
@@ -34,6 +34,7 @@ Trace the model via inference in framework operations.
 ```python
 # To OpenVINO format
 import openvino as ov
+
 ov_quantized_model = ov.convert_model(quantized_model.cpu(), example_input=dummy_input)
 ```
 

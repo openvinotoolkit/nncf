@@ -25,10 +25,10 @@ The Weights Compression algorithm is aimed at compressing the weights of the mod
 
 By default, the algorithm applies asymmetric 8-bit integer quantization (INT8_ASYM mode) to all weights. For symmetric quantization without zero point, the INT8_SYM mode is also available. Both modes typically preserve model accuracy while providing decent performance improvements.
 
-| Compression Mode | Element type | Scale type | Granularity              | Description                |
-|------------------|--------------|------------|--------------------------|----------------------------|
-| INT8_ASYM        | INT8         | FP16       | Per-channel              | [Asymmetric quantization](/docs/usage/Quantization.md#asymmetric-quantization) |
-| INT8_SYM         | INT8         | FP16       | Per-channel              | [Symmetric quantization](/docs/usage/Quantization.md#symmetric-quantization) |
+| Compression Mode | Element type | Scale type | Granularity              | Supported backends               | Description                |
+|------------------|--------------|------------|--------------------------|----------------------------------|----------------------------|
+| INT8_ASYM        | INT8         | FP16       | Per-channel              | OpenVINO, PyTorch, ONNX, TorchFX | [Asymmetric quantization](/docs/usage/Quantization.md#asymmetric-quantization) |
+| INT8_SYM         | INT8         | FP16       | Per-channel              | OpenVINO, PyTorch, ONNX, TorchFX | [Symmetric quantization](/docs/usage/Quantization.md#symmetric-quantization) |
 
 #### Mixed precision modes
 
@@ -44,18 +44,18 @@ Default backup precision:
 
 NNCF can automatically distribute precision assignments based on quantization sensitivity using the `ratio` parameter. For example, with `ratio=0.9`, layers (excluding special ones) accounting for 90% of model weights receive primary precision, while the remaining layers use backup precision. This distribution minimizes overall quality deterioration by prioritizing less sensitive layers for lower precision.
 
-| Compression Mode | Element type | Scale type | Granularity              | Description |
-|------------------|--------------|------------|--------------------------|-------------|
-| INT4_SYM         | INT4         | FP16       | Per-channel / Group-wise | [Symmetric quantization](/docs/usage/Quantization.md#symmetric-quantization) |
-| INT4_ASYM        | INT4         | FP16       | Per-channel / Group-wise | [Asymmetric quantization](/docs/usage/Quantization.md#asymmetric-quantization) |
-| NF4              | FP32         | FP16       | Per-channel / Group-wise | [NormalFloat-4](https://arxiv.org/pdf/2305.14314v1.pdf) lookup table with 16 FP32 values |
-| CODEBOOK         | Any          | FP16       | Per-channel / Group-wise | Arbitrary lookup table (codebook) |
-| CB4              | E4M3         | FP16       | Per-channel / Group-wise | A fixed lookup table with 16 E4M3 values based on NF4 values |
-| MXFP4            | E2M1         | E8M0       | Group-wise (32)          | [MX-compliant FP4](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
-| MXFP8_E4M3       | E4M3         | E8M0       | Group-wise (32)          | [MX-compliant FP8](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
-|   FP8_E4M3       | E4M3         | FP16       | Per-channel / Group-wise | [FP8](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
-|   FP4            | E2M1         | FP16       | Per-channel / Group-wise | [FP4](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
-| NVFP4            | E2M1         | E4M3 per group / FP32 per weight | Group-wise (16)          | [NVFP4](https://arxiv.org/abs/2509.25149) |
+| Compression Mode | Element type | Scale type | Granularity              | Supported backends               | Description |
+|------------------|--------------|------------|--------------------------|----------------------------------|-------------|
+| INT4_SYM         | INT4         | FP16       | Per-channel / Group-wise | OpenVINO, PyTorch, ONNX, TorchFX | [Symmetric quantization](/docs/usage/Quantization.md#symmetric-quantization) |
+| INT4_ASYM        | INT4         | FP16       | Per-channel / Group-wise | OpenVINO, PyTorch, ONNX, TorchFX | [Asymmetric quantization](/docs/usage/Quantization.md#asymmetric-quantization) |
+| NF4              | FP32         | FP16       | Per-channel / Group-wise | OpenVINO                         | [NormalFloat-4](https://arxiv.org/pdf/2305.14314v1.pdf) lookup table with 16 FP32 values |
+| CODEBOOK         | Any          | FP16       | Per-channel / Group-wise | OpenVINO                         | Arbitrary lookup table (codebook) |
+| CB4              | E4M3         | FP16       | Per-channel / Group-wise | OpenVINO                         | A fixed lookup table with 16 E4M3 values based on NF4 values |
+| MXFP4            | E2M1         | E8M0       | Group-wise (32)          | OpenVINO                         | [MX-compliant FP4](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
+| MXFP8_E4M3       | E4M3         | E8M0       | Group-wise (32)          | OpenVINO                         | [MX-compliant FP8](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
+|   FP8_E4M3       | E4M3         | FP16       | Per-channel / Group-wise | OpenVINO, ONNX                   | [FP8](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
+|   FP4            | E2M1         | FP16       | Per-channel / Group-wise | OpenVINO                         | [FP4](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
+| NVFP4            | E2M1         | E4M3 per group / FP32 per weight | Group-wise (16)          | OpenVINO              | [NVFP4](https://arxiv.org/abs/2509.25149) |
 
 **Note**: Granularity refers to the scope of elements sharing quantization parameters. "Per-channel" applies different parameters for each output channel, while "Group-wise" divides weights into groups (e.g., group_size=128) that share the same parameters.
 
@@ -72,28 +72,34 @@ Percent of the rest layers compressed to 4-bit can be configured by "ratio" para
 
 ```python
 from nncf import compress_weights
-compressed_model = compress_weights(model) # model is openvino.Model object
+
+compressed_model = compress_weights(model)  # model is openvino.Model object
 ```
 
 - Compress weights symmetrically to 8-bit integer data type.
 
 ```python
 from nncf import compress_weights, CompressWeightsMode
-compressed_model = compress_weights(model, mode=CompressWeightsMode.INT8_SYM) # model is openvino.Model object
+
+compressed_model = compress_weights(model, mode=CompressWeightsMode.INT8_SYM)  # model is openvino.Model object
 ```
 
 - Compress weights symmetrically to 4-bit integer data type with group size = 128, except embeddings, convolutions and last linear layers - they are compressed asymmetrically to 8-bit integer data type.
 
 ```python
 from nncf import compress_weights, CompressWeightsMode
-compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_SYM) # model is openvino.Model object
+
+compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_SYM)  # model is openvino.Model object
 ```
 
 - Compress weights to NF4 with group size = 128, except embeddings, convolutions and last linear layers - they are remain in original floating-point precision.
 
 ```python
 from nncf import compress_weights, BackupMode, CompressWeightsMode
-compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4, backup_mode=BackupMode.NONE) # model is openvino.Model object
+
+compressed_model = compress_weights(
+    model, mode=CompressWeightsMode.NF4, backup_mode=BackupMode.NONE
+)  # model is openvino.Model object
 ```
 
 - Generally, `INT4_SYM` mode is the fastest mixed-precision mode, but it may lead to a significant accuracy degradation or perplexity increase.
@@ -105,8 +111,50 @@ compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4, backup_
 
 ```python
 from nncf import compress_weights, CompressWeightsMode
-compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_ASYM, group_size=64, ratio=0.9) # model is openvino.Model object
+
+compressed_model = compress_weights(
+    model, mode=CompressWeightsMode.INT4_ASYM, group_size=64, ratio=0.9
+)  # model is openvino.Model object
 ```
+
+#### Custom precision for specific layers
+
+- The `scoped_configs` parameter assigns a compression configuration (`mode`, `group_size`) to certain layers
+  explicitly. A typical use case is a Mixture-of-Experts model, where the experts are compressed to 4 bits, while the router layers are kept in 8 bits to preserve accuracy.
+
+```python
+import nncf
+from nncf import compress_weights, CompressWeightsMode, ScopedConfig
+
+compressed_model = compress_weights(
+    model,  # model is openvino.Model object
+    mode=CompressWeightsMode.INT4_SYM,
+    group_size=64,
+    ratio=1.0,
+    scoped_configs=[
+        ScopedConfig(
+            patterns=[".*self_attn.*", ".*router.*"],
+            mode=CompressWeightsMode.INT8_ASYM,
+            group_size=-1,
+        ),
+        ScopedConfig(
+            patterns=[".*mul.*"],
+            mode=CompressWeightsMode.INT4_ASYM,
+            group_size=128,
+        ),
+    ],
+)
+```
+
+- Each `nncf.ScopedConfig` selects layers by the same rules as [the ignored scope](/docs/usage/IgnoredScope.md):
+  node `names`, regular expression `patterns`, operation `types` and `subgraphs`.
+
+- How the config of a layer is selected:
+  1. **Scoped configs** - a matched layer gets the config of the scoped config. If several match, the **last** one
+     in the list wins.
+  2. **Ignored scope** - layers in the `ignored_scope` are not compressed, unless a scoped config matches them in which case scoped config takes precedence.
+  3. **All Other Layers** - gets the config from the main API (`mode`, `group_size`, `ratio`, `backup_mode`,
+     `all_layers`). The mixed precision `ratio` is counted only over layers who are not defined in `scoped_configs` or `ignored_scope`.
 
 #### Data-aware methods
 
@@ -118,8 +166,11 @@ On the average the data-aware mixed-precision weight compression takes more time
 
 ```python
 from nncf import compress_weights, CompressWeightsMode, Dataset
+
 nncf_dataset = nncf.Dataset(data_source, transform_fn)
-compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_SYM, ratio=0.8, dataset=nncf_dataset) # model is openvino.Model object
+compressed_model = compress_weights(
+    model, mode=CompressWeightsMode.INT4_SYM, ratio=0.8, dataset=nncf_dataset
+)  # model is openvino.Model object
 ```
 
 - Additionally, it is possible to generate a synthetic dataset by the `nncf.data.generate_text_data` method to use it in the data-aware weight compression. The method takes a language model (e.g. from `optimum.intel.openvino`) and a tokenizer (e.g. from `transformers`) as input and returns the list of strings generated by the model. Note that the dataset generation takes time and depends on various conditions like the model size, requested dataset length or environment setup. Also, since the dataset is generated by the model output, it does not guarantee significant accuracy improvement after the compression. This method is recommended only in cases when a better dataset is not available. Refer to the [example](https://github.com/openvinotoolkit/nncf/tree/develop/examples/llm_compression/openvino/tiny_llama_synthetic_data/) for details of the usage.
@@ -127,6 +178,7 @@ compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_SYM, ra
 ```python
 from nncf import compress_weights, CompressWeightsMode, Dataset
 from nncf.data import generate_text_data
+
 synthetic_data = generate_text_data(model, tokenizer)
 nncf_dataset = nncf.Dataset(synthetic_data, transform_fn)
 ```
@@ -144,17 +196,20 @@ Unlike all others, the Lora Correction algorithm inserts an additional Linear la
   from optimum.intel.openvino import OVModelForCausalLM
   from transformers import AutoTokenizer
 
+
   def transform_func(item, tokenizer, input_shapes):
-      text = item['text']
+      text = item["text"]
       tokens = tokenizer(text)
 
-      res = {'input_ids': np.expand_dims(np.array(tokens['input_ids']), 0),
-            'attention_mask': np.expand_dims(np.array(tokens['attention_mask']), 0)}
+      res = {
+          "input_ids": np.expand_dims(np.array(tokens["input_ids"]), 0),
+          "attention_mask": np.expand_dims(np.array(tokens["attention_mask"]), 0),
+      }
 
-      if 'position_ids' in input_shapes:
-          position_ids = np.cumsum(res['attention_mask'], axis=1) - 1
-          position_ids[res['attention_mask'] == 0] = 1
-          res['position_ids'] = position_ids
+      if "position_ids" in input_shapes:
+          position_ids = np.cumsum(res["attention_mask"], axis=1) - 1
+          position_ids[res["attention_mask"] == 0] = 1
+          res["position_ids"] = position_ids
 
       for name, shape in input_shapes.items():
           if name in res:
@@ -163,7 +218,8 @@ Unlike all others, the Lora Correction algorithm inserts an additional Linear la
 
       return res
 
-  def get_input_shapes(model, batch_size = 1):
+
+  def get_input_shapes(model, batch_size=1):
       inputs = {}
 
       for val in model.model.inputs:
@@ -174,16 +230,16 @@ Unlike all others, the Lora Correction algorithm inserts an additional Linear la
 
       return inputs
 
+
   # load your model and tokenizer
   model = OVModelForCausalLM.from_pretrained(...)
   tokenizer = AutoTokenizer.from_pretrained(...)
 
   # prepare dataset for compression
-  dataset = load_dataset('wikitext', 'wikitext-2-v1', split='train')
+  dataset = load_dataset("wikitext", "wikitext-2-v1", split="train")
   dataset = dataset.filter(lambda example: len(example["text"]) > 80)
   input_shapes = get_input_shapes(model)
-  nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer,
-                                                          input_shapes=input_shapes))
+  nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer, input_shapes=input_shapes))
   ```
 
   </details>
@@ -191,32 +247,38 @@ Unlike all others, the Lora Correction algorithm inserts an additional Linear la
 - How to compress 80% of layers to 4-bit integer with a default data-based mixed precision algorithm and AWQ with Scale Estimation. It requires to set `awq` to `True` and `scale_estimation` to `True` additionally to data-based mixed-precision algorithm.
 
 ```python
-model.model = compress_weights(model.model,
-                               mode=CompressWeightsMode.INT4_SYM,
-                               ratio=0.8,
-                               dataset=nncf_dataset,
-                               awq=True,
-                               scale_estimation=True)
+model.model = compress_weights(
+    model.model,
+    mode=CompressWeightsMode.INT4_SYM,
+    ratio=0.8,
+    dataset=nncf_dataset,
+    awq=True,
+    scale_estimation=True,
+)
 ```
 
 - How to compress 80% of layers to 4-bit integer with a default data-based mixed precision algorithm and GPTQ. It requires to set `gptq` to `True` additionally to data-based mixed-precision algorithm.
 
 ```python
-model.model = compress_weights(model.model,
-                               mode=CompressWeightsMode.INT4_SYM,
-                               ratio=0.8,
-                               dataset=nncf_dataset,
-                               gptq=True)
+model.model = compress_weights(
+    model.model,
+    mode=CompressWeightsMode.INT4_SYM,
+    ratio=0.8,
+    dataset=nncf_dataset,
+    gptq=True,
+)
 ```
 
 - How to compress 80% of layers to 4-bit integer with a default data-based mixed precision algorithm and Lora Correction algorithm. It requires setting `lora_correction` to `True` additionally to data-based mixed-precision algorithm.
 
 ```python
-model.model = compress_weights(model.model,
-                               mode=CompressWeightsMode.INT4_SYM,
-                               ratio=0.8,
-                               dataset=nncf_dataset,
-                               lora_correction=True)
+model.model = compress_weights(
+    model.model,
+    mode=CompressWeightsMode.INT4_SYM,
+    ratio=0.8,
+    dataset=nncf_dataset,
+    lora_correction=True,
+)
 ```
 
 - `NF4` mode can be considered for improving accuracy, but currently models quantized to nf4 should not be faster models
@@ -225,6 +287,7 @@ model.model = compress_weights(model.model,
 
 ```python
 from nncf import compress_weights, CompressWeightsMode
+
 compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4)
 ```
 
@@ -232,6 +295,7 @@ compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4)
 
 ```python
 from nncf import compress_weights, CompressWeightsMode
+
 compressed_model = compress_weights(model, mode=CompressWeightsMode.MXFP4, all_layers=True)
 ```
 
@@ -247,7 +311,7 @@ from nncf import compress_weights
 
 compressed_model = compress_weights(
     model,
-    advanced_parameters=AdvancedCompressionParameters(statistics_path="statistics")
+    advanced_parameters=AdvancedCompressionParameters(statistics_path="statistics"),
 )
 ```
 

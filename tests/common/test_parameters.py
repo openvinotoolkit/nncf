@@ -12,7 +12,7 @@
 import pytest
 
 import nncf
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.scopes import convert_ignored_scope_to_list
 
 
@@ -20,7 +20,7 @@ def test_convert_ignored_scope_to_list():
     ignored_names = ["name1", "name2"]
     ignored_patterns = [".*1", ".*2"]
 
-    ignored_scope = IgnoredScope(
+    ignored_scope = Scope(
         names=ignored_names,
         patterns=ignored_patterns,
     )
@@ -35,6 +35,6 @@ def test_convert_ignored_scope_to_list():
 
 
 def test_create_ignored_scope_config_raise_exception():
-    ignored_scope = IgnoredScope(types=["type1"])
+    ignored_scope = Scope(types=["type1"])
     with pytest.raises(nncf.InternalError):
         _ = convert_ignored_scope_to_list(ignored_scope)

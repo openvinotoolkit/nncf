@@ -1,0 +1,12 @@
+{
+    "embedding": {
+        "mode": "int8_sym",
+        "group_size": -1,
+        "codebook_values": null
+    },
+    "linear": {
+        "mode": "int8_sym",
+        "group_size": -1,
+        "codebook_values": null
+    }
+}

@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import TypeVar
+from typing import Callable, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -40,6 +40,14 @@ class MinMaxAlgoBackend(ABC):
         Property for backend-specific metatypes that require preserving float subgraphs
         when removing the ShapeOf subgraph.
         """
+
+    @property
+    def inference_graph_transformations(self) -> list[Callable[[NNCFGraph], None]]:
+        """
+        Property for backend-specific inference graph transformations. Each function transforms the
+        NNCFGraph in place.
+        """
+        return []
 
     @property
     @abstractmethod

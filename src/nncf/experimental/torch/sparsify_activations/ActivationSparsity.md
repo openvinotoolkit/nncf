@@ -30,8 +30,8 @@ Below is an example of applying `sparsify_activations` algorithm to a torch mode
 import nncf
 from nncf.experimental.torch.sparsify_activations import sparsify_activations, TargetScope
 
-model = ... # Your model
-dataset = ... # Calibration set
+model = ...  # Your model
+dataset = ...  # Calibration set
 
 # (Optional) Weight-only quantization
 model = nncf.compress_weights(
@@ -46,8 +46,8 @@ model = sparsify_activations(
     dataset=dataset,
     target_sparsity_by_scope={
         TargetScope(patterns=[".*up_proj.*", ".*gate_proj.*"]): 0.3,
-        TargetScope(patterns=[".*down_proj.*",]): 0.5,
-    }
+        TargetScope(patterns=[".*down_proj.*"]): 0.5,
+    },
 )
 ```
 
@@ -70,7 +70,7 @@ In this example, we first conduct data-free INT8 asymmetric weight quantization 
     }
     ```
 
-- `ignored_scope`: Optional. If specified, it should be an instance of `nncf.IgnoredScope` class that defines the nodes in the model graph to be ignored by this algorithm. Note that unsupported layer types are already filtered out internally, so there is no need to mention them in `ignored_scope`. The algorithm currently only supports Linear layers, as they benefit most from dynamic sparse activations by reducing memory read bandwidth for the large Linear layer weights used in LLMs.
+- `ignored_scope`: Optional. If specified, it should be an instance of `nncf.Scope` class that defines the nodes in the model graph to be ignored by this algorithm. Note that unsupported layer types are already filtered out internally, so there is no need to mention them in `ignored_scope`. The algorithm currently only supports Linear layers, as they benefit most from dynamic sparse activations by reducing memory read bandwidth for the large Linear layer weights used in LLMs.
 
 #### Evaluation results
 

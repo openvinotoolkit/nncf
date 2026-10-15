@@ -1,0 +1,23 @@
+digraph {
+"0 Input" [id=0, type=Parameter];
+"1 MatMul" [id=1, type=MatMul];
+"2 Mul" [id=2, type=Multiply];
+"3 Add" [id=3, type=Add];
+"4 Relu" [id=4, type=Relu];
+"5 MatMul2" [id=5, type=MatMul];
+"6 Result" [id=6, type=Result];
+"7 MatMul2/Constant_1445105" [id=7, type=Constant];
+"8 Add/Constant_1445102" [id=8, type=Constant];
+"9 Mul/Constant_1445100" [id=9, type=Constant];
+"10 MatMul/Constant_1445098" [id=10, type=Constant];
+"0 Input" -> "1 MatMul" [key=0, style=solid, label="[3, 5]"];
+"1 MatMul" -> "2 Mul" [key=0, style=solid, label="[3, 2]"];
+"2 Mul" -> "3 Add" [key=0, style=solid, label="[3, 2]"];
+"3 Add" -> "4 Relu" [key=0, style=solid, label="[3, 2]"];
+"4 Relu" -> "5 MatMul2" [key=0, style=solid, label="[3, 2]"];
+"5 MatMul2" -> "6 Result" [key=0, style=solid, label="[3, 4]"];
+"7 MatMul2/Constant_1445105" -> "5 MatMul2" [key=0, style=solid, label="[2, 4]"];
+"8 Add/Constant_1445102" -> "3 Add" [key=0, style=solid, label="[1, 2]"];
+"9 Mul/Constant_1445100" -> "2 Mul" [key=0, style=solid, label="[1, 2]"];
+"10 MatMul/Constant_1445098" -> "1 MatMul" [key=0, style=solid, label="[5, 2]"];
+}

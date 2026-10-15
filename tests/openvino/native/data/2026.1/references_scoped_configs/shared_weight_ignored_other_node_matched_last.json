@@ -1,0 +1,17 @@
+{
+    "Gather_1": {
+        "mode": "int4_asym",
+        "group_size": 2,
+        "codebook_values": null
+    },
+    "Gather_2": {
+        "mode": "int8_sym",
+        "group_size": -1,
+        "codebook_values": null
+    },
+    "MatMul_1": {
+        "mode": "int8_sym",
+        "group_size": -1,
+        "codebook_values": null
+    }
+}

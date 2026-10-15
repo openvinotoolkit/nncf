@@ -8,10 +8,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import sys
 from collections import deque
-from typing import Union
+from typing import Any, Union
 
+import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from nncf.tensor import Tensor
 from nncf.tensor.functions.dispatcher import _get_arg_type
@@ -79,7 +82,23 @@ def test_get_arg_type(data, ref):
         (list[float | str], [float, str]),
         (dict[str, int], [int]),
         (dict[str, float | int], [float, int]),
+        (NDArray[Any], [np.ndarray]),
+        (NDArray[Any] | np.generic, [np.ndarray, np.generic]),
     ),
 )
 def test_get_register_types(data, ref):
     assert _get_register_types(data) == ref
+
+
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="TypeAliasType requires Python 3.12+")
+@pytest.mark.parametrize(
+    "data, ref",
+    (
+        (np.ndarray, [np.ndarray]),
+        (np.ndarray | np.generic, [np.ndarray, np.generic]),
+    ),
+)
+def test_get_register_types_alias(data: Any, ref: list[type]) -> None:
+    from typing import TypeAliasType
+
+    assert _get_register_types(TypeAliasType("array_alias", data)) == ref

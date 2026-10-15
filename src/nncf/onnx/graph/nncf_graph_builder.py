@@ -229,9 +229,13 @@ def _get_bias_attr(
                 port_id = i
                 break
 
-        # Ensure that `tensor_name` is the output of a `Constant` node or an initializer.
         initializer = {x.name: x for x in model.graph.initializer}
-        if tensor_name in initializer or parents_node_mapping[tensor_name].op_type == "Constant":
+        parent_node = parents_node_mapping.get(tensor_name)
+
+        # Ensure that `tensor_name` is the output of a `Constant` node or an initializer.
+        # We should check that `parent_node` is not None here, because `tensor_name` can be a model input,
+        # in which case `parent_node` does not exist.
+        if tensor_name in initializer or (parent_node is not None and parent_node.op_type == "Constant"):
             return {"node": add_node.name, "name": tensor_name, "port_id": port_id}
         return {}
 

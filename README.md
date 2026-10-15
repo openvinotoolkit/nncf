@@ -15,7 +15,7 @@
 [![Apache License Version 2.0](https://img.shields.io/badge/license-Apache_2.0-green.svg)](LICENSE)
 [![PyPI Downloads](https://static.pepy.tech/badge/nncf)](https://pypi.org/project/nncf/)
 
-![Python](https://img.shields.io/badge/python-3.10+-blue)
+![Python](https://img.shields.io/badge/python-3.11+-blue)
 ![Backends](https://img.shields.io/badge/backends-openvino_|_pytorch_|_onnx_-orange)
 ![OS](https://img.shields.io/badge/OS-Linux_|_Windows_|_MacOS-blue)
 
@@ -97,10 +97,12 @@ model = ov.Core().read_model("/model_path")
 val_dataset = datasets.ImageFolder("/path", transform=transforms.Compose([transforms.ToTensor()]))
 dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1)
 
+
 # Step 1: Initialize transformation function
 def transform_fn(data_item):
     images, _ = data_item
     return images
+
 
 # Step 2: Initialize NNCF Dataset
 calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
@@ -124,16 +126,17 @@ model = models.mobilenet_v2()
 val_dataset = datasets.ImageFolder("/path", transform=transforms.Compose([transforms.ToTensor()]))
 dataset_loader = torch.utils.data.DataLoader(val_dataset)
 
+
 # Step 1: Initialize the transformation function
 def transform_fn(data_item):
     images, _ = data_item
     return images
 
+
 # Step 2: Initialize NNCF Dataset
 calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
 # Step 3: Run the quantization pipeline
 quantized_model = nncf.quantize(model, calibration_dataset)
-
 ```
 
 **NOTE** If the Post-Training Quantization algorithm does not meet quality requirements you can fine-tune the quantized pytorch model. You can find an example of the Quantization-Aware training pipeline for a pytorch model [here](examples/quantization_aware_training/torch/resnet18/README.md).
@@ -154,19 +157,19 @@ model = models.mobilenet_v2()
 val_dataset = datasets.ImageFolder("/path", transform=transforms.Compose([transforms.ToTensor()]))
 dataset_loader = torch.utils.data.DataLoader(val_dataset)
 
+
 # Step 1: Initialize the transformation function
 def transform_fn(data_item):
     images, _ = data_item
     return images
 
+
 # Step 2: Initialize NNCF Dataset
 calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
 
 # Step 3: Export model to TorchFX
-input_shape = (1, 3, 224, 224)
-fx_model = torch.export.export_for_training(model, args=(ex_input,)).module()
-# or
-# fx_model = torch.export.export(model, args=(ex_input,)).module()
+ex_input = torch.randn(1, 3, 224, 224)
+fx_model = torch.export.export(model, args=(ex_input,)).module()
 
 # Step 4: Run the quantization pipeline
 quantized_fx_model = nncf.quantize(fx_model, calibration_dataset)
@@ -191,9 +194,12 @@ dataset_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1)
 
 # Step 1: Initialize transformation function
 input_name = onnx_model.graph.input[0].name
+
+
 def transform_fn(data_item):
     images, _ = data_item
     return {input_name: images.numpy()}
+
 
 # Step 2: Initialize NNCF Dataset
 calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
@@ -283,8 +289,6 @@ A list of notebooks demonstrating OpenVINO conversion and inference together wit
 | [CLIP](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/clip-zero-shot-image-classification)                                                                                                                                                                                                                           |            Post-Training Quantization             | OpenVINO  |                            Image-to-Text                             |
 | [BLIP](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/blip-visual-language-processing)                                                                                                                                                                                                                               |            Post-Training Quantization             | OpenVINO  |                            Image-to-Text                             |
 | [Latent Consistency Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/latent-consistency-models-image-generation)                                                                                                                                                                                                |            Post-Training Quantization             | OpenVINO  |                            Text-to-Image                             |
-| [Distil-Whisper](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/distil-whisper-asr)                                                                                                                                                                                                                                  |            Post-Training Quantization             | OpenVINO  |                            Speech-to-Text                            |
-| [Whisper](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/whisper-subtitles-generation)<br>[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/openvinotoolkit/openvino_notebooks/blob/latest/notebooks/whisper-subtitles-generation/whisper-convert.ipynb) |            Post-Training Quantization             | OpenVINO  |                            Speech-to-Text                            |
 | [MMS Speech Recognition](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/mms-massively-multilingual-speech)                                                                                                                                                                                                           |            Post-Training Quantization             | OpenVINO  |                            Speech-to-Text                            |
 | [LLM Instruction Following](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-question-answering)                                                                                                                                                                                                                   |                Weight Compression                 | OpenVINO  |                      NLP, Instruction Following                      |
 | [LLM Chat Bots](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-chatbot)                                                                                                                                                                                                                                          |                Weight Compression                 | OpenVINO  |                            NLP, Chat Bot                             |
@@ -298,7 +302,6 @@ Compact scripts demonstrating quantization/weight compression and corresponding 
 | [OpenVINO MobileNetV2](./examples/post_training_quantization/openvino/mobilenet_v2/README.md)                                            |            Post-Training Quantization            |  OpenVINO  |  Image Classification  |
 | [OpenVINO YOLO26](./examples/post_training_quantization/openvino/yolo26/README.md)                                                       |            Post-Training Quantization            |  OpenVINO  |    Object Detection    |
 | [OpenVINO YOLOv8 QwAC](./examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/README.md)                   | Post-Training Quantization with Accuracy Control |  OpenVINO  |    Object Detection    |
-| [OpenVINO Anomaly Classification](./examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control/README.md) | Post-Training Quantization with Accuracy Control |  OpenVINO  | Anomaly Classification |
 | [PyTorch MobileNetV2](./examples/post_training_quantization/torch/mobilenet_v2/README.md)                                                |            Post-Training Quantization            |  PyTorch   |  Image Classification  |
 | [PyTorch SSD](./examples/post_training_quantization/torch/ssd300_vgg16/README.md)                                                        |            Post-Training Quantization            |  PyTorch   |    Object Detection    |
 | [TorchFX Resnet18](./examples/post_training_quantization/torch_fx/resnet18/README.md)                                                    |            Post-Training Quantization            |  TorchFX   |  Image Classification  |

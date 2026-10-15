@@ -16,7 +16,7 @@ import openvino as ov
 import pytest
 import torch
 
-from nncf import IgnoredScope
+from nncf import Scope
 from nncf.parameters import ModelType
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
@@ -60,16 +60,16 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
         raise NotImplementedError
 
     @staticmethod
-    def get_ignored_scope(model_cls: Any) -> IgnoredScope:
+    def get_ignored_scope(model_cls: Any) -> Scope:
         if model_cls is LinearMultiShapeModel:
             # Ignore matmul nodes before the min/max nodes as
             # min/max operatons could  not be quantized
             # due to nncf propagation algo  restrictions.
-            return IgnoredScope(names=["matmul_5", "matmul_6"])
-        return IgnoredScope()
+            return Scope(names=["matmul_5", "matmul_6"])
+        return Scope()
 
     @staticmethod
-    def get_quantization_algorithm(ignored_scope: IgnoredScope):
+    def get_quantization_algorithm(ignored_scope: Scope):
         return PostTrainingQuantization(
             subset_size=1,
             model_type=ModelType.TRANSFORMER,

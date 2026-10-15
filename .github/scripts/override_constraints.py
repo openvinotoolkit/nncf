@@ -27,8 +27,12 @@ def main():
 
     for new_requirement in overrided_requirements:
         new_requirement = new_requirement.strip()
-        package_name = new_requirement.split("==")[0]
-        content = re.sub(f"^{package_name}\s*[=><].*", "", content, flags=re.MULTILINE)
+        match = re.match(r"([A-Za-z0-9][A-Za-z0-9._-]*)\s*(?:==|!=|~=|>=|<=|>|<)", new_requirement)
+        if match is None:
+            message = f"Invalid requirement: {new_requirement}"
+            raise ValueError(message)
+        package_name = match.group(1)
+        content = re.sub(rf"^{re.escape(package_name)}.*", "", content, flags=re.MULTILINE)
         content += f"\n{new_requirement}"
 
     print("New constraints:")

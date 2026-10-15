@@ -51,7 +51,7 @@ def main():
         mode=nncf.CompressWeightsMode.INT4_SYM,
         ratio=1.0,
         all_layers=True,
-        ignored_scope=nncf.IgnoredScope(types=["Gather"]),
+        ignored_scope=nncf.Scope(types=["Gather"]),
         advanced_parameters=nncf.AdvancedCompressionParameters(
             backend_params={BackendParameters.EXTERNAL_DATA_DIR: OUTPUT_DIR}
         ),

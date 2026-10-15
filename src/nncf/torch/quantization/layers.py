@@ -987,7 +987,9 @@ class LoraMixin:
     def init_lora(self, lspec: PTLoraSpec):
         self._lspec = lspec
         default_lora_dtype = torch.bfloat16
-        out_features, in_features = lspec.orig_weight_shape
+        # 3D weights have leading batch dimension. A separate pair of adapters
+        # is created for each group.
+        *group_dims, out_features, in_features = lspec.orig_weight_shape
         rank = lspec.lora_rank
         if rank > out_features or rank > in_features:
             msg = (
@@ -995,8 +997,8 @@ class LoraMixin:
                 f"[{out_features}, {in_features}]"
             )
             raise nncf.ValidationError(msg)
-        self.lora_A = torch.nn.Parameter(torch.ones((rank, in_features), dtype=default_lora_dtype))
-        self.lora_B = torch.nn.Parameter(torch.zeros((out_features, rank), dtype=default_lora_dtype))
+        self.lora_A = torch.nn.Parameter(torch.ones((*group_dims, rank, in_features), dtype=default_lora_dtype))
+        self.lora_B = torch.nn.Parameter(torch.zeros((*group_dims, out_features, rank), dtype=default_lora_dtype))
 
     def enable_gradients(self):
         self.lora_A.requires_grad = True
@@ -1042,8 +1044,8 @@ class LoraNLSMixin(LoraMixin):
 
         :return: A dictionary containing the active LoRA adapters.
         """
-        lora_A = self.lora_A[: self.active_lora_rank, :]
-        lora_B = self.lora_B[:, : self.active_lora_rank]
+        lora_A = self.lora_A[..., : self.active_lora_rank, :]
+        lora_B = self.lora_B[..., : self.active_lora_rank]
         return lora_A, lora_B
 
 

@@ -1,0 +1,12 @@
+{
+    "conv1_weight": "PTConstNoopMetatype",
+    "conv2_weight": "PTConstNoopMetatype",
+    "x": "PTInputNoopMetatype",
+    "conv2d": "PTConv2dMetatype",
+    "chunk": "PTSplitMetatype",
+    "getitem": "PTGatherMetatype",
+    "getitem_1": "PTGatherMetatype",
+    "conv2d_1": "PTConv2dMetatype",
+    "cat": "PTCatMetatype",
+    "output": "PTOutputNoopMetatype"
+}

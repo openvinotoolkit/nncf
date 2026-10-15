@@ -17,6 +17,7 @@ import torch
 import torch.nn as nn
 
 from nncf import IgnoredScope
+from nncf import Scope
 from nncf.experimental.torch.sparsify_activations import TargetScope
 
 
@@ -62,7 +63,7 @@ def count_sparsifier_patterns_in_ov(model: ov.Model) -> int:
     return result
 
 
-def convert_ignored_scope_to_target_scope(ignored_scope: IgnoredScope) -> TargetScope:
+def convert_ignored_scope_to_target_scope(ignored_scope: Scope | IgnoredScope) -> TargetScope:
     return TargetScope(
         ignored_scope.names,
         ignored_scope.patterns,

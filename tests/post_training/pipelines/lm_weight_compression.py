@@ -104,7 +104,6 @@ class LMWeightCompression(BaseTestPipeline):
         backend: BackendType,
         compression_params: dict,
         output_dir: Path,
-        data_dir: Path,
         reference_data: dict,
         no_eval: bool,
         run_benchmark_app: bool,
@@ -118,7 +117,6 @@ class LMWeightCompression(BaseTestPipeline):
             backend,
             compression_params,
             output_dir,
-            data_dir,
             reference_data,
             no_eval,
             run_benchmark_app,
@@ -237,10 +235,10 @@ class LMWeightCompression(BaseTestPipeline):
                 for input_name in inputs:
                     inputs[input_name] = torch.from_numpy(inputs[input_name]).to(self.model_hf.device)
             elif self.backend == BackendType.FX_TORCH:
-                fx_inputs = ()
-                fx_inputs += (torch.from_numpy(inputs["input_ids"]).to(self.model_hf.device),)
-                fx_inputs += (torch.from_numpy(inputs["position_ids"]).to(self.model_hf.device).squeeze(0),)
-                inputs = fx_inputs
+                inputs = {
+                    "input_ids": torch.from_numpy(inputs["input_ids"]).to(self.model_hf.device),
+                    "cache_position": torch.from_numpy(inputs["position_ids"]).to(self.model_hf.device).squeeze(0),
+                }
             elif self.backend == BackendType.ONNX:
                 batch_size = input_ids.shape[0]
                 onnx_type_to_numpy = {

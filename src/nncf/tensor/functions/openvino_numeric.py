@@ -10,8 +10,8 @@
 # limitations under the License.
 from typing import Any
 
+import numpy as np
 import openvino as ov  # type: ignore
-from numpy.typing import NDArray
 
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
@@ -22,6 +22,8 @@ from nncf.tensor.functions import numeric
 from nncf.tensor.functions.numpy_numeric import DTYPE_MAP_REV as DTYPE_MAP_REV_NUMPY
 
 DTYPE_MAP: dict[TensorDataType, ov.Type] = {
+    TensorDataType.int2: ov.Type.u2,
+    TensorDataType.int3: ov.Type.u3,
     TensorDataType.nf4: ov.Type.nf4,
     TensorDataType.f4e2m1: ov.Type.f4e2m1,
     TensorDataType.f8e8m0: ov.Type.f8e8m0,
@@ -43,6 +45,8 @@ DTYPE_MAP: dict[TensorDataType, ov.Type] = {
 
 NATIVE_OV_CAST_DTYPES = [
     TensorDataType.bfloat16,
+    TensorDataType.int2,
+    TensorDataType.int3,
     TensorDataType.int4,
     TensorDataType.uint4,
     TensorDataType.nf4,
@@ -55,7 +59,7 @@ NATIVE_OV_CAST_DTYPES = [
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
 
 
-def from_numpy(a: NDArray[Any]) -> ov.Tensor:
+def from_numpy(a: np.ndarray[Any, np.dtype[Any]]) -> ov.Tensor:
     """
     Convert a numpy array to an OpenVINO tensor.
 
@@ -100,7 +104,7 @@ def _(a: ov.Tensor, shape: int | tuple[int, ...]) -> ov.Tensor:
 
 
 @numeric.as_numpy_tensor.register
-def _(a: ov.Tensor) -> NDArray[Any]:
+def _(a: ov.Tensor) -> np.ndarray[Any, np.dtype[Any]]:
     # Cannot convert bfloat16, uint4, int4, nf4, f4e2m1, f8e8m0, f8e4m3, f8e5m2 to numpy directly
     a_dtype = DTYPE_MAP_REV[a.get_element_type()]
     if a_dtype in NATIVE_OV_CAST_DTYPES:

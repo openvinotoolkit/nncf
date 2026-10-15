@@ -1,0 +1,23 @@
+digraph {
+"0 X" [id=0, type=Parameter];
+"1 initial_hidden_state" [id=1, type=Parameter];
+"2 initial_cell_state" [id=2, type=Parameter];
+"3 LSTMSequence" [id=3, type=LSTMSequence];
+"4 MatMul" [id=4, type=MatMul];
+"5 Result" [id=5, type=Result];
+"6 MatMul/Constant_1445225" [id=6, type=Constant];
+"7 Constant_1445223" [id=7, type=Constant];
+"8 Constant_1445221" [id=8, type=Constant];
+"9 Constant_1445219" [id=9, type=Constant];
+"10 Constant_1445217" [id=10, type=Constant];
+"0 X" -> "3 LSTMSequence" [key=0, style=solid, label="[1, 2, 16]"];
+"1 initial_hidden_state" -> "3 LSTMSequence" [key=0, style=solid, label="[1, 1, 128]"];
+"2 initial_cell_state" -> "3 LSTMSequence" [key=0, style=solid, label="[1, 1, 128]"];
+"3 LSTMSequence" -> "4 MatMul" [key=0, style=solid, label="[1, 1, 128]"];
+"4 MatMul" -> "5 Result" [key=0, style=solid, label="[1, 1, 1, 3]"];
+"6 MatMul/Constant_1445225" -> "4 MatMul" [key=0, style=solid, label="[1, 1, 128, 3]"];
+"7 Constant_1445223" -> "3 LSTMSequence" [key=0, style=solid, label="[1, 512]"];
+"8 Constant_1445221" -> "3 LSTMSequence" [key=0, style=solid, label="[1, 512, 128]"];
+"9 Constant_1445219" -> "3 LSTMSequence" [key=0, style=solid, label="[1, 512, 16]"];
+"10 Constant_1445217" -> "3 LSTMSequence" [key=0, style=dashed, label="[1]"];
+}

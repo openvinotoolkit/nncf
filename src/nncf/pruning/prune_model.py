@@ -20,6 +20,7 @@ from nncf.common.utils.helpers import create_table
 from nncf.data.dataset import Dataset
 from nncf.parameters import PruneMode
 from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 
 TModel = TypeVar("TModel")
 
@@ -30,7 +31,7 @@ def prune(
     mode: PruneMode,
     *,
     ratio: float | None = None,
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
     examples_inputs: Any | None = None,
 ) -> TModel:
     """

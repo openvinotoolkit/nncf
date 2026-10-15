@@ -18,13 +18,18 @@ from dataclasses import field
 from dataclasses import fields
 from dataclasses import is_dataclass
 from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationRule
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.utils.api_marker import api
-from nncf.parameters import StrEnum
+from nncf.parameters import CompressWeightsMode
+from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
+from nncf.quantization.algorithms.weight_compression.config import get_default_group_size
 from nncf.quantization.range_estimator import RangeEstimatorParameters
+from nncf.scopes import Scope
+from nncf.scopes import Subgraph
 from nncf.tensor import TensorDataType
 
 TTensor = Any
@@ -449,6 +454,79 @@ class AdvancedCompressionParameters:
     adaptive_codebook_params: AdvancedAdaptiveCodebookParameters = field(
         default_factory=AdvancedAdaptiveCodebookParameters
     )
+
+
+@api(canonical_alias="nncf.ScopedConfig")
+@dataclass
+class ScopedConfig:
+    """
+    Applies a user-defined weight compression configuration to a portion of a model.
+    It overrides the configuration assigned by the weight compression algorithm, including the mixed precision
+    algorithm and the `ignored_scope`, `all_layers` and `backup_mode` options.
+
+    Example:
+
+    ..  code-block:: python
+
+            import nncf
+
+            scoped_config = nncf.ScopedConfig(
+                patterns=['.*self_attn.*', '.*router.*'],
+                mode=nncf.CompressWeightsMode.INT8_ASYM,
+                group_size=-1,
+            )
+
+    The portion of a model is defined by the same rules as :class:`nncf.Scope`.
+
+    :param names: List of node names.
+    :type names: List[str]
+    :param patterns: List of regular expressions that define patterns for names of nodes.
+    :type patterns: List[str]
+    :param types: List of operation types.
+    :type types: List[str]
+    :param subgraphs: List of subgraphs.
+    :type subgraphs: List[nncf.Subgraph]
+    :param validate: If set to True, then a RuntimeError will be raised if any rule does not match
+      in the model graph.
+    :type validate: bool
+    :param mode: Weight compression mode to apply to the matched nodes. Defaults to INT8_ASYM mode.
+    :type mode: nncf.CompressWeightsMode
+    :param group_size: Number of weights in the channel dimension that share quantization parameters (scale).
+        The value -1 means no grouping. Defaults to None, which means that the default group size of the given
+        mode is used.
+    :type group_size: int
+    """
+
+    names: list[str] = field(default_factory=list)
+    patterns: list[str] = field(default_factory=list)
+    types: list[str] = field(default_factory=list)
+    subgraphs: list[Subgraph] = field(default_factory=list)
+    validate: bool = True
+    mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM
+    group_size: int | None = None
+
+    @property
+    def scope(self) -> Scope:
+        """
+        Scope that defines the portion of a model to apply the configuration to.
+        """
+        return Scope(
+            names=self.names,
+            patterns=self.patterns,
+            types=self.types,
+            subgraphs=self.subgraphs,
+            validate=self.validate,
+        )
+
+    @property
+    def compression_config(self) -> WeightCompressionConfig:
+        """
+        Weight compression configuration to apply to the nodes matched by the scope.
+        """
+        group_size = self.group_size
+        if group_size is None:
+            group_size = get_default_group_size(self.mode)
+        return WeightCompressionConfig(mode=self.mode, group_size=group_size)
 
 
 @api()

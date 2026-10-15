@@ -23,15 +23,17 @@ from dataclasses import asdict
 from dataclasses import dataclass
 from dataclasses import replace
 from enum import Enum
+from importlib import metadata as importlib_metadata
 from itertools import islice
 from typing import Any, Iterable, TypeVar
 
 import numpy as np
 import openvino as ov
-import pkg_resources
 from config import Config
 from openvino import Dimension
 from openvino import PartialShape
+
+from nncf.common.quantization.quantizer_propagation.structs import QuantizerPropagationRule
 
 try:
     from accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
@@ -59,7 +61,7 @@ from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import RestoreMode
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import StatisticsType
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 
 TModel = TypeVar("TModel")
 
@@ -126,10 +128,11 @@ class CustomJSONEncoder(json.JSONEncoder):
                 DropType,
                 QuantizationMode,
                 RestoreMode,
+                QuantizerPropagationRule,
             ),
         ):
             return o.value
-        if isinstance(o, (IgnoredScope, AdvancedQuantizationParameters, AdvancedAccuracyRestorerParameters)):
+        if isinstance(o, (Scope, AdvancedQuantizationParameters, AdvancedAccuracyRestorerParameters)):
             return asdict(o)
         msg = f"Object of type {o.__class__.__name__} is not JSON serializable"
         raise TypeError(msg)
@@ -358,7 +361,7 @@ def map_ignored_scope(ignored):
                 msg = '"attributes" in the ignored operations are not supported'
                 raise ValueError(msg)
             ignored_operations.append(op["type"])
-    return {"ignored_scope": IgnoredScope(names=ignored.get("scope", []), types=ignored_operations)}
+    return {"ignored_scope": Scope(names=ignored.get("scope", []), types=ignored_operations)}
 
 
 def map_preset(preset):
@@ -1115,8 +1118,8 @@ class EnvInfo:
     @staticmethod
     def _get_nncf_version() -> str:
         try:
-            version = pkg_resources.get_distribution("nncf").version
-        except pkg_resources.DistributionNotFound:
+            version = importlib_metadata.version("nncf")
+        except importlib_metadata.PackageNotFoundError:
             version = "Unknown"
         return version
 

@@ -1,0 +1,38 @@
+digraph {
+x [id=0, type="nncf_model_input", metatype=PTInputNoopMetatype];
+"__nncf_hooks.post_hooks.x__0.0.input_low" [id=1, type="nncf_model_const", metatype=PTConstNoopMetatype];
+"__nncf_hooks.post_hooks.x__0.0._input_range_param_storage" [id=2, type="nncf_model_const", metatype=PTConstNoopMetatype];
+"post_hook__x__0[0]/asymmetric_quantize/0" [id=3, type="asymmetric_quantize", metatype=UnknownMetatype];
+"conv1.weight" [id=4, type="nncf_model_const", metatype=PTConstNoopMetatype];
+"__nncf_hooks.pre_hooks.conv1/conv2d/0__1.0._scale_param_storage" [id=5, type="nncf_model_const", metatype=PTConstNoopMetatype];
+"conv1/pre_hook__conv1-conv2d-0__1[0]/symmetric_quantize/0" [id=6, type="symmetric_quantize", metatype=UnknownMetatype];
+"conv1/conv2d/0" [id=7, type=conv2d, metatype=PTConv2dMetatype];
+"/chunk/0" [id=8, type=chunk, metatype=PTSplitMetatype];
+"conv2.weight" [id=9, type="nncf_model_const", metatype=PTConstNoopMetatype];
+"__nncf_hooks.pre_hooks.conv2/conv2d/0__0.0.input_low" [id=10, type="nncf_model_const", metatype=PTConstNoopMetatype];
+"__nncf_hooks.pre_hooks.conv2/conv2d/0__0.0._input_range_param_storage" [id=11, type="nncf_model_const", metatype=PTConstNoopMetatype];
+"conv2/pre_hook__conv2-conv2d-0__0[0]/asymmetric_quantize/0" [id=12, type="asymmetric_quantize", metatype=UnknownMetatype];
+"__nncf_hooks.pre_hooks.conv2/conv2d/0__1.0._scale_param_storage" [id=13, type="nncf_model_const", metatype=PTConstNoopMetatype];
+"conv2/pre_hook__conv2-conv2d-0__1[0]/symmetric_quantize/0" [id=14, type="symmetric_quantize", metatype=UnknownMetatype];
+"conv2/conv2d/0" [id=15, type=conv2d, metatype=PTConv2dMetatype];
+"/cat/0" [id=16, type=cat, metatype=PTCatMetatype];
+output [id=17, type="nncf_model_output", metatype=PTOutputNoopMetatype];
+x -> "post_hook__x__0[0]/asymmetric_quantize/0" [key=0, dtype=float, shape="(1, 4, 8, 8)", out_port_id=0, in_port_id=0];
+"__nncf_hooks.post_hooks.x__0.0.input_low" -> "post_hook__x__0[0]/asymmetric_quantize/0" [key=0, dtype=float, shape="(1,)", out_port_id=0, in_port_id=4];
+"__nncf_hooks.post_hooks.x__0.0._input_range_param_storage" -> "post_hook__x__0[0]/asymmetric_quantize/0" [key=0, dtype=float, shape="(1,)", out_port_id=0, in_port_id=5];
+"post_hook__x__0[0]/asymmetric_quantize/0" -> "conv1/conv2d/0" [key=0, dtype=float, shape="(1, 4, 8, 8)", out_port_id=0, in_port_id=0];
+"conv1.weight" -> "conv1/pre_hook__conv1-conv2d-0__1[0]/symmetric_quantize/0" [key=0, dtype=float, shape="(4, 4, 1, 1)", out_port_id=0, in_port_id=0];
+"__nncf_hooks.pre_hooks.conv1/conv2d/0__1.0._scale_param_storage" -> "conv1/pre_hook__conv1-conv2d-0__1[0]/symmetric_quantize/0" [key=0, dtype=float, shape="(4, 1, 1, 1)", out_port_id=0, in_port_id=4];
+"conv1/pre_hook__conv1-conv2d-0__1[0]/symmetric_quantize/0" -> "conv1/conv2d/0" [key=0, dtype=float, shape="(4, 4, 1, 1)", out_port_id=0, in_port_id=1];
+"conv1/conv2d/0" -> "/chunk/0" [key=0, dtype=float, shape="(1, 4, 8, 8)", out_port_id=0, in_port_id=0];
+"/chunk/0" -> "conv2/pre_hook__conv2-conv2d-0__0[0]/asymmetric_quantize/0" [key=0, dtype=float, shape="(1, 2, 8, 8)", out_port_id=0, in_port_id=0];
+"/chunk/0" -> "/cat/0" [key=0, dtype=float, shape="(1, 2, 8, 8)", out_port_id=1, in_port_id=1];
+"conv2.weight" -> "conv2/pre_hook__conv2-conv2d-0__1[0]/symmetric_quantize/0" [key=0, dtype=float, shape="(2, 2, 1, 1)", out_port_id=0, in_port_id=0];
+"__nncf_hooks.pre_hooks.conv2/conv2d/0__0.0.input_low" -> "conv2/pre_hook__conv2-conv2d-0__0[0]/asymmetric_quantize/0" [key=0, dtype=float, shape="(1,)", out_port_id=0, in_port_id=4];
+"__nncf_hooks.pre_hooks.conv2/conv2d/0__0.0._input_range_param_storage" -> "conv2/pre_hook__conv2-conv2d-0__0[0]/asymmetric_quantize/0" [key=0, dtype=float, shape="(1,)", out_port_id=0, in_port_id=5];
+"conv2/pre_hook__conv2-conv2d-0__0[0]/asymmetric_quantize/0" -> "conv2/conv2d/0" [key=0, dtype=float, shape="(1, 2, 8, 8)", out_port_id=0, in_port_id=0];
+"__nncf_hooks.pre_hooks.conv2/conv2d/0__1.0._scale_param_storage" -> "conv2/pre_hook__conv2-conv2d-0__1[0]/symmetric_quantize/0" [key=0, dtype=float, shape="(2, 1, 1, 1)", out_port_id=0, in_port_id=4];
+"conv2/pre_hook__conv2-conv2d-0__1[0]/symmetric_quantize/0" -> "conv2/conv2d/0" [key=0, dtype=float, shape="(2, 2, 1, 1)", out_port_id=0, in_port_id=1];
+"conv2/conv2d/0" -> "/cat/0" [key=0, dtype=float, shape="(1, 2, 8, 8)", out_port_id=0, in_port_id=0];
+"/cat/0" -> output [key=0, dtype=float, shape="(1, 4, 8, 8)", out_port_id=0, in_port_id=0];
+}

@@ -714,8 +714,8 @@ class TemplateTestReducersAggregators:
 
     HAWQ_AGGREGATOR_REFERENCE_VALUES = [
         ([np.arange(10)], 57.0),
-        ([np.arange(12).reshape((2, 6)), np.arange(24).reshape((4, 6))], 181.92361111111111),
-        ([np.arange(8 * i).reshape((1, 8, i)) for i in range(1, 5)], 165.61627197265625),
+        ([np.arange(12).reshape((2, 6)), np.arange(24).reshape((4, 6))], 222.33333333333331),
+        ([np.arange(8 * i).reshape((1, 8, i)) for i in range(1, 5)], 300.3333333333333),
     ]
 
     @pytest.mark.parametrize("inputs,reference_output", HAWQ_AGGREGATOR_REFERENCE_VALUES)

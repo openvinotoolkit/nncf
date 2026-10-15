@@ -3,7 +3,7 @@
 NNCF operates on an intermediate representation of a model graph called `NNCFGraph`.
 To control how model compression algorithms are applied, you can specify an ignored scope - parts of the graph that should be excluded from compression.
 
-Ignored scopes are defined using node names, operation types, regular expressions, or entire subgraphs and are passed to compression algorithms via nncf.IgnoredScope.
+Ignored scopes are defined using node names, operation types, regular expressions, or entire subgraphs and are passed to compression algorithms via nncf.Scope.
 
 ## Usage
 
@@ -11,18 +11,16 @@ Ignored scopes are defined using node names, operation types, regular expression
 import nncf
 
 # Exclude by node name:
-ignored_scope = nncf.IgnoredScope(names=["node_name"])
+ignored_scope = nncf.Scope(names=["node_name"])
 
 # Exclude using regular expressions:
-ignored_scope = nncf.IgnoredScope(patterns=["node_\\d"])
+ignored_scope = nncf.Scope(patterns=["node_\\d"])
 
 # Exclude by operation type:
-ignored_scope = nncf.IgnoredScope(types=["Multiply"])
+ignored_scope = nncf.Scope(types=["Multiply"])
 
 # Exclude by subgraph
-ignored_scope = nncf.IgnoredScope(
-    subgraphs=nncf.Subgraph(inputs=["start_node"], outputs=["end_node"])
-)
+ignored_scope = nncf.Scope(subgraphs=[nncf.Subgraph(inputs=["start_node"], outputs=["end_node"])])
 ```
 
 ## Inspecting and Visualizing the NNCFGraph
@@ -45,5 +43,5 @@ graph.dump_graph("model.dot")
 ### Convert dot to svg file
 
 ```sh
-python tools/render_dot_to_svg.py -m model.dot
+python tools/other/render_dot_to_svg.py -i model.dot
 ```

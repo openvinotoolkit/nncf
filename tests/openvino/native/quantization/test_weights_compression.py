@@ -14,6 +14,7 @@ import os
 from collections import defaultdict
 from dataclasses import dataclass
 from dataclasses import field
+from pathlib import Path
 from typing import Callable
 from unittest.mock import patch
 
@@ -57,7 +58,7 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import do_f
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from tests.cross_fw.shared.comparator import compare_stats
@@ -73,6 +74,7 @@ from tests.openvino.native.models import AWQModel_fp16_overlow
 from tests.openvino.native.models import DifferentChannelSizeMatmulModel
 from tests.openvino.native.models import GatherAndMatmulShareData
 from tests.openvino.native.models import GatherWithTwoReductionAxes
+from tests.openvino.native.models import GroupedMatMulModel
 from tests.openvino.native.models import IdentityMatmul
 from tests.openvino.native.models import IntegerModel
 from tests.openvino.native.models import MatMul
@@ -85,6 +87,8 @@ from tests.openvino.native.models import SequentialMatmulModel
 from tests.openvino.native.models import SimpleMoEModel
 from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.quantization.test_fq_params_calculation import REFERENCE_SCALES_DIR
+
+SCOPED_CONFIGS_REFERENCES_DIR = Path("references_scoped_configs")
 
 TEST_MODELS = {
     IntegerModel: ["matmul_2_data", "gather_2_data", "matmul_1_data"],
@@ -103,6 +107,7 @@ ALL_SENSITIVITY_METRICS = DATA_BASED_SENSITIVITY_METRICS + (SensitivityMetric.WE
 INT8_MODES = (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM)
 INT4_NF4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM, CompressWeightsMode.NF4)
 INT4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM)
+INT2_3_MODES = (CompressWeightsMode.INT2_SYM, CompressWeightsMode.INT3_SYM)
 
 
 class LMLinearModel(OVReferenceModel):
@@ -833,7 +838,7 @@ CALCULATE_SCALE_DESCS = [
 @dataclass
 class ParamIgnoredScope:
     name: str
-    ignored_scope: IgnoredScope
+    ignored_scope: Scope
     ref: set[str]
 
     def __str__(self) -> str:
@@ -843,12 +848,12 @@ class ParamIgnoredScope:
 @pytest.mark.parametrize(
     "param",
     (
-        ParamIgnoredScope(name="empty", ignored_scope=IgnoredScope(), ref=3),
-        ParamIgnoredScope(name="type", ignored_scope=IgnoredScope(types=["Gather"]), ref=2),
-        ParamIgnoredScope(name="name_const", ignored_scope=IgnoredScope(names=["matmul_1_data"]), ref=2),
-        ParamIgnoredScope(name="name_op", ignored_scope=IgnoredScope(names=["MatMul_1"]), ref=2),
-        ParamIgnoredScope(name="pattern_const", ignored_scope=IgnoredScope(patterns=[".*data"]), ref=0),
-        ParamIgnoredScope(name="pattern_op", ignored_scope=IgnoredScope(patterns=["Mat.*"]), ref=1),
+        ParamIgnoredScope(name="empty", ignored_scope=Scope(), ref=3),
+        ParamIgnoredScope(name="type", ignored_scope=Scope(types=["Gather"]), ref=2),
+        ParamIgnoredScope(name="name_const", ignored_scope=Scope(names=["matmul_1_data"]), ref=2),
+        ParamIgnoredScope(name="name_op", ignored_scope=Scope(names=["MatMul_1"]), ref=2),
+        ParamIgnoredScope(name="pattern_const", ignored_scope=Scope(patterns=[".*data"]), ref=0),
+        ParamIgnoredScope(name="pattern_op", ignored_scope=Scope(patterns=["Mat.*"]), ref=1),
     ),
     ids=str,
 )
@@ -908,7 +913,7 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
         compress_weights(ov.Model([], []), mode=mode, **params)
 
 
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize("mode", INT4_NF4_MODES + INT2_3_MODES)
 @pytest.mark.parametrize(
     "params",
     (
@@ -1023,7 +1028,7 @@ def test_call_max_var_criterion_with_dataset_by_default(mocker, mode):
     scores_spy.assert_called()
 
 
-@pytest.mark.parametrize("mode", INT4_MODES)
+@pytest.mark.parametrize("mode", INT4_MODES + INT2_3_MODES)
 def test_call_max_var_criterion_with_dataset_by_default_awq(mode):
     model = AWQMatmulModel().ov_model
     dataset = Dataset([np.ones([2, 8, 8])])
@@ -1031,7 +1036,7 @@ def test_call_max_var_criterion_with_dataset_by_default_awq(mode):
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
 
 
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize("mode", INT4_NF4_MODES + INT2_3_MODES)
 def test_call_max_var_criterion_with_dataset_awq_for_compressed_model(mode):
     model = AWQMatmulModel(is_int8=True).ov_model
     dataset = Dataset([np.ones([2, 8, 8])])
@@ -1039,7 +1044,7 @@ def test_call_max_var_criterion_with_dataset_awq_for_compressed_model(mode):
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
 
 
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize("mode", INT4_NF4_MODES + INT2_3_MODES)
 def test_call_max_var_criterion_with_dataset_awq_neg_group_size(mode):
     model = AWQMatmulModel().ov_model
     dataset = Dataset([np.ones([2, 8, 8])])
@@ -1250,7 +1255,7 @@ def test_call_max_var_criterion_with_dataset_by_default_scale_estimation(mode, c
     assert tzm_spy.call_args_list[0][0][0].dtype == compressed_weight_dtype
 
 
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize("mode", INT4_NF4_MODES + INT2_3_MODES)
 def test_call_max_var_criterion_with_dataset_scale_estimation_for_compressed_model(mode):
     model = AWQMatmulModel(is_int8=True).ov_model
     dataset = Dataset([np.ones([1, 8, 8])])
@@ -1258,7 +1263,7 @@ def test_call_max_var_criterion_with_dataset_scale_estimation_for_compressed_mod
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, scale_estimation=True)
 
 
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize("mode", INT4_NF4_MODES + INT2_3_MODES)
 def test_call_max_var_criterion_with_dataset_scale_estimation_neg_group_size(mode):
     model = AWQMatmulModel().ov_model
     dataset = Dataset([np.ones([1, 8, 8])])
@@ -1266,7 +1271,7 @@ def test_call_max_var_criterion_with_dataset_scale_estimation_neg_group_size(mod
     compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, scale_estimation=True)
 
 
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize("mode", INT4_NF4_MODES + INT2_3_MODES)
 def test_call_gptq(mode):
     model = AWQMatmulModel().ov_model
     dataset = Dataset([np.ones([1, 8, 8])])
@@ -1274,7 +1279,7 @@ def test_call_gptq(mode):
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, gptq=True)
 
 
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize("mode", INT4_NF4_MODES + INT2_3_MODES)
 def test_call_gptq_with_dataset_scale_estimation_neg_group_size(mode):
     model = AWQMatmulModel().ov_model
     dataset = Dataset([np.ones([1, 8, 8])])
@@ -1497,6 +1502,8 @@ def test_codebook(codebook, n_layers, dst_type, group_size):
             CompressWeightsMode.INT4_SYM,
             [-8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0],
         ),
+        (CompressWeightsMode.INT3_SYM, [-4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0]),
+        (CompressWeightsMode.INT2_SYM, [-2.0, -1.0, 0.0, 1.0]),
     ),
 )
 def test_int_compressed_weighs_range(mode, data):
@@ -1660,6 +1667,10 @@ def test_codebook_weights_range(data):
         (WeightCompressionConfig(CompressWeightsMode.INT8_SYM), False, False, False),
         (WeightCompressionConfig(CompressWeightsMode.INT4_SYM), True, False, False),
         (WeightCompressionConfig(CompressWeightsMode.INT4_SYM), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT3_SYM), True, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT3_SYM), False, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT2_SYM), True, False, False),
+        (WeightCompressionConfig(CompressWeightsMode.INT2_SYM), False, False, False),
     ],
 )
 def test_int_quantization_with_precomputed_parameters(config, precompute_scale, precompute_zero_point, raises):
@@ -1955,6 +1966,7 @@ def test_data_free_compression_with_backup_mode(backup_mode):
     assert act_num == num_compressed
 
 
+@pytest.mark.parametrize("use_scoped_config", [False, True], ids=["default", "scoped_config"])
 @pytest.mark.parametrize("backup_mode", [BackupMode.NONE, BackupMode.INT8_ASYM, BackupMode.INT8_SYM])
 @pytest.mark.parametrize(
     ("params", "num_compressed"),
@@ -1971,11 +1983,16 @@ def test_data_free_compression_with_backup_mode(backup_mode):
         ({"awq": True}, 6),
     ),
 )
-def test_data_based_compression_with_backup_mode(backup_mode, params, num_compressed):
+def test_data_based_compression_with_backup_mode(backup_mode, params, num_compressed, use_scoped_config):
     model = AWQMatmulModel().ov_model
     sz = 8
     n_samples = 10
     dataset = Dataset([np.ones([1, i + 1, sz]) for i in range(n_samples)])
+
+    scoped_configs = None
+    if use_scoped_config:
+        scoped_configs = [nncf.ScopedConfig(names=["MatMul_1"], mode=CompressWeightsMode.INT4_SYM, group_size=-1)]
+        num_compressed = 6
 
     compressed_model = compress_weights(
         model,
@@ -1984,9 +2001,11 @@ def test_data_based_compression_with_backup_mode(backup_mode, params, num_compre
         group_size=-1,
         dataset=dataset,
         backup_mode=backup_mode,
+        scoped_configs=scoped_configs,
         **params,
     )
     act_num = 0
+    scoped_num = 0
     if backup_mode == BackupMode.INT8_ASYM:
         backup_ov_mode = ov.Type.u8
     elif backup_mode == BackupMode.INT8_SYM:
@@ -1997,6 +2016,8 @@ def test_data_based_compression_with_backup_mode(backup_mode, params, num_compre
         if op.get_type_name() == "Constant":
             if op.get_element_type() == ov.Type.u4:
                 act_num += 1
+            elif op.get_element_type() == ov.Type.i4:
+                scoped_num += 1
             elif "/scale" in op.get_friendly_name():
                 assert op.get_element_type() == ov.Type.f16
             elif "_lora_" in op.get_friendly_name():
@@ -2004,6 +2025,7 @@ def test_data_based_compression_with_backup_mode(backup_mode, params, num_compre
             else:
                 assert op.get_element_type() == backup_ov_mode
     assert act_num == num_compressed
+    assert scoped_num == (1 if use_scoped_config else 0)
 
 
 @pytest.mark.parametrize(
@@ -2421,11 +2443,15 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return MatMul(transpose_a=transpose_a).ov_model
 
     @staticmethod
-    def get_moe_model_for_test_scale_estimation(transpose_a: bool):
+    def get_moe_model_for_test_scale_estimation(transpose_a: bool, grouped_mm: bool = False):
+        if grouped_mm:
+            return GroupedMatMulModel().ov_model
         return SimpleMoEModel(transpose_a=transpose_a).ov_model
 
     @staticmethod
-    def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool) -> ov.Model:
+    def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool, grouped_mm: bool = False) -> ov.Model:
+        if grouped_mm:
+            return GroupedMatMulModel(mergeable=not non_mergable_pattern).ov_model
         # if is_3d_weights:
         #     return AWQMatmulModel3D(non_mergable_pattern=non_mergable_pattern).ov_model
         return AWQMatmulModel(non_mergable_pattern=non_mergable_pattern, is_3d_weights=is_3d_weights).ov_model
@@ -2472,150 +2498,8 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return model
 
     @staticmethod
-    def get_scale_estimation_ref(check_sampling_activation_stats_flow):
-        return (
-            np.array(
-                [
-                    [[0.47332805]],
-                    [[1.0]],
-                    [[1.4732642]],
-                    [[2.0380495]],
-                    [[2.6054149]],
-                    [[3.0301015]],
-                    [[3.679056]],
-                    [[4.175322]],
-                    [[4.700384]],
-                    [[5.2552223]],
-                    [[5.8100615]],
-                    [[6.3083715]],
-                    [[6.858295]],
-                    [[7.4082184]],
-                    [[7.722581]],
-                    [[8.255914]],
-                ]
-            ),
-            np.array(
-                [
-                    [[0.47344488]],
-                    [[1.0]],
-                    [[1.5450557]],
-                    [[2.0380037]],
-                    [[2.6055446]],
-                    [[3.02987]],
-                    [[3.679132]],
-                    [[4.1754694]],
-                    [[4.7001443]],
-                    [[5.2551227]],
-                    [[5.810101]],
-                    [[6.308658]],
-                    [[6.8587303]],
-                    [[7.4]],
-                    [[7.7212124]],
-                    [[8.254545]],
-                ]
-            ),
-        )[check_sampling_activation_stats_flow]
-
-    @staticmethod
-    def get_moe_scale_estimation_ref(check_sampling_activation_stats_flow):
-        return (
-            np.array(
-                [
-                    [
-                        [
-                            [
-                                7.573249,
-                                7.58195,
-                                7.6,
-                                7.6666665,
-                                7.1209445,
-                                7.260152,
-                                7.866667,
-                                7.9333334,
-                                8.0,
-                                8.066667,
-                                8.528544,
-                                8.659291,
-                                8.879055,
-                                8.469787,
-                                8.4,
-                                8.364824,
-                            ]
-                        ]
-                    ],
-                    [
-                        [
-                            [
-                                16.0,
-                                16.089771,
-                                16.179543,
-                                16.269318,
-                                16.359089,
-                                16.44886,
-                                16.538631,
-                                16.628407,
-                                16.718176,
-                                16.80795,
-                                16.89772,
-                                16.987492,
-                                15.812495,
-                                15.89516,
-                                15.977826,
-                                16.060493,
-                            ]
-                        ]
-                    ],
-                ]
-            ),
-            np.array(
-                [
-                    [
-                        [
-                            [
-                                7.575118,
-                                7.5841107,
-                                7.6,
-                                7.6666665,
-                                7.112954,
-                                7.254837,
-                                7.866667,
-                                7.9333334,
-                                8.0,
-                                8.066667,
-                                8.531546,
-                                7.850108,
-                                8.887045,
-                                8.468656,
-                                8.4,
-                                8.361673,
-                            ]
-                        ]
-                    ],
-                    [
-                        [
-                            [
-                                16.0,
-                                16.089788,
-                                16.17958,
-                                16.269371,
-                                16.359161,
-                                16.448954,
-                                16.538742,
-                                16.628534,
-                                16.718325,
-                                16.808115,
-                                16.897905,
-                                16.987696,
-                                15.812232,
-                                15.894914,
-                                15.977593,
-                                16.060274,
-                            ]
-                        ]
-                    ],
-                ]
-            ),
-        )[check_sampling_activation_stats_flow]
+    def get_scale_estimation_ref_path() -> Path:
+        return get_actual_reference_for_current_openvino(REFERENCE_SCALES_DIR / "scale_estimation_ref.json")
 
     @staticmethod
     def get_orig_weight(model: ov.Model) -> Tensor:
@@ -2676,105 +2560,24 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
         return awq_num
 
     @staticmethod
-    @pytest.fixture
-    def test_awq_scale_ref() -> list[dict[str, Tensor]]:
-        return [
-            {
-                "MatMul": Tensor(np.array([[10.337929], [6.4558873]], dtype=np.float32)),
-                "MatMul_3": Tensor(
-                    np.array(
-                        [
-                            [1.2264546],
-                            [1.2054994],
-                            [1.1413403],
-                            [1.0974358],
-                            [1.0643553],
-                            [1.0379708],
-                            [1.0161183],
-                            [0.9975262],
-                        ],
-                        dtype=np.float32,
-                    )
-                ),
-                "MatMul_2": Tensor(
-                    np.array(
-                        [
-                            [
-                                [
-                                    1.9909902,
-                                    1.8632966,
-                                    1.5759803,
-                                    1.3974594,
-                                    1.2722752,
-                                    1.1779976,
-                                    1.1035581,
-                                    1.042768,
-                                ]
-                            ]
-                        ],
-                        dtype=np.float32,
-                    )
-                ),
-            },
-            {
-                "MatMul": Tensor(
-                    np.array(
-                        [
-                            [[10.337929], [6.4558873]],
-                            [[7.7174687], [5.987996]],
-                        ],
-                        dtype=np.float32,
-                    )
-                ),
-                "MatMul_3": Tensor(
-                    np.array(
-                        [
-                            [
-                                [1.2264546],
-                                [1.2054994],
-                                [1.1413403],
-                                [1.0974358],
-                                [1.0643553],
-                                [1.0379708],
-                                [1.0161183],
-                                [0.9975262],
-                            ],
-                            [
-                                [0.46889508],
-                                [0.4599662],
-                                [0.4321173],
-                                [0.40815368],
-                                [0.387274],
-                                [0.36888793],
-                                [0.35255024],
-                                [0.33791822],
-                            ],
-                        ],
-                        dtype=np.float32,
-                    )
-                ),
-                "MatMul_2": Tensor(
-                    np.array(
-                        [
-                            [[1.9909902, 1.8632966, 1.5759803, 1.3974594, 1.2722752, 1.1779976, 1.1035581, 1.042768]],
-                            [
-                                [
-                                    0.47422293,
-                                    0.4648561,
-                                    0.4367122,
-                                    0.41249463,
-                                    0.39139354,
-                                    0.37281245,
-                                    0.3563014,
-                                    0.3415141,
-                                ]
-                            ],
-                        ],
-                        dtype=np.float32,
-                    )
-                ),
-            },
-        ]
+    def get_awq_scale_ref_path() -> Path:
+        return get_actual_reference_for_current_openvino(REFERENCE_SCALES_DIR / "awq_scale_ref.json")
+
+    @staticmethod
+    def get_shared_weight_model() -> ov.Model:
+        return GatherAndMatmulShareData().ov_model
+
+    @staticmethod
+    def get_shared_weight_node_name() -> str:
+        return "MatMul_2"
+
+    @staticmethod
+    def get_node_with_shared_weight_name() -> str:
+        return "Gather_1"
+
+    @staticmethod
+    def get_scoped_configs_ref_path(ref_name: str) -> Path:
+        return get_actual_reference_for_current_openvino(SCOPED_CONFIGS_REFERENCES_DIR / f"{ref_name}.json")
 
     @pytest.fixture
     def transpose_a_supported(self) -> bool:

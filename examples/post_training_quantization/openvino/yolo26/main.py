@@ -129,7 +129,7 @@ def quantize(model: ov.Model, data_loader: torch.utils.data.DataLoader, validato
         subset_size=len(data_loader),
         preset=nncf.QuantizationPreset.MIXED,
         fast_bias_correction=False,
-        ignored_scope=nncf.IgnoredScope(patterns=[".*one2one.*"]),
+        ignored_scope=nncf.Scope(patterns=[".*one2one.*"]),
     )
     return quantized_model
 

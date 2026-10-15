@@ -209,6 +209,10 @@ def _get_register_types(type_alias: Any) -> list[type]:
         """
         Recursively find types.
         """
+        # Resolve PEP 695 type aliases (e.g. numpy.typing.NDArray on NumPy 2.5+) via their `__value__`
+        # attribute; duck typing avoids the distinct `typing` vs `typing_extensions` TypeAliasType classes.
+        if hasattr(t, "__value__"):
+            return _unpack_types(t.__value__)
         origin = get_origin(t)
         if origin is types.UnionType or origin is Union or origin is list or origin is tuple or origin is SequenceABC:
             ret = []

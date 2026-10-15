@@ -12,7 +12,6 @@
 from dataclasses import dataclass
 from typing import Any, Callable
 
-import numpy as np
 import onnx
 import openvino as ov
 import torch
@@ -22,10 +21,6 @@ from tests.post_training.pipelines.base import FX_BACKENDS
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.image_classification_base import ImageClassificationBase
-
-
-def _torch_export_for_training(model: torch.nn.Module, args: tuple[Any, ...]) -> torch.fx.GraphModule:
-    return torch.export.export_for_training(model, args, strict=True).module(check_guards=False)
 
 
 def _torch_export(model: torch.nn.Module, args: tuple[Any, ...]) -> torch.fx.GraphModule:
@@ -43,19 +38,17 @@ class ImageClassificationTorchvision(ImageClassificationBase):
     """Pipeline for Image Classification model from torchvision repository"""
 
     models_vs_model_params = {
-        models.resnet18: VisionModelParams(models.ResNet18_Weights.DEFAULT, _torch_export_for_training),
-        models.mobilenet_v3_small: VisionModelParams(
-            models.MobileNet_V3_Small_Weights.DEFAULT, _torch_export_for_training
-        ),
+        models.resnet18: VisionModelParams(models.ResNet18_Weights.DEFAULT, _torch_export),
+        models.mobilenet_v3_small: VisionModelParams(models.MobileNet_V3_Small_Weights.DEFAULT, _torch_export),
         models.vit_b_16: VisionModelParams(
             models.ViT_B_16_Weights.DEFAULT,
-            _torch_export_for_training,
-            export_torch_before_ov_convert=False,  # OV convert of exported model has issues Issue-162009
+            _torch_export,
+            export_torch_before_ov_convert=False,
         ),
         models.swin_v2_s: VisionModelParams(
             models.Swin_V2_S_Weights.DEFAULT,
             _torch_export,
-            export_torch_before_ov_convert=False,  # OV convert of exported model has issues Issue-162009
+            export_torch_before_ov_convert=False,
         ),
     }
 
@@ -143,21 +136,3 @@ class ImageClassificationTorchvision(ImageClassificationBase):
 
     def prepare_preprocessor(self) -> None:
         self.transform = self.model_params.weights.transforms()
-
-    def get_transform_calibration_fn(self):
-        if self.backend in FX_BACKENDS + PT_BACKENDS:
-            device = torch.device(
-                "cuda" if self.backend in [BackendType.CUDA_TORCH, BackendType.CUDA_FX_TORCH] else "cpu"
-            )
-
-            def transform_fn(data_item):
-                images, _ = data_item
-                return images.to(device)
-
-        else:
-
-            def transform_fn(data_item):
-                images, _ = data_item
-                return {self.input_name: np.array(images, dtype=np.float32)}
-
-        return transform_fn

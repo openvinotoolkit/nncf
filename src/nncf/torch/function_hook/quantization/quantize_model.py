@@ -26,10 +26,12 @@ from nncf.parameters import SensitivityMetric
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import ScopedConfig
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.quantization.quantize_model import warning_model_no_batchwise_support
 from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.torch.function_hook import wrap_model
 from nncf.torch.function_hook.nncf_graph.nncf_graph_builder import GraphModelWrapper
 from nncf.torch.graph.operator_metatypes import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
@@ -44,7 +46,7 @@ def quantize_impl(
     subset_size: int = 300,
     fast_bias_correction: bool = True,
     model_type: ModelType | None = None,
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
     advanced_parameters: AdvancedQuantizationParameters | None = None,
 ) -> torch.nn.Module:
     """
@@ -89,7 +91,7 @@ def compress_weights_impl(
     mode: CompressWeightsMode,
     ratio: float,
     group_size: int,
-    ignored_scope: IgnoredScope,
+    ignored_scope: Scope | IgnoredScope,
     all_layers: bool,
     sensitivity_metric: SensitivityMetric,
     awq: bool,
@@ -100,6 +102,7 @@ def compress_weights_impl(
     backup_mode: BackupMode,
     compression_format: CompressionFormat,
     advanced_parameters: AdvancedCompressionParameters | None = None,
+    scoped_configs: list[ScopedConfig] | None = None,
 ) -> torch.nn.Module:
     """
     Implementation of the `compress_weights()` method for the PyTorch backend.
@@ -119,6 +122,7 @@ def compress_weights_impl(
         backup_mode,
         compression_format,
         advanced_parameters,
+        scoped_configs,
     )
     graph = build_graph(model)
 

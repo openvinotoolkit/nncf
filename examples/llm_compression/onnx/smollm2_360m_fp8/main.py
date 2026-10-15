@@ -48,9 +48,10 @@ def generate_answers(questions, model, tokenizer, max_new_tokens=50):
 
     for question in questions:
         messages.append({"role": "user", "content": question})
-        input_ids = tokenizer.apply_chat_template(
+        batch_feature = tokenizer.apply_chat_template(
             messages, tokenize=True, add_generation_prompt=True, return_tensors="pt"
-        ).to(device=model.device)
+        )
+        input_ids = batch_feature["input_ids"]
         input_len = len(input_ids[0])
 
         output = model.generate(input_ids, max_new_tokens=max_new_tokens, do_sample=False)[0]
@@ -104,7 +105,7 @@ def main():
         advanced_parameters=nncf.AdvancedQuantizationParameters(
             smooth_quant_alphas=nncf.AdvancedSmoothQuantParameters(matmul=-1)
         ),
-        ignored_scope=nncf.IgnoredScope(
+        ignored_scope=nncf.Scope(
             names=[
                 "/model/rotary_emb/MatMul",
                 "/model/layers.0/self_attn/MatMul_1",

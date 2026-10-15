@@ -9,11 +9,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import math
+import os
+import re
 from abc import ABC
 from abc import abstractmethod
+from dataclasses import asdict
 from dataclasses import dataclass
+from dataclasses import replace
 from functools import reduce
 from operator import mul
+from pathlib import Path
 from typing import Any, Callable, TypeVar
 from unittest.mock import patch
 
@@ -22,6 +27,7 @@ import pytest
 
 import nncf
 import nncf.tensor.functions as fns
+from nncf import BackupMode
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf import nncf_logger
@@ -42,9 +48,11 @@ from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
 from nncf.quantization.algorithms.weight_compression.weight_lowering import integer_quantize_dequantize_weight
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
+from tests.cross_fw.shared.json import dump_to_json
+from tests.cross_fw.shared.json import load_json
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -179,7 +187,7 @@ class TemplateWeightCompression(ABC):
     @staticmethod
     @abstractmethod
     def get_sequential_matmul_model(transpose_a: bool) -> TModel:
-        """Returns a backend model for test_mixed_precision."""
+        """Returns a backend model with a sequence of MatMul layers."""
 
     @staticmethod
     @abstractmethod
@@ -256,37 +264,37 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_moe_model_for_test_scale_estimation(transpose_a: bool) -> TModel:
+    def get_moe_model_for_test_scale_estimation(transpose_a: bool, grouped_mm: bool = False) -> TModel:
         """
-        Returns a backend MoE model for test_scale_estimation with 3D weights.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_moe_scale_estimation_ref(check_sampling_activation_stats_flow: bool) -> TTensor:
-        """
-        :param check_sampling_activation_stats_flow: whether we are checking the flow with sampling when processing
-            activation statistics
-        Returns the reference output of calculate_quantization_params for MoE model.
+        Returns a backend MoE model with 3D weights. Could be grouped_mm or batched_mm implementation
+        for the MoE.
+        :raises NotImplementedError: If grouped_mm is not supported by the backend.
         """
 
     @staticmethod
     @abstractmethod
-    def get_scale_estimation_ref(check_sampling_activation_stats_flow: bool) -> TTensor:
+    def get_scale_estimation_ref_path() -> Path:
         """
-        :param check_sampling_activation_stats_flow: whether we are checking the flow with sampling when processing
-            activation statistics
-        Returns the reference output of calculate_quantization_params of ScaleEstimation.
+        Returns path to the file with the reference output of calculate_quantization_params of ScaleEstimation
         """
 
-    @pytest.mark.parametrize("transpose_a", [False, True], ids=["no_tr_a", "tr_a"])
-    @pytest.mark.parametrize("is_moe", [False, True], ids=["reg", "moe"])
+    @pytest.mark.parametrize(
+        "model_type,transpose_a",
+        [("reg", False), ("reg", True), ("moe_bmm", False), ("moe_bmm", True), ("moe_grouped_mm", False)],
+        ids=["reg", "reg_tr_a", "moe_bmm", "moe_bmm_tr_a", "moe_grouped_mm"],
+    )
     @pytest.mark.parametrize("check_sampling_activation_stats_flow", [False, True], ids=["full", "sampled"])
-    def test_scale_estimation(self, mocker, transpose_a, is_moe, check_sampling_activation_stats_flow):
+    def test_scale_estimation(self, mocker, transpose_a, model_type, check_sampling_activation_stats_flow):
         """Checks that scales match the reference."""
         calc_q_params_spy = mocker.spy(ScaleEstimation, "calculate_quantization_params")
 
-        if is_moe:
+        if model_type == "moe_grouped_mm":
+            try:
+                model = self.get_moe_model_for_test_scale_estimation(transpose_a=transpose_a, grouped_mm=True)
+            except NotImplementedError as e:
+                pytest.xfail(str(e))
+            input = np.arange(0, 4 * 8, dtype=np.float32).reshape(4, 8)
+        elif model_type == "moe_bmm":
             model = self.get_moe_model_for_test_scale_estimation(transpose_a=transpose_a)
             input = np.arange(0, 2 * 4 * 8, dtype=np.float32).reshape(2, 4, 8)
         else:
@@ -320,11 +328,15 @@ class TemplateWeightCompression(ABC):
 
         computed_scale = calc_q_params_spy.spy_return[0]
 
-        if is_moe:
-            reference = self.get_moe_scale_estimation_ref(check_sampling_activation_stats_flow)
-        else:
-            reference = self.get_scale_estimation_ref(check_sampling_activation_stats_flow)
+        ref_key = f"{model_type}_{'sampled' if check_sampling_activation_stats_flow else 'full'}"
+        ref_path = self.get_scale_estimation_ref_path()
 
+        if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
+            ref_scales = load_json(ref_path)
+            ref_scales[ref_key] = computed_scale.as_numpy_tensor().data
+            dump_to_json(ref_path, ref_scales)
+
+        reference = self.to_tensor(load_json(ref_path)[ref_key])
         assert fns.allclose(Tensor(reference), computed_scale)
 
     @staticmethod
@@ -337,15 +349,24 @@ class TemplateWeightCompression(ABC):
     def get_decompressed_weight(compressed_model: TModel, input: TTensor) -> Tensor:
         """Returns decompressed weight"""
 
+    @pytest.mark.parametrize("backup_mode", [BackupMode.INT8_ASYM, BackupMode.NONE], ids=["int8_backup", "no_backup"])
+    @pytest.mark.parametrize("scoped_mode", [None, CompressWeightsMode.INT4_SYM], ids=["default", "scoped_config"])
     @pytest.mark.parametrize("transpose_a", [False, True], ids=["no_tr_a", "tr_a"])
-    def test_scale_estimation_act_ch_axis_param(self, mocker, transpose_a):
-        """Checks that act_ch_axis parameter is passed to calculate_quantization_params."""
+    def test_scale_estimation_act_ch_axis_param(self, mocker, transpose_a, scoped_mode, backup_mode):
+        """
+        Checks that act_ch_axis parameter and the config defined by the scoped config are passed to
+        calculate_quantization_params.
+        """
         calc_q_params_spy = mocker.spy(ScaleEstimation, "calculate_quantization_params")
 
         model = self.get_model_for_test_scale_estimation(transpose_a=transpose_a)
         input = np.arange(0, 4 * 8, dtype=np.float32).reshape(1, 4, 8)
         input = self.to_tensor(input)
         dataset = Dataset([input], self.get_transform_func())
+
+        scoped_configs = None
+        if scoped_mode is not None:
+            scoped_configs = [nncf.ScopedConfig(patterns=[".*"], mode=scoped_mode, group_size=8)]
 
         with SpyWeightCompressionStatisticsContext(mocker):
             _ = compress_weights(
@@ -355,7 +376,9 @@ class TemplateWeightCompression(ABC):
                 group_size=8,
                 scale_estimation=True,
                 all_layers=True,
+                backup_mode=backup_mode,
                 dataset=dataset,
+                scoped_configs=scoped_configs,
             )
 
         # Verify calculate_quantization_params was called
@@ -365,6 +388,10 @@ class TemplateWeightCompression(ABC):
         # Signature: calculate_quantization_params(statistics, weight, reduction_axes, config, act_ch_axis, ...)
         call_args = calc_q_params_spy.call_args[0]
         assert len(call_args) >= 5, "calculate_quantization_params should have at least 5 positional arguments"
+
+        # Verify the config is the scoped one, if the scoped config is given
+        config = call_args[3]
+        assert config.mode == (scoped_mode or CompressWeightsMode.INT4_ASYM)
 
         # Verify act_ch_axis has a valid value (should be an integer)
         act_ch_axis = call_args[4]
@@ -641,27 +668,43 @@ class TemplateWeightCompression(ABC):
 
     @pytest.mark.parametrize("is_3d_weights", [True, False])
     @pytest.mark.parametrize("with_multiply", (True, False))
+    @pytest.mark.parametrize("scope_all", [False, True], ids=["default", "scoped_config"])
     def test_call_max_var_criterion_with_dataset_by_default_awq_act_matmul(
-        self, int4_mode, with_multiply, is_3d_weights, mocker
+        self, int4_mode, with_multiply, is_3d_weights, scope_all, mocker
     ):
         n_layers = 8
-        n_awq_target = n_layers - 1  # first MatMul is always int8
+        # The first MatMul is always int8, unless the scoped config assigns 4 bits to it
+        n_awq_target = n_layers if scope_all else n_layers - 1
         model = self.get_awq_act_model(is_3d_weights, with_multiply, n_layers)
 
         dataset = Dataset([self.to_tensor(np.ones([2, 8, 8], dtype=np.float32))], self.get_transform_func())
 
+        scoped_configs = None
+        if scope_all:
+            scoped_configs = [nncf.ScopedConfig(patterns=[".*"], mode=int4_mode, group_size=2)]
+
         with SpyWeightCompressionStatisticsContext(mocker):
-            model = compress_weights(model, mode=int4_mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)
+            model = compress_weights(
+                model,
+                mode=int4_mode,
+                ratio=1.0,
+                group_size=2,
+                dataset=dataset,
+                awq=True,
+                scoped_configs=scoped_configs,
+            )
 
         awq_num = self.get_num_multiply_from_awq(model)
         assert awq_num == n_awq_target
 
     @staticmethod
     @abstractmethod
-    def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool) -> TModel:
+    def get_awq_model(non_mergable_pattern: bool, is_3d_weights: bool, grouped_mm: bool = False) -> TModel:
         """
         Returns a backend model for test_awq_with_ignored_scope."
         :param is_3d_weights: The model has 3d weights
+        :param grouped_mm: The 3d weights are applied as a GroupedMatMul
+        :raises NotImplementedError: If grouped_mm is not supported by the backend.
         """
 
     @staticmethod
@@ -687,10 +730,15 @@ class TemplateWeightCompression(ABC):
     @staticmethod
     @abstractmethod
     def get_ignored_scope_name(is_3d_weights) -> str:
-        "Returns ignored scope name for test_awq_with_ignored_scope."
+        "Returns ignored scope name for test_awq_with_ignored_scopes."
 
     @pytest.mark.parametrize("is_3d_weights", [True, False])
-    def test_awq_with_ignored_scope(self, mocker, is_3d_weights):
+    @pytest.mark.parametrize("exclude_by_scoped_config", [False, True], ids=["ignored_scope", "scoped_configs"])
+    def test_awq_with_excluded_node(self, mocker, is_3d_weights, exclude_by_scoped_config):
+        """
+        Checks that a node is kept out of the 4 bit compression when AWQ is enabled, either by the ignored scope
+        or using a scoped config by assigning layers int8 configuration.
+        """
         model = self.get_awq_model(non_mergable_pattern=False, is_3d_weights=is_3d_weights)
         sz = 8
         n_samples = 10
@@ -702,6 +750,16 @@ class TemplateWeightCompression(ABC):
             self.get_transform_func(),
         )
 
+        excluded_node_name = self.get_ignored_scope_name(is_3d_weights)
+        ignored_scope = None
+        scoped_configs = None
+        if exclude_by_scoped_config:
+            scoped_configs = [
+                nncf.ScopedConfig(names=[excluded_node_name], mode=CompressWeightsMode.INT8_SYM, group_size=-1)
+            ]
+        else:
+            ignored_scope = Scope(names=[excluded_node_name])
+
         with SpyWeightCompressionStatisticsContext(mocker):
             compressed_model = compress_weights(
                 model,
@@ -710,10 +768,11 @@ class TemplateWeightCompression(ABC):
                 group_size=-1,
                 dataset=dataset,
                 awq=True,
-                ignored_scope=IgnoredScope(names=[self.get_ignored_scope_name(is_3d_weights)]),
+                ignored_scope=ignored_scope,
+                scoped_configs=scoped_configs,
             )
 
-        int4_ref_num_compressed = 4  # last MatMul is always int8; one - is ignored; total 6 matmuls
+        int4_ref_num_compressed = 4  # last MatMul is always int8; one - is excluded; total 6 matmuls
         int4_num_nodes = self.get_num_int4_nodes(compressed_model)
         assert int4_num_nodes == int4_ref_num_compressed, int4_num_nodes
 
@@ -758,24 +817,42 @@ class TemplateWeightCompression(ABC):
 
     @staticmethod
     @abstractmethod
-    @pytest.fixture
-    def test_awq_scale_ref() -> dict[str, Tensor]:
-        "Returns reference for test_awq_scale_reference."
+    def get_awq_scale_ref_path() -> Path:
+        """
+        Returns path to the file with the reference scales for test_awq_scale_reference.
+        """
 
     # Transpose inputs does not affect mergable pattern code, skippting (True, False)
-    @pytest.mark.parametrize("transpose_a,non_mergable_pattern", [(True, True), (False, True), (False, False)])
-    @pytest.mark.parametrize("is_3d_weights", [True, False])
+    @pytest.mark.parametrize(
+        "model_type,transpose_a,non_mergable_pattern",
+        [
+            ("reg", True, True),
+            ("reg", False, True),
+            ("reg", False, False),
+            ("moe_bmm", True, True),
+            ("moe_bmm", False, True),
+            ("moe_bmm", False, False),
+            ("moe_grouped_mm", False, True),
+            ("moe_grouped_mm", False, False),
+        ],
+    )
     def test_awq_scale_reference(
         self,
         non_mergable_pattern,
         transpose_a,
-        test_awq_scale_ref,
-        is_3d_weights,
+        model_type,
         monkeypatch,
         mocker,
     ):
         monkeypatch.setattr("nncf.quantization.algorithms.weight_compression.algorithm.AWQ", SpyAWQ)
-        if transpose_a:
+        is_3d_weights = model_type == "moe_bmm"
+        if model_type == "moe_grouped_mm":
+            try:
+                model = self.get_awq_model(non_mergable_pattern, is_3d_weights=False, grouped_mm=True)
+            except NotImplementedError as e:
+                pytest.xfail(str(e))
+            INPUT_SHAPE = (4, 8)
+        elif transpose_a:
             INPUT_SHAPE = (2, 2, 4) if is_3d_weights else (2, 4)
             model = self.get_transposable_awq_model(
                 transpose_a=True, transpose_b=True, input_shape=INPUT_SHAPE, is_3d_weights=is_3d_weights
@@ -793,14 +870,26 @@ class TemplateWeightCompression(ABC):
                 model,
                 mode=CompressWeightsMode.INT4_SYM,
                 ratio=1.0,
-                all_layers=transpose_a,
+                all_layers=transpose_a or model_type == "moe_grouped_mm",
                 group_size=-1,
                 dataset=dataset,
                 awq=True,
             )
         assert spy_instance is not None
+        if model_type == "moe_grouped_mm":
+            assert spy_instance._scale_per_target_node
+
+        ref_path = self.get_awq_scale_ref_path()
+        if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
+            ref_scales = load_json(ref_path)
+            ref_scales.setdefault(model_type, {}).update(
+                {name: scales.as_numpy_tensor().data for name, scales in spy_instance._scale_per_target_node.items()}
+            )
+            dump_to_json(ref_path, ref_scales)
+
+        model_ref_scales = load_json(ref_path)[model_type]
         for node_name, scales in spy_instance._scale_per_target_node.items():
-            ref = test_awq_scale_ref[is_3d_weights][node_name]
+            ref = Tensor(self.to_tensor(model_ref_scales[node_name]))
             assert fns.allclose(scales, ref)
             assert scales.shape == ref.shape
 
@@ -850,7 +939,7 @@ class TemplateWeightCompression(ABC):
             with pytest.raises(InvalidGroupSizeError) as exc_info:
                 compress_weights(**kwargs)
 
-            assert "Failed to apply group-wise quantization with group size value" in str(exc_info.value)
+            assert "Failed to apply group-wise quantization with the requested group size value" in str(exc_info.value)
         elif expected_outcome == "warn_ignored":
             with patch.object(nncf_logger, "warning") as mock_warning:
                 compress_weights(**kwargs)
@@ -868,14 +957,14 @@ class TemplateWeightCompression(ABC):
             )
             assert any(info_msg in msg for msg in info_messages)
             if expected_outcome == "info_adjusted_group_size":
-                table_rows = [
-                    "int8_asym, per-channel    │ 50% (1 / 9)                 │ 50% (1 / 9)",
-                    "int4_asym, group size 8   │ 25% (7 / 9)                 │ 25% (7 / 9)",
-                    "int4_asym, group size 16  │ 25% (1 / 9)                 │ 25% (1 / 9)",
+                table_row_patterns = [
+                    r"int8_asym, per-channel.*50% \(1 / 9\).*50% \(1 / 9\)",
+                    r"int4_asym, group size 8\s.*25% \(7 / 9\).*25% \(7 / 9\)",
+                    r"int4_asym, group size 16\s.*25% \(1 / 9\).*25% \(1 / 9\)",
                 ]
-                for row in table_rows:
+                for pattern in table_row_patterns:
                     # On Windows "|" is printed instead of "│"
-                    assert any(row in msg.replace("|", "│") for msg in info_messages), "\n".join(info_messages)
+                    assert any(re.search(pattern, msg) for msg in info_messages), "\n".join(info_messages)
 
     @pytest.mark.parametrize(
         [
@@ -925,6 +1014,340 @@ class TemplateWeightCompression(ABC):
         assert ref_num_group_sizes == num_group_sizes, (
             f"Expected {ref_num_group_sizes} group size values, but got {num_group_sizes}."
         )
+
+    # Test Scoped Configs
+
+    @staticmethod
+    @abstractmethod
+    def get_scoped_configs_ref_path(ref_name: str) -> Path:
+        """
+        Returns the path to the reference compression configs of the given scoped config test case.
+        """
+
+    @abstractmethod
+    def get_shared_weight_model(self) -> TModel:
+        """
+        Returns a backend model where two nodes share the same weight.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_shared_weight_node_name() -> str:
+        """
+        Returns the name of the node from `get_shared_weight_model` whose weight is compressed under the other
+        node sharing it.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_node_with_shared_weight_name() -> str:
+        """
+        Returns the name of the node from `get_shared_weight_model` that the shared weight is compressed under,
+        """
+
+    @staticmethod
+    def get_mode_not_supported_by_backend() -> CompressWeightsMode | None:
+        """
+        Returns a compression mode that is not supported by the backend, or None if all the modes are supported.
+        """
+        return None
+
+    def _compress_and_get_configs(self, **kwargs) -> dict[str, dict[str, Any]]:
+        """
+        Compresses a model and returns the compression config assigned to each compressed weight node.
+
+        :param kwargs: Arguments for the `compress_weights` function.
+        :return: A mapping from a node name to the assigned compression config.
+        """
+        captured_weight_params = []
+        original_fn = WeightCompression.apply_with_parameters
+
+        def apply_with_parameters(self, model, graph, dataset, statistics, all_weight_params):
+            captured_weight_params.append(all_weight_params)
+            return original_fn(self, model, graph, dataset, statistics, all_weight_params)
+
+        with patch.object(WeightCompression, "apply_with_parameters", apply_with_parameters):
+            compress_weights(**kwargs)
+
+        all_weight_params = captured_weight_params[-1]
+        return {wp.node_with_weight.node_name: asdict(wp.compression_config) for wp in all_weight_params}
+
+    # The weight nodes of the sequential MatMul model are named "MatMul_<i>" / "linear_<i>" / "/linear/<i>"
+    # depending on the backend, so they are referred to by a pattern that matches the node index.
+    @pytest.mark.parametrize(
+        ("model_name", "kwargs", "scoped_configs", "ignored_scope"),
+        [
+            pytest.param(
+                "sequential_matmul",
+                dict(ratio=1.0, all_layers=False),
+                [
+                    nncf.ScopedConfig(patterns=[".*1$"], mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                    nncf.ScopedConfig(patterns=[".*4$"], mode=CompressWeightsMode.INT4_ASYM, group_size=4),
+                ],
+                None,
+                id="primary_and_backup_precision",
+            ),
+            pytest.param(
+                "sequential_matmul",
+                dict(ratio=0.5, all_layers=True),
+                [nncf.ScopedConfig(patterns=[".*1$"], mode=CompressWeightsMode.INT4_ASYM, group_size=-1)],
+                None,
+                id="mixed_precision",
+            ),
+            pytest.param(
+                "sequential_matmul",
+                dict(ratio=1.0, all_layers=True),
+                [nncf.ScopedConfig(patterns=[".*1$"], mode=CompressWeightsMode.INT8_SYM, group_size=-1)],
+                Scope(patterns=[".*1$"]),
+                id="ignored_scope",
+            ),
+            pytest.param(
+                "sequential_matmul",
+                dict(ratio=1.0, all_layers=True),
+                [
+                    nncf.ScopedConfig(patterns=[".*1$", ".*2$"], mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                    nncf.ScopedConfig(patterns=[".*2$"], mode=CompressWeightsMode.INT4_ASYM, group_size=4),
+                    nncf.ScopedConfig(patterns=[".*2$"], mode=CompressWeightsMode.INT4_SYM, group_size=2),
+                ],
+                None,
+                id="overlapping_scoped_configs",
+            ),
+            pytest.param(
+                "sequential_matmul",
+                dict(
+                    ratio=1.0,
+                    all_layers=True,
+                    advanced_parameters=CompressionParams(
+                        group_size_fallback_mode=nncf.GroupSizeFallbackMode.ADJUST, min_adjusted_group_size=4
+                    ),
+                ),
+                [nncf.ScopedConfig(patterns=[".*1$"], mode=CompressWeightsMode.INT4_ASYM, group_size=3)],
+                None,
+                id="group_size_fallback_adjust",
+            ),
+            pytest.param(
+                "sequential_matmul",
+                dict(
+                    ratio=1.0,
+                    all_layers=True,
+                    advanced_parameters=CompressionParams(
+                        group_size_fallback_mode=nncf.GroupSizeFallbackMode.IGNORE, min_adjusted_group_size=4
+                    ),
+                ),
+                [nncf.ScopedConfig(patterns=[".*1$"], mode=CompressWeightsMode.INT4_ASYM, group_size=3)],
+                None,
+                id="group_size_fallback_ignore",
+            ),
+            pytest.param(
+                "shared_weight",
+                dict(ratio=1.0, all_layers=True),
+                [nncf.ScopedConfig(patterns=[".*"], mode=CompressWeightsMode.INT8_SYM, group_size=-1)],
+                None,
+                id="shared_weight",
+            ),
+            pytest.param(
+                "shared_weight",
+                dict(ratio=1.0, all_layers=True),
+                [nncf.ScopedConfig(patterns=[".*"], mode=CompressWeightsMode.INT8_SYM, group_size=-1)],
+                Scope(patterns=[".*"]),
+                id="shared_weight_with_ignored_scope",
+            ),
+            pytest.param(
+                "shared_weight",
+                dict(ratio=1.0, all_layers=True),
+                # No scope rules are given, since the matched node name is backend-specific
+                [nncf.ScopedConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=2)],
+                None,
+                id="shared_weight_matched_by_other_node",
+            ),
+            pytest.param(
+                "shared_weight",
+                dict(ratio=1.0, all_layers=True),
+                [
+                    nncf.ScopedConfig(patterns=[".*"], mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                    nncf.ScopedConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=2),
+                ],
+                None,
+                id="shared_weight_other_node_matched_last",
+            ),
+            pytest.param(
+                "shared_weight",
+                dict(ratio=1.0, all_layers=True),
+                [
+                    nncf.ScopedConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=2),
+                    nncf.ScopedConfig(patterns=[".*"], mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                ],
+                None,
+                id="shared_weight_other_node_matched_first",
+            ),
+            # The nodes sharing a weight are matched as a single one even if none of them is compressed,
+            # so that the last scoped config takes precedence no matter which of the nodes it matches
+            pytest.param(
+                "shared_weight",
+                dict(ratio=1.0, all_layers=True),
+                [
+                    nncf.ScopedConfig(patterns=[".*"], mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                    nncf.ScopedConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=2),
+                ],
+                Scope(patterns=[".*"]),
+                id="shared_weight_ignored_other_node_matched_last",
+            ),
+            pytest.param(
+                "shared_weight",
+                dict(ratio=1.0, all_layers=True),
+                [
+                    nncf.ScopedConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=2),
+                    nncf.ScopedConfig(patterns=[".*"], mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                ],
+                Scope(patterns=[".*"]),
+                id="shared_weight_ignored_other_node_matched_first",
+            ),
+            # The weight is compressed under the node that is not ignored, so the ignored one is not restored
+            pytest.param(
+                "shared_weight",
+                dict(ratio=1.0, all_layers=True),
+                [nncf.ScopedConfig(patterns=[".*"], mode=CompressWeightsMode.INT8_SYM, group_size=-1)],
+                None,
+                id="shared_weight_with_ignored_compressed_node",
+            ),
+        ],
+    )
+    def test_scoped_configs(self, model_name, kwargs, scoped_configs, ignored_scope, request):
+        """
+        Compares the compression config assigned to each weight node with the reference one when the given
+        scoped configs are applied. A node that is not compressed has no config in the reference file.
+
+        Set the NNCF_TEST_REGEN_DOT environment variable to regenerate the reference file.
+        """
+        test_id = request.node.callspec.id
+        if model_name == "sequential_matmul":
+            model = self.get_sequential_matmul_model(transpose_a=False)
+        else:
+            model = self.get_shared_weight_model()
+
+        # The scoped configs without the scope rules are applied to the node with the shared weight
+        scoped_configs = [
+            scoped_config
+            if scoped_config.scope.patterns
+            else replace(scoped_config, names=[self.get_shared_weight_node_name()])
+            for scoped_config in scoped_configs
+        ]
+        if test_id == "shared_weight_with_ignored_compressed_node":
+            ignored_scope = Scope(names=[self.get_node_with_shared_weight_name()])
+
+        configs = self._compress_and_get_configs(
+            model=model,
+            mode=CompressWeightsMode.INT4_SYM,
+            group_size=-1,
+            ignored_scope=ignored_scope,
+            **kwargs,
+            scoped_configs=scoped_configs,
+        )
+
+        ref_path = self.get_scoped_configs_ref_path(test_id)
+        if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
+            dump_to_json(ref_path, configs)
+
+        assert configs == load_json(ref_path)
+
+    @pytest.mark.parametrize(
+        ("scoped_configs", "ignored_scope", "warning"),
+        [
+            pytest.param(
+                [
+                    nncf.ScopedConfig(patterns=[".*1$"], mode=CompressWeightsMode.INT8_SYM, group_size=-1),
+                    nncf.ScopedConfig(patterns=[".*1$"], mode=CompressWeightsMode.INT4_ASYM, group_size=4),
+                    nncf.ScopedConfig(patterns=[".*1$"], mode=CompressWeightsMode.INT4_SYM, group_size=2),
+                ],
+                None,
+                "Several scoped configs match the same nodes",
+                id="overlapping_scoped_configs",
+            ),
+            pytest.param(
+                [nncf.ScopedConfig(patterns=[".*1$"], mode=CompressWeightsMode.INT8_SYM, group_size=-1)],
+                Scope(patterns=[".*1$"]),
+                "excluded from the compression",
+                id="ignored_scope",
+            ),
+        ],
+    )
+    def test_scoped_configs_warning(self, scoped_configs, ignored_scope, warning):
+        """
+        Checks that appropriate warnings are logged when the scoped config is overridden or has no effect.
+        """
+        with patch.object(nncf_logger, "warning") as mock_warning:
+            compress_weights(
+                model=self.get_sequential_matmul_model(transpose_a=False),
+                mode=CompressWeightsMode.INT4_SYM,
+                ratio=1.0,
+                group_size=-1,
+                all_layers=True,
+                ignored_scope=ignored_scope,
+                scoped_configs=scoped_configs,
+            )
+
+        messages = [args[0] for args, _ in mock_warning.call_args_list]
+        # Check if warning is logged + only 1 warning is logged for a single incident
+        matched = [message for message in messages if warning in message]
+        assert len(matched) == 1, f"Expected a single '{warning}' warning, but got: {messages}"
+
+    @pytest.mark.parametrize(
+        ("scoped_configs", "error"),
+        [
+            pytest.param(nncf.ScopedConfig(), nncf.ValidationError, id="not_a_list"),
+            pytest.param(["anything"], nncf.ValidationError, id="not_a_scoped_config"),
+            pytest.param([nncf.Scope(patterns=[".*"])], nncf.ValidationError, id="scope"),
+            pytest.param(
+                [WeightCompressionConfig(mode=CompressWeightsMode.INT8_SYM, group_size=-1)],
+                nncf.ValidationError,
+                id="weight_compression_config",
+            ),
+            pytest.param(
+                [nncf.ScopedConfig(mode=CompressWeightsMode.CODEBOOK)],
+                nncf.ParameterNotSupportedError,
+                id="codebook_mode",
+            ),
+            pytest.param(
+                [nncf.ScopedConfig(mode=CompressWeightsMode.INT8_SYM, group_size=4)],
+                nncf.ParameterNotSupportedError,
+                id="int8_with_group_size",
+            ),
+            pytest.param(
+                [nncf.ScopedConfig(names=["unknown_node"], mode=CompressWeightsMode.INT8_SYM, group_size=-1)],
+                nncf.ValidationError,
+                id="unmatched_scope",
+            ),
+            pytest.param(
+                [nncf.ScopedConfig(patterns=[".*"], mode=CompressWeightsMode.INT4_ASYM, group_size=3)],
+                InvalidGroupSizeError,
+                id="invalid_group_size",
+            ),
+            pytest.param(
+                None,
+                nncf.ParameterNotSupportedError,
+                id="mode_not_supported_by_backend",
+            ),
+        ],
+    )
+    def test_invalid_scoped_configs(self, scoped_configs, error, request):
+        """
+        Checks that an error is raised for an invalid scoped config.
+        """
+        if request.node.callspec.id == "mode_not_supported_by_backend":
+            mode = self.get_mode_not_supported_by_backend()
+            if mode is None:
+                pytest.skip("The backend supports all the compression modes")
+            scoped_configs = [nncf.ScopedConfig(patterns=[".*"], mode=mode, group_size=-1)]
+
+        with pytest.raises(error):
+            compress_weights(
+                model=self.get_sequential_matmul_model(transpose_a=False),
+                mode=CompressWeightsMode.INT4_SYM,
+                ratio=1.0,
+                group_size=-1,
+                all_layers=True,
+                scoped_configs=scoped_configs,
+            )
 
     @pytest.mark.parametrize("is_3d_weights", [True, False])
     @pytest.mark.parametrize("dataset", [None, np.ones([2, 8, 8], dtype=np.float32)])

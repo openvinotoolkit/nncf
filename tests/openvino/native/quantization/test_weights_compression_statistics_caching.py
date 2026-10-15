@@ -20,13 +20,13 @@ from transformers import AutoTokenizer
 
 import nncf
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 
 MODEL_ID = "hf-internal-testing/tiny-random-OPTForCausalLM"
 DEFAULT_RATIO = 0.4
 DEFAULT_GROUP_SIZE = 4
 DEFAULT_SENSITIVITY = nncf.SensitivityMetric.HESSIAN_INPUT_ACTIVATION
-DEFAULT_IGNORED_SCOPE = IgnoredScope()
+DEFAULT_IGNORED_SCOPE = Scope()
 DEFAULT_SUBSET_SIZE = 4
 DEFAULT_MODE = nncf.CompressWeightsMode.INT4_ASYM
 
@@ -72,7 +72,7 @@ def _test_basic_configurations(model, quantization_dataset, tmp_path, subset_siz
         nncf.SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
         nncf.SensitivityMetric.MAX_ACTIVATION_VARIANCE,
     ]
-    ignored_scopes = [IgnoredScope(), IgnoredScope(types=["MatMul"])]
+    ignored_scopes = [Scope(), Scope(types=["MatMul"])]
 
     load_count = 0
     for awq, group_size, ratio, sensitivity, scope in product(

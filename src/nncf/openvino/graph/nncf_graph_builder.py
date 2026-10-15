@@ -20,6 +20,7 @@ from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_CONST_PORT_ID
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupedMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGRUSequenceMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVLSTMSequenceMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
@@ -87,6 +88,8 @@ class GraphConverter:
             return inputs[:5]
         if metatype == OVLSTMSequenceMetatype:
             return inputs[:6]
+        if metatype == OVGroupedMatMulMetatype:
+            return inputs[1:2]  # per-group (expert) weight matrices are always passed through port 1 (mat_b).
         return inputs
 
     @staticmethod
@@ -214,6 +217,8 @@ class GraphConverter:
                     elif metatype == OVGRUSequenceMetatype:
                         node_attributes = node.get_attributes()
                         act_attrs["linear_before_reset"] = node_attributes["linear_before_reset"]
+
+                    # NOTE: GroupedMatMul operation has no attributes.
 
                     if const_attrs or act_attrs:
                         nncf_node = nncf_graph.get_node_by_name(node_name)
