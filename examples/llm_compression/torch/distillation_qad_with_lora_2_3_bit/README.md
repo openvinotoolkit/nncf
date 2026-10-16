@@ -57,6 +57,7 @@ python main.py
 - `--pretrained`: HF model ID or local path (only AutoModelForCausalLM are supported).
 - `--bits`: `2` or `3` bits per weight.
 - `--lora_rank`: rank of absorbable LoRA adapters.
+- `--group_size`: group size for weight compression.
 - `--basic_init`: use a simpler initialization without AWQ / scale estimation.
 - `--equalize_mlp`: run MLP equalization before compression.
 - `--resume`: continue from a saved checkpoint instead of reinitializing.

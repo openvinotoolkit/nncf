@@ -353,6 +353,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
         "start from scratch by post-training weight compression initialization.",
     )
     parser.add_argument("--lora_rank", type=int, default=256, help="Rank of lora adapters")
+    parser.add_argument("--group_size", type=int, default=128, help="Group size for weight quantization.")
     parser.add_argument(
         "--basic_init",
         action="store_true",
@@ -749,7 +750,7 @@ def main(argv) -> float:
     torch_dtype = torch.bfloat16
     compression_config = dict(
         mode=CompressWeightsMode.INT3_SYM if args.bits == 3 else CompressWeightsMode.INT2_SYM,
-        group_size=64,
+        group_size=args.group_size,
         awq=not (args.basic_init or args.equalize_mlp),
         scale_estimation=not args.basic_init,
         compression_format=CompressionFormat.FQ_LORA,
