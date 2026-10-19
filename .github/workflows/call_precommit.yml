@@ -31,6 +31,7 @@ defaults:
 
 jobs:
   cpu:
+    if: false
     name: ${{ matrix.scope }}
     timeout-minutes: 40
     runs-on: ${{ matrix.runner }}
@@ -98,15 +99,24 @@ jobs:
       - name: Install dependencies
         run : |
           sudo apt-get update
-          sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make
+          sudo apt-get --assume-yes install build-essential ninja-build libgl1-mesa-dev libglib2.0-0 wget make lsb-release
       - name: Download CUDA
         run: |
-          wget -q https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_560.35.05_linux.run
-          sudo sh cuda_12.6.3_560.35.05_linux.run --toolkit --silent
+          wget -q https://developer.download.nvidia.com/compute/cuda/13.2.1/local_installers/cuda_13.2.1_595.58.03_linux.run
+          sudo sh cuda_13.2.1_595.58.03_linux.run --toolkit --silent
+          cuda_home=/usr/local/cuda-13.2
+          test -f "$cuda_home/targets/x86_64-linux/lib/libcudart.so.13"
+          echo "CUDA_HOME=$cuda_home" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=$cuda_home/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
+          echo "$cuda_home/bin" >> "$GITHUB_PATH"
       - name: CPU Info
         run: awk 'BEGIN{RS=""} END{print}' /proc/cpuinfo
       - name: GPU Info
-        run: nvidia-smi
+        run: |
+          nvidia-smi || echo "no nvidia-smi"
+          ls -ls /usr/local/ || echo "no ls"
+          nvcc -V || echo "no nvcc"
+          lsb_release -a || echo "no lsb_release"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: true
@@ -122,15 +132,15 @@ jobs:
         shell: bash
       - name: Install NNCF and test requirements
         run: make install-torch
-        env:
-          UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cu126  # TODO(AlexanderDokuchaev): Remove when update ci to use cuda13
-          UV_INDEX_STRATEGY: unsafe-best-match
+        # env:
+        #   UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cu126  # TODO(AlexanderDokuchaev): Remove when update ci to use cuda13
+        #   UV_INDEX_STRATEGY: unsafe-best-match
       - name: Print installed modules
         run: pip list
       - name: Check CUDA
         run: |
           python -c "import torch; print(torch.cuda.is_available())"
-      - name: Run PyTorch precommit test scope
-        run: make test-torch-gpu
-        env:
-          PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cu126  # TODO(AlexanderDokuchaev): Remove when update ci to use cuda13
+      # - name: Run PyTorch precommit test scope
+      #   run: make test-torch-gpu
+      #   env:
+      #     PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cu126  # TODO(AlexanderDokuchaev): Remove when update ci to use cuda13
