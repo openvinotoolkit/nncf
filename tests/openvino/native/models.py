@@ -1552,8 +1552,14 @@ class ModelForRepack(OVReferenceModel):
         model_config = [
             {"w_bits": 32, "data_range": [-128, 128]},
             {"w_bits": 8, "data_range": [-8, 7]},
+            # 3 bit
             {"w_bits": 4, "data_range": [-4, 3]},
+            {"w_bits": 4, "data_range": [-3, 3]},
+            {"w_bits": 4, "data_range": [-2, 3]},
+            # 2 bit
             {"w_bits": 4, "data_range": [-2, 1]},
+            {"w_bits": 4, "data_range": [-1, 1]},
+            {"w_bits": 4, "data_range": [0, 1]},
         ]
 
         x = opset.relu(input_1)

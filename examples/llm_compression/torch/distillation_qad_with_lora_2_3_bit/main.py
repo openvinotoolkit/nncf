@@ -822,6 +822,11 @@ def main(argv) -> float:
     grad_accumulation_steps = args.batch_size // args.microbatch_size
     num_samples = len(train_loader)
     epoch_samples = num_samples - num_samples % args.microbatch_size
+
+    if not is_ptq and epoch_samples == 0:
+        msg = f"Training requires at least batch_size={args.batch_size} samples, but only {num_samples} were loaded."
+        raise ValueError(msg)
+
     microbatches_per_epoch = epoch_samples // args.microbatch_size
 
     save_model_state = not args.basic_init or args.equalize_mlp

@@ -17,10 +17,11 @@ from tests.openvino.native.models import ModelForRepack
 
 def get_constant_element_types(model: ov.Model) -> list[ov.Type]:
     """Collects element types of all Constant nodes in the model."""
-    types = []
+    types = {}
     for op in model.get_ops():
         if op.get_type_name() == "Constant":
-            types.append(op.get_element_type())
+            etype = op.get_element_type()
+            types[etype] = types.get(etype, 0) + 1
     return types
 
 
@@ -36,3 +37,6 @@ def test_repack_weights_produces_u3_and_u2():
     element_types = get_constant_element_types(repacked_model)
     assert ov.Type.u3 in element_types, "Expected u3 constant after repacking"
     assert ov.Type.u2 in element_types, "Expected u2 constant after repacking"
+
+    assert element_types[ov.Type.u3] == 3, "Expected exactly three u3 constants after repacking"
+    assert element_types[ov.Type.u2] == 3, "Expected exactly three u2 constants after repacking"

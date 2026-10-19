@@ -133,13 +133,22 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             # Probably zero point
             return False, 0, 0
 
-        max_val = max(int(weight_tensor.max().item()), abs(int(weight_tensor.min().item())))
-        optimal_bits = int(max_val).bit_length()
+        min_val = int(weight_tensor.min().item())
+        max_val = int(weight_tensor.max().item())
 
         supported_optimal_bits = {2: ov.Type.u2, 3: ov.Type.u3}
 
+        optimal_bits = next(
+            (
+                candidate
+                for candidate in supported_optimal_bits
+                if min_val >= -(2 ** (candidate - 1)) and max_val < 2 ** (candidate - 1)
+            ),
+            None,
+        )
+
         # If the optimal bits is equal to the current bits, no need to repack
-        if optimal_bits == bits or optimal_bits not in supported_optimal_bits:
+        if optimal_bits is None or optimal_bits >= bits:
             return False, 0, 0
 
         const_node_name = node.node_name
