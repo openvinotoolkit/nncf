@@ -23,6 +23,7 @@ jobs:
           - python_version: "3.12"
           - python_version: "3.13"
           - python_version: "3.14"
+          - python_version: "3.15"
     uses: ./.github/workflows/call_precommit.yml
     with:
       pr_num: ${{ inputs.pr_num }}
