@@ -22,6 +22,35 @@ from nncf.parameters import CompressWeightsMode
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
 
+INT8_MODES = [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]
+NON_INT8_MODES = [mode for mode in CompressWeightsMode if mode not in INT8_MODES]
+FIXED_GROUP_SIZE_MODES = {
+    CompressWeightsMode.MXFP4: 32,
+    CompressWeightsMode.MXFP8_E4M3: 32,
+    CompressWeightsMode.NVFP4: 16,
+}
+PER_CHANNEL_BY_DEFAULT_MODES = [
+    *INT8_MODES,
+    CompressWeightsMode.CODEBOOK,
+    CompressWeightsMode.CB4,
+    CompressWeightsMode.ADAPTIVE_CODEBOOK,
+]
+DEFAULT_GROUP_SIZE_FOR_NON_INT8_MODES = 128
+
+
+def get_default_group_size(mode: CompressWeightsMode) -> int:
+    """
+    Returns the group size to use for the given mode when no group size is requested explicitly.
+
+    :param mode: Compression mode to get the default group size for.
+    :return: Default group size for the given mode.
+    """
+    if mode in FIXED_GROUP_SIZE_MODES:
+        return FIXED_GROUP_SIZE_MODES[mode]
+    if mode in PER_CHANNEL_BY_DEFAULT_MODES:
+        return -1
+    return DEFAULT_GROUP_SIZE_FOR_NON_INT8_MODES
+
 
 @dataclass
 class WeightCompressionConfig:

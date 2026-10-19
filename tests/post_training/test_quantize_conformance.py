@@ -9,8 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import re
+import sys
 import time
 import traceback
 from collections import OrderedDict
@@ -33,15 +33,6 @@ from tests.post_training.pipelines.base import ErrorReport
 from tests.post_training.pipelines.base import RunInfo
 
 DATA_ROOT = Path(__file__).parent / "data"
-
-
-@pytest.fixture(scope="function", name="use_avx2")
-def fixture_use_avx2(monkeypatch: pytest.MonkeyPatch) -> None:
-    for env_var in ("ONEDNN_MAX_CPU_ISA", "OV_CPU_MAX_ISA"):
-        old_value = os.environ.get(env_var)
-        monkeypatch.setenv(env_var, "AVX2")
-        if old_value is not None and old_value != "AVX2":
-            print(f"Warning: overriding {env_var} with AVX2; previous value was {old_value}")
 
 
 def _parse_version(s: Path):
@@ -236,6 +227,12 @@ def run_pipeline(
             captured = capsys.readouterr()
             write_logs(captured, pipeline)
 
+            with capsys.disabled():
+                sys.stdout.write(captured.out)
+                sys.stdout.flush()
+                sys.stderr.write(captured.err)
+                sys.stderr.flush()
+
             if extra_columns:
                 pipeline.collect_data_from_stdout(captured.out)
         else:
@@ -304,7 +301,6 @@ def test_weight_compression(
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
     memory_monitor: bool,
-    use_avx2: None,
 ):
     run_pipeline(
         test_case_name,

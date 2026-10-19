@@ -29,7 +29,7 @@ from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.torch.function_hook import get_hook_storage
@@ -48,10 +48,14 @@ from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.cross_fw.test_templates.helpers import RoPEModel
 from tests.cross_fw.test_templates.helpers import SAMPEModel
 from tests.cross_fw.test_templates.template_test_weights_compression import TemplateWeightCompression
+from tests.torch.test_models.synthetic import GroupedMatMulModel
 from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
 
 REFERENCE_SCALES_DIR = TEST_ROOT / "torch" / "data" / "function_hook" / "quantization" / "reference_scales"
+SCOPED_CONFIGS_REFERENCES_DIR = (
+    TEST_ROOT / "torch" / "data" / "function_hook" / "quantization" / "references_scoped_configs"
+)
 
 ALL_SENSITIVITY_METRICS = list(SensitivityMetric)
 
@@ -412,6 +416,39 @@ def test_compress_weights_conv():
     assert n_compressed_weights == n_target_modules
 
 
+@pytest.mark.parametrize("transposed_weight", (False, True), ids=("native_weight", "transposed_weight"))
+@pytest.mark.parametrize("mode", SUPPORTED_MODES)
+def test_compress_weights_grouped_matmul(mode, transposed_weight):
+    model = GroupedMatMulModel(transposed_weight=transposed_weight)
+    example_input = torch.ones(model.INPUT_SHAPE, dtype=model.INPUT_DTYPE)
+    wrapped_model = GraphModelWrapper(wrap_model(model), example_input=example_input)
+
+    kwargs = {"group_size": 4, "all_layers": True} if mode in INT4_MODES else {}
+    compressed_model = compress_weights(wrapped_model, mode=mode, **kwargs)
+
+    n_compressed_weights = 0
+    for module in compressed_model.modules():
+        if isinstance(module, BaseWeightsDecompressor):
+            n_compressed_weights += 1
+    assert n_compressed_weights == 1
+
+
+@pytest.mark.parametrize("algorithm", ("awq", "scale_estimation"))
+def test_raise_error_for_data_aware_grouped_matmul(algorithm):
+    model = GroupedMatMulModel()
+    example_input = torch.ones(model.INPUT_SHAPE, dtype=model.INPUT_DTYPE)
+    wrapped_model = GraphModelWrapper(wrap_model(model), example_input=example_input)
+    with pytest.raises(nncf.ParameterNotSupportedError, match="GroupedMatMul"):
+        compress_weights(
+            wrapped_model,
+            mode=CompressWeightsMode.INT4_SYM,
+            group_size=4,
+            all_layers=True,
+            dataset=nncf.Dataset([example_input]),
+            **{algorithm: True},
+        )
+
+
 @pytest.mark.parametrize("mode", SUPPORTED_MODES)
 def test_compress_shared_weights(mocker, mode):
     model = wrap_model(ShortTransformer(8, 16, share_weights=True))
@@ -593,7 +630,8 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
     def get_sequential_matmul_model(transpose_a: bool) -> torch.nn.Module:
         if transpose_a:
             pytest.skip("transpose_a=True is not supported for PT backend")
-        return SequentialMatmulModel()
+        wrapped_model = GraphModelWrapper(wrap_model(SequentialMatmulModel()), example_input=torch.ones([1, 4, 4]))
+        return wrapped_model
 
     @staticmethod
     def get_model_for_test_scale_estimation(transpose_a: bool):
@@ -724,6 +762,27 @@ class TestPTTemplateWeightCompression(TemplateWeightCompression):
         return REFERENCE_SCALES_DIR / "awq_scale_ref.json"
 
     @staticmethod
+    def get_shared_weight_model() -> GraphModelWrapper:
+        model = wrap_model(ShortTransformer(8, 16, share_weights=True))
+        return GraphModelWrapper(model, example_input=torch.randint(0, 10, (8,)))
+
+    @staticmethod
+    def get_shared_weight_node_name() -> str:
+        return "lm_head/linear/0"
+
+    @staticmethod
+    def get_node_with_shared_weight_name() -> str:
+        return "wte/embedding/0"
+
+    @staticmethod
+    def get_mode_not_supported_by_backend() -> CompressWeightsMode | None:
+        return CompressWeightsMode.NF4
+
+    @staticmethod
+    def get_scoped_configs_ref_path(ref_name: str) -> Path:
+        return SCOPED_CONFIGS_REFERENCES_DIR / f"{ref_name}.json"
+
+    @staticmethod
     def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, input_shape=None, is_3d_weights: bool = False):
         pytest.skip("Transposable models are not supported")
 
@@ -751,7 +810,7 @@ def test_half_precision_models(dtype):
 @dataclass
 class ParamIgnoredScope:
     name: str
-    ignored_scope: IgnoredScope
+    ignored_scope: Scope
     ref: set[str]
 
     def __str__(self) -> str:
@@ -761,11 +820,11 @@ class ParamIgnoredScope:
 @pytest.mark.parametrize(
     "param",
     (
-        ParamIgnoredScope("empty", IgnoredScope(), {"post_hooks.linear:weight__0.0"}),
-        ParamIgnoredScope("name_const", IgnoredScope(names=["linear.weight"]), set()),
-        ParamIgnoredScope("name_op", IgnoredScope(names=["linear/linear/0"]), set()),
-        ParamIgnoredScope("pattern_const", IgnoredScope(patterns=[".*weight"]), set()),
-        ParamIgnoredScope("pattern_op", IgnoredScope(patterns=["linear/*"]), set()),
+        ParamIgnoredScope("empty", Scope(), {"post_hooks.linear:weight__0.0"}),
+        ParamIgnoredScope("name_const", Scope(names=["linear.weight"]), set()),
+        ParamIgnoredScope("name_op", Scope(names=["linear/linear/0"]), set()),
+        ParamIgnoredScope("pattern_const", Scope(patterns=[".*weight"]), set()),
+        ParamIgnoredScope("pattern_op", Scope(patterns=["linear/*"]), set()),
     ),
     ids=str,
 )

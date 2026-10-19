@@ -117,6 +117,45 @@ compressed_model = compress_weights(
 )  # model is openvino.Model object
 ```
 
+#### Custom precision for specific layers
+
+- The `scoped_configs` parameter assigns a compression configuration (`mode`, `group_size`) to certain layers
+  explicitly. A typical use case is a Mixture-of-Experts model, where the experts are compressed to 4 bits, while the router layers are kept in 8 bits to preserve accuracy.
+
+```python
+import nncf
+from nncf import compress_weights, CompressWeightsMode, ScopedConfig
+
+compressed_model = compress_weights(
+    model,  # model is openvino.Model object
+    mode=CompressWeightsMode.INT4_SYM,
+    group_size=64,
+    ratio=1.0,
+    scoped_configs=[
+        ScopedConfig(
+            patterns=[".*self_attn.*", ".*router.*"],
+            mode=CompressWeightsMode.INT8_ASYM,
+            group_size=-1,
+        ),
+        ScopedConfig(
+            patterns=[".*mul.*"],
+            mode=CompressWeightsMode.INT4_ASYM,
+            group_size=128,
+        ),
+    ],
+)
+```
+
+- Each `nncf.ScopedConfig` selects layers by the same rules as [the ignored scope](/docs/usage/IgnoredScope.md):
+  node `names`, regular expression `patterns`, operation `types` and `subgraphs`.
+
+- How the config of a layer is selected:
+  1. **Scoped configs** - a matched layer gets the config of the scoped config. If several match, the **last** one
+     in the list wins.
+  2. **Ignored scope** - layers in the `ignored_scope` are not compressed, unless a scoped config matches them in which case scoped config takes precedence.
+  3. **All Other Layers** - gets the config from the main API (`mode`, `group_size`, `ratio`, `backup_mode`,
+     `all_layers`). The mixed precision `ratio` is counted only over layers who are not defined in `scoped_configs` or `ignored_scope`.
+
 #### Data-aware methods
 
 - Accuracy of the 4-bit compressed models can be improved by using data-aware mixed-precision algorithm. It is capable to find outliers in the input activations and assign different quantization precision to minimize accuracy degradation.

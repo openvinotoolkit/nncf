@@ -42,6 +42,7 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import ScopedConfig
 from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
 from nncf.quantization.algorithms.accuracy_control.algorithm import calculate_accuracy_drop
@@ -55,7 +56,8 @@ from nncf.quantization.quantize_model import warning_model_no_batchwise_support
 from nncf.quantization.statistics_caching import cache_weight_compression_statistics
 from nncf.quantization.statistics_caching import register_statistics_for_algorithm
 from nncf.scopes import IgnoredScope
-from nncf.scopes import validate_ignored_scope
+from nncf.scopes import Scope
+from nncf.scopes import validate_scope
 
 TTensor = TypeVar("TTensor")
 
@@ -69,7 +71,7 @@ def native_quantize_if_op_impl(
     subset_size: int = 300,
     fast_bias_correction: bool = True,
     model_type: ModelType | None = None,
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
     advanced_parameters: AdvancedQuantizationParameters | None = None,
 ) -> ov.Model:
     """
@@ -96,8 +98,8 @@ def native_quantize_if_op_impl(
     main_model_graph_id = "main_model_graph"
     _extract_all_subgraphs(model, main_model_graph_id)
     if ignored_scope and ignored_scope.validate:
-        validate_ignored_scope(ignored_scope, graphs.values())
-        ignored_scope = IgnoredScope(
+        validate_scope(ignored_scope, graphs.values())
+        ignored_scope = Scope(
             ignored_scope.names, ignored_scope.patterns, ignored_scope.types, ignored_scope.subgraphs, validate=False
         )
     quantization_algorithm = PostTrainingQuantization(
@@ -150,7 +152,7 @@ def native_quantize_impl(
     subset_size: int = 300,
     fast_bias_correction: bool = True,
     model_type: ModelType | None = None,
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
     advanced_parameters: AdvancedQuantizationParameters | None = None,
 ) -> ov.Model:
     """
@@ -200,7 +202,7 @@ def quantize_with_accuracy_control_impl(
     subset_size: int = 300,
     fast_bias_correction: bool = True,
     model_type: ModelType | None = None,
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
     advanced_quantization_parameters: AdvancedQuantizationParameters | None = None,
     advanced_accuracy_restorer_parameters: AdvancedAccuracyRestorerParameters | None = None,
 ) -> ov.Model:
@@ -336,7 +338,7 @@ def quantize_impl(
     subset_size: int = 300,
     fast_bias_correction: bool = True,
     model_type: ModelType | None = None,
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
     advanced_parameters: AdvancedQuantizationParameters | None = None,
 ) -> ov.Model:
     """
@@ -368,7 +370,7 @@ def compress_weights_impl(
     mode: CompressWeightsMode,
     ratio: float,
     group_size: int,
-    ignored_scope: IgnoredScope,
+    ignored_scope: Scope | IgnoredScope,
     all_layers: bool,
     sensitivity_metric: SensitivityMetric,
     awq: bool,
@@ -379,6 +381,7 @@ def compress_weights_impl(
     backup_mode: BackupMode,
     compression_format: CompressionFormat,
     advanced_parameters: AdvancedCompressionParameters | None = None,
+    scoped_configs: list[ScopedConfig] | None = None,
 ) -> ov.Model:
     """
     Implementation of the `compress_weights()` method for the OpenVINO backend.
@@ -400,6 +403,7 @@ def compress_weights_impl(
         backup_mode,
         compression_format,
         advanced_parameters,
+        scoped_configs,
     )
 
     statistics_points = None

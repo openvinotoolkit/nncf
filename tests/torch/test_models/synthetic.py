@@ -591,6 +591,29 @@ class LinearModel(torch.nn.Module):
         return self.linear(input)
 
 
+class GroupedMatMulModel(torch.nn.Module):
+    NUM_GROUPS = 2
+    C_IN = 8
+    C_OUT = 16
+    NUM_TOKENS = 6
+    INPUT_SHAPE = (NUM_TOKENS, C_IN)
+    INPUT_DTYPE = torch.bfloat16
+
+    def __init__(self, transposed_weight: bool = False):
+        super().__init__()
+        self.transposed_weight = transposed_weight
+        shape = (
+            (self.NUM_GROUPS, self.C_OUT, self.C_IN) if transposed_weight else (self.NUM_GROUPS, self.C_IN, self.C_OUT)
+        )
+        weight = torch.arange(1, self.NUM_GROUPS * self.C_IN * self.C_OUT + 1, dtype=self.INPUT_DTYPE)
+        self.weight = torch.nn.Parameter(weight.reshape(shape))
+        self.register_buffer("offs", torch.tensor([self.NUM_TOKENS // 2, self.NUM_TOKENS], dtype=torch.int32))
+
+    def forward(self, x):
+        weight = self.weight.transpose(-2, -1) if self.transposed_weight else self.weight
+        return torch._grouped_mm(x, weight, offs=self.offs)
+
+
 class YOLO11N_SDPABlock(torch.nn.Module):
     INPUT_SIZE = (1, 2, 4)
 

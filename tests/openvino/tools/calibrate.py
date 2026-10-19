@@ -61,7 +61,7 @@ from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import RestoreMode
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import StatisticsType
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 
 TModel = TypeVar("TModel")
 
@@ -132,7 +132,7 @@ class CustomJSONEncoder(json.JSONEncoder):
             ),
         ):
             return o.value
-        if isinstance(o, (IgnoredScope, AdvancedQuantizationParameters, AdvancedAccuracyRestorerParameters)):
+        if isinstance(o, (Scope, AdvancedQuantizationParameters, AdvancedAccuracyRestorerParameters)):
             return asdict(o)
         msg = f"Object of type {o.__class__.__name__} is not JSON serializable"
         raise TypeError(msg)
@@ -361,7 +361,7 @@ def map_ignored_scope(ignored):
                 msg = '"attributes" in the ignored operations are not supported'
                 raise ValueError(msg)
             ignored_operations.append(op["type"])
-    return {"ignored_scope": IgnoredScope(names=ignored.get("scope", []), types=ignored_operations)}
+    return {"ignored_scope": Scope(names=ignored.get("scope", []), types=ignored_operations)}
 
 
 def map_preset(preset):

@@ -26,6 +26,7 @@ from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.pipeline import Pipeline
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
 from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 
 TModel = TypeVar("TModel")
 
@@ -37,7 +38,7 @@ def create_ptq_pipeline(
     subset_size: int = 300,
     fast_bias_correction: bool = True,
     model_type: ModelType | None = None,
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
     advanced_parameters: AdvancedQuantizationParameters | None = None,
 ) -> Pipeline:
     """

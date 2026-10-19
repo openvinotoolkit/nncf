@@ -16,7 +16,7 @@ import numpy as np
 import onnx
 
 from nncf import Dataset
-from nncf import IgnoredScope
+from nncf import Scope
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.onnx_helper import get_edge_dtype
@@ -106,7 +106,7 @@ def min_max_quantize_model(
     convert_model_opset: bool = True,
     dataset_has_batch_size: bool = False,
     quantization_params: dict[str, Any] = None,
-    ignored_scope: IgnoredScope = None,
+    ignored_scope: Scope | None = None,
 ) -> onnx.ModelProto:
     if convert_model_opset:
         original_model = convert_opset_version(original_model)
