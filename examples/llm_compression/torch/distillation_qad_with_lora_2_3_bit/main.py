@@ -733,10 +733,7 @@ def check_args(args):
 
 
 def main(argv) -> float:
-    """
-    Fine-tunes the specified model and returns the difference between initial and best validation perplexity in Torch,
-    and the test perplexity for best model exported to OpenVINO.
-    """
+    """Fine-tune the specified model and export the compressed model."""
     parser = get_argument_parser()
     args = parser.parse_args(argv)
     check_args(args)

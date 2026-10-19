@@ -94,6 +94,11 @@ output/
   last_bits_3/
     nncf_checkpoint.pth
   last_bits_3/
+    repacked/
+      model.xml
+      model.bin
+      ...
+  last_bits_3/
     model.xml
     model.bin
     ...

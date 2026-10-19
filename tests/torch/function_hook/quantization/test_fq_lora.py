@@ -49,8 +49,10 @@ REF_DIR = TEST_ROOT / "torch" / "data" / "function_hook" / "compress_weights" / 
         (nncf.CompressWeightsMode.INT4_ASYM, nncf.CompressWeightsMode.INT8_ASYM, 4),
         # LoRA A, LoRA B, scale for single linear layer
         (nncf.CompressWeightsMode.INT4_SYM, nncf.CompressWeightsMode.INT8_SYM, 3),
+        (nncf.CompressWeightsMode.INT3_SYM, nncf.CompressWeightsMode.INT8_SYM, 3),
+        (nncf.CompressWeightsMode.INT2_SYM, nncf.CompressWeightsMode.INT8_SYM, 3),
     ),
-    ids=["asym", "sym"],
+    ids=["asym", "sym", "sym_int3", "sym_int2"],
 )
 def test_fq_lora_tuning(mode, backup_mode, ref_num_trainable, _seed):
     """
