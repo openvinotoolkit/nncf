@@ -29,6 +29,7 @@ By default, the algorithm applies asymmetric 8-bit integer quantization (INT8_AS
 |------------------|--------------|------------|--------------------------|----------------------------------|----------------------------|
 | INT8_ASYM        | INT8         | FP16       | Per-channel              | OpenVINO, PyTorch, ONNX, TorchFX | [Asymmetric quantization](/docs/usage/Quantization.md#asymmetric-quantization) |
 | INT8_SYM         | INT8         | FP16       | Per-channel              | OpenVINO, PyTorch, ONNX, TorchFX | [Symmetric quantization](/docs/usage/Quantization.md#symmetric-quantization) |
+| INT8_ASYM, INT8_SYM with `group_size` | INT8 | FP16 | Group-wise | OpenVINO | Weights with a single reduction axis (e.g. MatMul, Gather) are quantized group-wise, the others (e.g. Convolution) per-channel. `group_size=32` with INT8_SYM is the layout of llama.cpp's Q8_0 (one FP16 scale per 32 weights). |
 
 #### Mixed precision modes
 
@@ -82,6 +83,14 @@ compressed_model = compress_weights(model)  # model is openvino.Model object
 from nncf import compress_weights, CompressWeightsMode
 
 compressed_model = compress_weights(model, mode=CompressWeightsMode.INT8_SYM)  # model is openvino.Model object
+```
+
+- Compress weights symmetrically to 8-bit integer data type with one scale per group of 32 weights (OpenVINO backend).
+
+```python
+from nncf import compress_weights, CompressWeightsMode
+
+compressed_model = compress_weights(model, mode=CompressWeightsMode.INT8_SYM, group_size=32)  # model is openvino.Model object
 ```
 
 - Compress weights symmetrically to 4-bit integer data type with group size = 128, except embeddings, convolutions and last linear layers - they are compressed asymmetrically to 8-bit integer data type.
@@ -214,6 +223,17 @@ model.model = compress_weights(
     ratio=0.8,
     dataset=nncf_dataset,
     awq=True,
+    scale_estimation=True,
+)
+```
+
+- How to compress all layers to 8-bit integer with Scale Estimation (OpenVINO backend). Scale Estimation is the only data-aware algorithm available in INT8 modes, so the dataset is accepted only together with `scale_estimation=True`. The zero points of INT8_ASYM stay the ones of the min-max quantization, only the scales are estimated.
+
+```python
+model.model = compress_weights(
+    model.model,
+    mode=CompressWeightsMode.INT8_ASYM,
+    dataset=nncf_dataset,
     scale_estimation=True,
 )
 ```

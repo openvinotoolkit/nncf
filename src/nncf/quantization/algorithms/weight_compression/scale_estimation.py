@@ -46,6 +46,7 @@ class ScaleEstimation:
         initial_steps: int = 5,
         scale_steps: int = 10,
         weight_penalty: float = -1.0,
+        max_num_bits: int = 4,
     ):
         """
         :param subset_size: The number of samples for scale estimation.
@@ -53,12 +54,14 @@ class ScaleEstimation:
         :param scale_steps: The number of the steps for grid search scale rectification
                             from 1.0 to 1.0 - 0.05 * scale_step.
         :param weight_penalty: coefficient for penalty between fp and compressed weights. If -1 then doesn't apply.
+        :param max_num_bits: Scales are estimated for the weights compressed to at most this number of bits.
         """
         super().__init__()
         self._subset_size = subset_size
         self._initial_steps = initial_steps
         self._scale_steps = scale_steps
         self._weight_penalty = weight_penalty
+        self._max_num_bits = max_num_bits
 
     @property
     def available_backends(self) -> list[BackendType]:
@@ -103,7 +106,7 @@ class ScaleEstimation:
         backend_entity: WeightCompressionAlgoBackend | None = None,
     ) -> dict[str, CompressedWeight]:
         """
-        Estimates better scale for the int4 nodes in the model.
+        Estimates better scale for the int4 nodes in the model (int8 nodes too in INT8 modes).
         Minimizes per-group difference between floating point MatMul and
         MatMul with compressed weights.
         The algorithm computes weighted scale for the group of weights in MatMul, which
@@ -128,7 +131,7 @@ class ScaleEstimation:
             node_name = wp.node_with_weight.node_name
             config = wp.compression_config
 
-            if config.num_bits > 4 or node_name not in statistics:
+            if config.num_bits > self._max_num_bits or node_name not in statistics:
                 res[weight_name] = CompressedWeight()
                 continue
 
