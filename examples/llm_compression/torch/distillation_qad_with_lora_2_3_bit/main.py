@@ -753,7 +753,6 @@ def main(argv) -> float:
         awq=not (args.basic_init or args.equalize_mlp),
         scale_estimation=not args.basic_init,
         compression_format=CompressionFormat.FQ_LORA,
-        ratio=0.9,
     )
     pprint({"CLI arguments": vars(args), "Major compression parameters": compression_config})
     compression_config["advanced_parameters"] = AdvancedCompressionParameters(
