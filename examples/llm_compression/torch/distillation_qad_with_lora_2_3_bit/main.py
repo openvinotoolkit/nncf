@@ -196,7 +196,7 @@ def set_trainable(model: nn.Module, lora_lr: float, fq_lr: float, scales_only: b
     adapters_to_train = []
     hook_storage = get_hook_storage(model)
     for _, module in hook_storage.named_hooks():
-        if isinstance(module, (AsymmetricLoraQuantizer, SymmetricLoraQuantizer)) and (module.num_bits < 4):
+        if isinstance(module, (AsymmetricLoraQuantizer, SymmetricLoraQuantizer)) and (module.num_bits <= 4):
             module.enable_gradients()
             params = module.get_trainable_params()
             adapters = module.get_adapters()
@@ -282,7 +282,7 @@ def load_checkpoint(model: nn.Module, ckpt_file: Path) -> nn.Module:
 
 
 @torch.no_grad()
-def export_to_openvino(pretrained: str, ckpt_file: Path, ir_dir: Path, tokenizer: AutoTokenizer):
+def export_to_openvino(pretrained: str, ckpt_file: Path, ir_dir: Path, tokenizer: AutoTokenizer, bits: int):
     """
     Export the quantized model to OpenVINO IR format.
 
@@ -298,11 +298,12 @@ def export_to_openvino(pretrained: str, ckpt_file: Path, ir_dir: Path, tokenizer
     print(f"The OpenVINO model has been exported and saved to: {ir_dir}")
     tokenizer.save_pretrained(ir_dir)
 
-    model_to_eval = OVModelForCausalLM.from_pretrained(ir_dir)
-    model_to_eval.model = nncf.repack_weights(model_to_eval.model)
-    model_to_eval.save_pretrained(ir_dir / "repacked")
-    tokenizer.save_pretrained(ir_dir / "repacked")
-    print(f"The OpenVINO model has been repacked and saved to: {ir_dir / 'repacked'}")
+    if bits < 4:
+        model_to_eval = OVModelForCausalLM.from_pretrained(ir_dir)
+        model_to_eval.model = nncf.repack_weights(model_to_eval.model)
+        model_to_eval.save_pretrained(ir_dir / "repacked")
+        tokenizer.save_pretrained(ir_dir / "repacked")
+        print(f"The OpenVINO model has been repacked and saved to: {ir_dir / 'repacked'}")
 
 
 @torch.no_grad()
@@ -337,8 +338,8 @@ def get_argument_parser() -> argparse.ArgumentParser:
         "--bits",
         type=int,
         default=3,
-        choices=[2, 3],
-        help="Number of bits for weight compression (2 or 3).",
+        choices=[2, 3, 4],
+        help="Number of bits for weight compression (2, 3, or 4).",
     )
     parser.add_argument(
         "--output_dir",
@@ -745,12 +746,14 @@ def main(argv) -> float:
         transformers.set_seed(42)
     device = "cuda"
     torch_dtype = torch.bfloat16
+    modes = {2: CompressWeightsMode.INT2_SYM, 3: CompressWeightsMode.INT3_SYM, 4: CompressWeightsMode.INT4_SYM}
     compression_config = dict(
-        mode=CompressWeightsMode.INT3_SYM if args.bits == 3 else CompressWeightsMode.INT2_SYM,
+        mode=modes[args.bits],
         group_size=args.group_size,
         awq=not (args.basic_init or args.equalize_mlp),
         scale_estimation=not args.basic_init,
         compression_format=CompressionFormat.FQ_LORA,
+        ratio=0.9,
     )
     pprint({"CLI arguments": vars(args), "Major compression parameters": compression_config})
     compression_config["advanced_parameters"] = AdvancedCompressionParameters(
@@ -889,7 +892,7 @@ def main(argv) -> float:
         print(f"The finetuned model has been exported to torch and saved to: {ckpt_file.parent / 'dequantized'}\n")
 
     # Export the best tuned model to OpenVINO.
-    export_to_openvino(args.pretrained, ckpt_file, ckpt_file.parent, tokenizer)
+    export_to_openvino(args.pretrained, ckpt_file, ckpt_file.parent, tokenizer, args.bits)
 
 
 if __name__ == "__main__":
