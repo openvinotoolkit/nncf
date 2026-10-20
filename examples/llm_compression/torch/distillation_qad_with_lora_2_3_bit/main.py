@@ -801,6 +801,7 @@ def main(argv) -> float:
         # Pre-compute hiddens of teacher model for distillation loss.
         orig_hiddens = calc_hiddens(model, train_loader)
 
+    save_model_state = not args.basic_init or args.equalize_mlp
     # Create or load model to tune with Fake Quantizers and absorbable LoRA adapters.
     if args.resume and ckpt_file.exists():
         model = load_checkpoint(model, ckpt_file)
@@ -811,7 +812,7 @@ def main(argv) -> float:
             n_eq = equalize_up_gate_with_layernorm(model, use_align_scale=True)
             print(f"Equalized {n_eq} up_proj/gate_proj layers with preceding LayerNorm.")
         model = compress_weights(model, dataset=dataset, **compression_config)
-        save_checkpoint(model, ckpt_file, model_state=not args.basic_init)
+        save_checkpoint(model, ckpt_file, model_state=save_model_state)
     fq_lr = args.lr / 10
     weight_decay = args.lr
     param_to_train = set_trainable(model, lora_lr=args.lr, fq_lr=fq_lr)
@@ -828,7 +829,6 @@ def main(argv) -> float:
 
     microbatches_per_epoch = epoch_samples // args.microbatch_size
 
-    save_model_state = not args.basic_init or args.equalize_mlp
     total_steps = run_training(
         model=model,
         train_loader=train_loader,

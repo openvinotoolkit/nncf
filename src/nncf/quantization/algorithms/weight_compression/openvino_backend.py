@@ -129,7 +129,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         weight_tensor = weight_tensor.as_numpy_tensor().astype(TensorDataType.int32)
         shape = list(ov_node.tensor_view.shape)
 
-        if len(shape) == 1 or shape[-1] == 1:
+        if len(shape) <= 1 or shape[-1] == 1:
             # Probably zero point
             return False, 0, 0
 
