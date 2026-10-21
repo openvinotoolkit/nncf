@@ -367,6 +367,10 @@ class ScaleEstimation:
 
             result_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
 
+        # A group without calibration signal (zero importance, e.g. all-zero activations) gets a zero estimated
+        # scale, which ties the min-max one on the calibration error and would zero its weights: keep min-max there
+        result_scale = fns.where(denum > 0, result_scale, scale)
+
         if config.group_size == -1:
             result_scale = fns.squeeze(result_scale, axis=-2)
         if zp is not None and config.group_size == -1:
@@ -411,7 +415,8 @@ def estimate_scales(weight: Tensor, target: Tensor, zero_mask: Tensor, importanc
     :param importance: The importance values tensor.
     :return: The estimated scales
     """
-    ideal_scale = fns.abs(weight) / (fns.abs(target) + zero_mask)
+    # In float32: INT8_SYM targets are int8 codes, and abs() of a code of -128 overflows to -128 in int8
+    ideal_scale = fns.abs(weight) / (fns.abs(target.astype(TensorDataType.float32)) + zero_mask)
     weighted_scale = ideal_scale * importance
     near_to_ideal_scale = fns.sum(weighted_scale, axis=-1, keepdims=True)
     return near_to_ideal_scale

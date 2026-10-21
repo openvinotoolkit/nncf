@@ -1357,6 +1357,51 @@ def test_int8_scale_estimation(mode):
     assert output_error(se_model) < output_error(rtn_model)
 
 
+@pytest.mark.parametrize("group_size", [-1, 16])
+@pytest.mark.parametrize("mode", INT8_MODES + INT4_MODES)
+def test_scale_estimation_without_calibration_signal(mode, group_size):
+    """
+    Checks that scale estimation keeps the min-max scales of the groups whose calibration activations are all zero.
+    The estimated scale of such a group is zero and ties the min-max one on the calibration error, so the weights of
+    the group would be dequantized to zeros.
+    """
+    rng = np.random.default_rng(0)
+    weight = (rng.standard_normal((16, 64)) * 0.1).astype(np.float32)
+    # No signal in the first group of input channels, which per-channel is all of them
+    num_zero_channels = 64 if group_size == -1 else group_size
+    samples = [rng.standard_normal((1, 64)).astype(np.float32) for _ in range(8)]
+    for sample in samples:
+        sample[:, :num_zero_channels] = 0.0
+    # The only MatMul is the last one, which INT4 modes otherwise keep in the backup precision
+    kwargs = {"all_layers": True} if mode in INT4_MODES else {}
+
+    def build():
+        x = opset.parameter([1, 64], name="Input")
+        return ov.Model([opset.matmul(x, opset.constant(weight, name="weights"), False, True)], [x])
+
+    def scales(model):
+        scale = {op.get_friendly_name(): op for op in model.get_ops()}["weights/scale"].get_data()
+        return scale.reshape(16, -1)  # [output channels, groups]
+
+    rtn_scale = scales(compress_weights(build(), mode=mode, group_size=group_size, **kwargs))
+    se_scale = scales(
+        compress_weights(
+            build(),
+            mode=mode,
+            group_size=group_size,
+            scale_estimation=True,
+            dataset=Dataset(samples),
+            subset_size=len(samples),
+            **kwargs,
+        )
+    )
+
+    np.testing.assert_array_equal(se_scale[:, 0], rtn_scale[:, 0])
+    if group_size != -1:
+        # The groups with calibration signal are still estimated
+        assert not np.array_equal(se_scale[:, 1:], rtn_scale[:, 1:])
+
+
 @pytest.mark.parametrize("mode", INT4_NF4_MODES + INT2_3_MODES)
 def test_call_gptq(mode):
     model = AWQMatmulModel().ov_model

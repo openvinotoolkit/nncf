@@ -44,6 +44,7 @@ from nncf.quantization.algorithms.weight_compression.constants import CB4_QUANTI
 from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
+from nncf.quantization.algorithms.weight_compression.scale_estimation import estimate_scales
 from nncf.quantization.algorithms.weight_compression.weight_lowering import integer_quantize_dequantize_weight
 from nncf.scopes import IgnoredScope
 from nncf.tensor import Tensor
@@ -416,6 +417,21 @@ class TemplateWeightCompression(ABC):
         error_after_se = get_relative_error(original_weight, decompressed_weight_after_se, axis=1 - reduction_axes)
         assert fns.argsort(error_after_se)[0] == OUTLIER_CHANNEL  # the smallest error on the outlier channel
         assert error_before_se[OUTLIER_CHANNEL] > error_after_se[OUTLIER_CHANNEL]
+
+    @pytest.mark.parametrize("target_dtype", [np.int8, np.float32], ids=["int8", "float32"])
+    def test_estimate_scales_with_min_int8_code(self, target_dtype):
+        """
+        Checks that a code of -128 counts like any other code in the estimated scale. With INT8_SYM, the
+        largest-magnitude weight of every group gets this code, and abs() of an int8 -128 overflows to -128.
+        """
+        weight = Tensor(self.to_tensor(np.array([[-1.0, 127 / 128]], dtype=np.float32)))
+        target = Tensor(self.to_tensor(np.array([[-128, 127]], dtype=target_dtype)))
+        zero_mask = Tensor(self.to_tensor(np.zeros((1, 2), dtype=np.float32)))
+        importance = Tensor(self.to_tensor(np.full((1, 2), 0.5, dtype=np.float32)))
+
+        scale = estimate_scales(weight, target, zero_mask, importance)
+
+        assert fns.allclose(scale, Tensor(self.to_tensor(np.array([[1 / 128]], dtype=np.float32))))
 
     @pytest.mark.parametrize("transpose_a", [False, True], ids=["no_tr_a", "tr_a"])
     @pytest.mark.parametrize("n_samples", [2, 4])
