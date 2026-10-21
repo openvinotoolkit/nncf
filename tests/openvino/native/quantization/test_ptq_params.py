@@ -27,7 +27,7 @@ from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCom
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from tests.common.quantization.metatypes import CatTestMetatype
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
@@ -126,10 +126,10 @@ class TestPTQParams(TemplateTestPTQParams):
 
     @pytest.fixture(
         params=[
-            (IgnoredScope(), 1, 1),
-            (IgnoredScope(["MatMul"]), 0, 0),
-            (IgnoredScope(["Add"]), 1, 1),
-            (IgnoredScope(["MatMul", "Add"]), 0, 0),
+            (Scope(), 1, 1),
+            (Scope(["MatMul"]), 0, 0),
+            (Scope(["Add"]), 1, 1),
+            (Scope(["MatMul", "Add"]), 0, 0),
         ]
     )
     def ignored_scopes_data(self, request):

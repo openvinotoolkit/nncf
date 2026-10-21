@@ -193,7 +193,7 @@ def quantize_ac(
         validation_fn=validation_fn,
         max_drop=0.003,
         preset=nncf.QuantizationPreset.MIXED,
-        ignored_scope=nncf.IgnoredScope(
+        ignored_scope=nncf.Scope(
             types=["Mul", "Sub", "Sigmoid"],  # ignore operations
             subgraphs=[
                 nncf.Subgraph(

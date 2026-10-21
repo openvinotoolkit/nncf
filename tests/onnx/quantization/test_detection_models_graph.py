@@ -12,7 +12,7 @@
 import onnx
 import pytest
 
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from tests.onnx.conftest import ONNX_MODEL_DIR
 from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.quantization.common import compare_nncf_graph
@@ -41,14 +41,14 @@ def test_min_max_quantization_graph(tmp_path, mocker, model_to_test):
     onnx_model_path = ONNX_MODEL_DIR / (model_to_test.model_name + ".onnx")
     original_model = load_model_topology_with_zeros_weights(onnx_model_path)
 
-    ignored_scopes = IgnoredScope()
+    ignored_scopes = Scope()
     if model_to_test.model_name == "MaskRCNN-12":
         # The problem with convert function - convert_opset_version.
         convert_opset_version = False
         # TODO(andrey-churkin): need to investigate disallowed_op_types for Mask RCNN
-        ignored_scopes = IgnoredScope(types=["Resize", "Div", "RoiAlign", "ScatterElements"])
+        ignored_scopes = Scope(types=["Resize", "Div", "RoiAlign", "ScatterElements"])
     if model_to_test.model_name == "ssd_mobilenet_v1_12":
-        ignored_scopes = IgnoredScope(
+        ignored_scopes = Scope(
             [
                 "copy__21/Preprocessor/map/while/Less",
                 "Preprocessor/mul",

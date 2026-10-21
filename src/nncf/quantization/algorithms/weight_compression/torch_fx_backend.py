@@ -50,6 +50,7 @@ from nncf.tensor.definitions import TensorDataType
 from nncf.torch.graph.operator_metatypes import CONVOLUTION_METATYPES
 from nncf.torch.graph.operator_metatypes import EMBEDDING_METATYPES
 from nncf.torch.graph.operator_metatypes import MATMUL_METATYPES
+from nncf.torch.graph.operator_metatypes import PTGroupedMatMulMetatype
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_weight_compression_reduction_axes
@@ -66,7 +67,8 @@ from nncf.torch.quantization.layers import INT8SymmetricWeightsDecompressor
 class FXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     @property
     def matmul_metatypes(self) -> list[OperatorMetatype]:
-        return MATMUL_METATYPES
+        # TODO(anzr299): add groupedmatmul support in torch fx
+        return [metatype for metatype in MATMUL_METATYPES if metatype != PTGroupedMatMulMetatype]
 
     @property
     def embedding_metatypes(self) -> list[OperatorMetatype]:

@@ -58,7 +58,7 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import do_f
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from tests.cross_fw.shared.comparator import compare_stats
@@ -87,6 +87,8 @@ from tests.openvino.native.models import SequentialMatmulModel
 from tests.openvino.native.models import SimpleMoEModel
 from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.quantization.test_fq_params_calculation import REFERENCE_SCALES_DIR
+
+SCOPED_CONFIGS_REFERENCES_DIR = Path("references_scoped_configs")
 
 TEST_MODELS = {
     IntegerModel: ["matmul_2_data", "gather_2_data", "matmul_1_data"],
@@ -836,7 +838,7 @@ CALCULATE_SCALE_DESCS = [
 @dataclass
 class ParamIgnoredScope:
     name: str
-    ignored_scope: IgnoredScope
+    ignored_scope: Scope
     ref: set[str]
 
     def __str__(self) -> str:
@@ -846,12 +848,12 @@ class ParamIgnoredScope:
 @pytest.mark.parametrize(
     "param",
     (
-        ParamIgnoredScope(name="empty", ignored_scope=IgnoredScope(), ref=3),
-        ParamIgnoredScope(name="type", ignored_scope=IgnoredScope(types=["Gather"]), ref=2),
-        ParamIgnoredScope(name="name_const", ignored_scope=IgnoredScope(names=["matmul_1_data"]), ref=2),
-        ParamIgnoredScope(name="name_op", ignored_scope=IgnoredScope(names=["MatMul_1"]), ref=2),
-        ParamIgnoredScope(name="pattern_const", ignored_scope=IgnoredScope(patterns=[".*data"]), ref=0),
-        ParamIgnoredScope(name="pattern_op", ignored_scope=IgnoredScope(patterns=["Mat.*"]), ref=1),
+        ParamIgnoredScope(name="empty", ignored_scope=Scope(), ref=3),
+        ParamIgnoredScope(name="type", ignored_scope=Scope(types=["Gather"]), ref=2),
+        ParamIgnoredScope(name="name_const", ignored_scope=Scope(names=["matmul_1_data"]), ref=2),
+        ParamIgnoredScope(name="name_op", ignored_scope=Scope(names=["MatMul_1"]), ref=2),
+        ParamIgnoredScope(name="pattern_const", ignored_scope=Scope(patterns=[".*data"]), ref=0),
+        ParamIgnoredScope(name="pattern_op", ignored_scope=Scope(patterns=["Mat.*"]), ref=1),
     ),
     ids=str,
 )
@@ -1959,6 +1961,7 @@ def test_data_free_compression_with_backup_mode(backup_mode):
     assert act_num == num_compressed
 
 
+@pytest.mark.parametrize("use_scoped_config", [False, True], ids=["default", "scoped_config"])
 @pytest.mark.parametrize("backup_mode", [BackupMode.NONE, BackupMode.INT8_ASYM, BackupMode.INT8_SYM])
 @pytest.mark.parametrize(
     ("params", "num_compressed"),
@@ -1975,11 +1978,16 @@ def test_data_free_compression_with_backup_mode(backup_mode):
         ({"awq": True}, 6),
     ),
 )
-def test_data_based_compression_with_backup_mode(backup_mode, params, num_compressed):
+def test_data_based_compression_with_backup_mode(backup_mode, params, num_compressed, use_scoped_config):
     model = AWQMatmulModel().ov_model
     sz = 8
     n_samples = 10
     dataset = Dataset([np.ones([1, i + 1, sz]) for i in range(n_samples)])
+
+    scoped_configs = None
+    if use_scoped_config:
+        scoped_configs = [nncf.ScopedConfig(names=["MatMul_1"], mode=CompressWeightsMode.INT4_SYM, group_size=-1)]
+        num_compressed = 6
 
     compressed_model = compress_weights(
         model,
@@ -1988,9 +1996,11 @@ def test_data_based_compression_with_backup_mode(backup_mode, params, num_compre
         group_size=-1,
         dataset=dataset,
         backup_mode=backup_mode,
+        scoped_configs=scoped_configs,
         **params,
     )
     act_num = 0
+    scoped_num = 0
     if backup_mode == BackupMode.INT8_ASYM:
         backup_ov_mode = ov.Type.u8
     elif backup_mode == BackupMode.INT8_SYM:
@@ -2001,6 +2011,8 @@ def test_data_based_compression_with_backup_mode(backup_mode, params, num_compre
         if op.get_type_name() == "Constant":
             if op.get_element_type() == ov.Type.u4:
                 act_num += 1
+            elif op.get_element_type() == ov.Type.i4:
+                scoped_num += 1
             elif "/scale" in op.get_friendly_name():
                 assert op.get_element_type() == ov.Type.f16
             elif "_lora_" in op.get_friendly_name():
@@ -2008,6 +2020,7 @@ def test_data_based_compression_with_backup_mode(backup_mode, params, num_compre
             else:
                 assert op.get_element_type() == backup_ov_mode
     assert act_num == num_compressed
+    assert scoped_num == (1 if use_scoped_config else 0)
 
 
 @pytest.mark.parametrize(
@@ -2544,6 +2557,22 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def get_awq_scale_ref_path() -> Path:
         return get_actual_reference_for_current_openvino(REFERENCE_SCALES_DIR / "awq_scale_ref.json")
+
+    @staticmethod
+    def get_shared_weight_model() -> ov.Model:
+        return GatherAndMatmulShareData().ov_model
+
+    @staticmethod
+    def get_shared_weight_node_name() -> str:
+        return "MatMul_2"
+
+    @staticmethod
+    def get_node_with_shared_weight_name() -> str:
+        return "Gather_1"
+
+    @staticmethod
+    def get_scoped_configs_ref_path(ref_name: str) -> Path:
+        return get_actual_reference_for_current_openvino(SCOPED_CONFIGS_REFERENCES_DIR / f"{ref_name}.json")
 
     @pytest.fixture
     def transpose_a_supported(self) -> bool:

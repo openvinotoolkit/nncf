@@ -14,7 +14,7 @@ from dataclasses import dataclass
 import pytest
 
 import nncf
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.torch.function_hook.pruning.prune_model import get_prunable_parameters
 from nncf.torch.graph.graph import PTNNCFGraph
 from tests.torch.function_hook.pruning.helpers import TwoConvModel
@@ -29,7 +29,7 @@ def two_conv_graph() -> PTNNCFGraph:
 @dataclass
 class ParamIgnoredScope:
     name: str
-    ignored_scope: IgnoredScope
+    ignored_scope: Scope
     expected_params: set[str]
 
     def __str__(self) -> str:
@@ -39,12 +39,12 @@ class ParamIgnoredScope:
 @pytest.mark.parametrize(
     "param",
     (
-        ParamIgnoredScope("empty", IgnoredScope(), {"conv1.weight", "conv2.weight"}),
-        ParamIgnoredScope("weight_name_1", IgnoredScope(names=["conv1.weight"]), {"conv2.weight"}),
-        ParamIgnoredScope("weight_name_2", IgnoredScope(names=["conv2.weight"]), {"conv1.weight"}),
-        ParamIgnoredScope("op_name", IgnoredScope(names=["conv1/conv2d/0"]), {"conv2.weight"}),
-        ParamIgnoredScope("pattern_conv", IgnoredScope(patterns=["^conv1/conv2d/.*"]), {"conv2.weight"}),
-        ParamIgnoredScope("pattern_const", IgnoredScope(patterns=[".*2.weight"]), {"conv1.weight"}),
+        ParamIgnoredScope("empty", Scope(), {"conv1.weight", "conv2.weight"}),
+        ParamIgnoredScope("weight_name_1", Scope(names=["conv1.weight"]), {"conv2.weight"}),
+        ParamIgnoredScope("weight_name_2", Scope(names=["conv2.weight"]), {"conv1.weight"}),
+        ParamIgnoredScope("op_name", Scope(names=["conv1/conv2d/0"]), {"conv2.weight"}),
+        ParamIgnoredScope("pattern_conv", Scope(patterns=["^conv1/conv2d/.*"]), {"conv2.weight"}),
+        ParamIgnoredScope("pattern_const", Scope(patterns=[".*2.weight"]), {"conv1.weight"}),
     ),
     ids=str,
 )

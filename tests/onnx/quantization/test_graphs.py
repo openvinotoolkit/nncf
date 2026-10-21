@@ -11,7 +11,7 @@
 
 import pytest
 
-from nncf import IgnoredScope
+from nncf import Scope
 from nncf.parameters import ModelType
 from tests.onnx.models import ALL_SYNTHETIC_MODELS
 from tests.onnx.models import MultiInputOutputNetParallelEdgesQuantizable
@@ -35,7 +35,7 @@ def test_synthetic_models_graph(model_cls_to_test, mocker):
 def test_multi_output_port_id_model(mocker):
     mock_collect_statistics(mocker)
     model_to_test = MultiInputOutputNetParallelEdgesQuantizable()
-    quantized_model = min_max_quantize_model(model_to_test.onnx_model, ignored_scope=IgnoredScope(types=["Split"]))
+    quantized_model = min_max_quantize_model(model_to_test.onnx_model, ignored_scope=Scope(types=["Split"]))
     compare_nncf_graph(quantized_model, "synthetic/multi_output_port_id_model.dot")
 
 

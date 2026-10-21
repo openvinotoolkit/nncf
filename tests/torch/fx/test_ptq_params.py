@@ -21,7 +21,7 @@ from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.nncf_graph_builder import GraphConverter
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
@@ -129,6 +129,6 @@ class TestPTQParams(TemplateTestPTQParams):
             },
         }
 
-    @pytest.fixture(params=[(IgnoredScope([]), 1, 1), (IgnoredScope(["/Conv_1_0"]), 0, 0)])
+    @pytest.fixture(params=[(Scope([]), 1, 1), (Scope(["/Conv_1_0"]), 0, 0)])
     def ignored_scopes_data(self, request):
         return request.param

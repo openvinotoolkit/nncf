@@ -24,8 +24,8 @@ from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 
 def test_set_ignored_scope():
     algorithm = MinMaxQuantization()
-    assert algorithm._ignored_scope == nncf.IgnoredScope()
-    ref_ignored_scope = nncf.IgnoredScope(names=["add_1"], patterns=["linear*"], types=["conv"])
+    assert algorithm._ignored_scope == nncf.Scope()
+    ref_ignored_scope = nncf.Scope(names=["add_1"], patterns=["linear*"], types=["conv"])
     algorithm.set_ignored_scope(ref_ignored_scope)
     assert algorithm._ignored_scope is ref_ignored_scope
 

@@ -25,7 +25,7 @@ from nncf.parameters import CompressionFormat
 from nncf.quantization import compress_weights
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.weight_compression.torch_fx_backend import FXAWQMultiply
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.torch.quantization.layers import BaseWeightsDecompressor
@@ -60,6 +60,7 @@ from tests.torch.test_models.synthetic import ShortTransformer
 from tests.torch.test_tensor import cast_to
 
 REFERENCE_SCALES_DIR = TEST_ROOT / "torch" / "data" / "fx" / "reference_scales"
+SCOPED_CONFIGS_REFERENCES_DIR = TEST_ROOT / "torch" / "data" / "fx" / "references_scoped_configs"
 
 DATA_BASED_SENSITIVITY_METRICS = (
     SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
@@ -514,6 +515,27 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
         return REFERENCE_SCALES_DIR / "awq_scale_ref.json"
 
     @staticmethod
+    def get_shared_weight_model() -> torch.fx.GraphModule:
+        model = ShortTransformer(8, 16, share_weights=True)
+        return get_torch_fx_model(model, torch.randint(0, 10, (8,)))
+
+    @staticmethod
+    def get_shared_weight_node_name() -> str:
+        return "linear_1"
+
+    @staticmethod
+    def get_node_with_shared_weight_name() -> str:
+        return "embedding"
+
+    @staticmethod
+    def get_mode_not_supported_by_backend() -> CompressWeightsMode | None:
+        return CompressWeightsMode.NF4
+
+    @staticmethod
+    def get_scoped_configs_ref_path(ref_name: str) -> Path:
+        return SCOPED_CONFIGS_REFERENCES_DIR / f"{ref_name}.json"
+
+    @staticmethod
     def get_transposable_awq_model(transpose_a: bool, transpose_b: bool, input_shape=None, is_3d_weights: bool = False):
         pytest.skip("Transposable models are not supported")
 
@@ -525,7 +547,7 @@ class TestFXTemplateWeightCompression(TemplateWeightCompression):
 @dataclass
 class ParamIgnoredScope:
     name: str
-    ignored_scope: IgnoredScope
+    ignored_scope: Scope
     ref: int
 
     def __str__(self) -> str:
@@ -535,11 +557,11 @@ class ParamIgnoredScope:
 @pytest.mark.parametrize(
     "param",
     (
-        ParamIgnoredScope("empty", IgnoredScope(), 1),
-        ParamIgnoredScope("name_const", IgnoredScope(names=["linear_weight"]), 0),
-        ParamIgnoredScope("name_op", IgnoredScope(names=["linear"]), 0),
-        ParamIgnoredScope("pattern_const", IgnoredScope(patterns=[".*weight"]), 0),
-        ParamIgnoredScope("pattern_op", IgnoredScope(patterns=["linear*"]), 0),
+        ParamIgnoredScope("empty", Scope(), 1),
+        ParamIgnoredScope("name_const", Scope(names=["linear_weight"]), 0),
+        ParamIgnoredScope("name_op", Scope(names=["linear"]), 0),
+        ParamIgnoredScope("pattern_const", Scope(patterns=[".*weight"]), 0),
+        ParamIgnoredScope("pattern_op", Scope(patterns=["linear*"]), 0),
     ),
     ids=str,
 )

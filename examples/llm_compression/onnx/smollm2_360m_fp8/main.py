@@ -105,7 +105,7 @@ def main():
         advanced_parameters=nncf.AdvancedQuantizationParameters(
             smooth_quant_alphas=nncf.AdvancedSmoothQuantParameters(matmul=-1)
         ),
-        ignored_scope=nncf.IgnoredScope(
+        ignored_scope=nncf.Scope(
             names=[
                 "/model/rotary_emb/MatMul",
                 "/model/layers.0/self_attn/MatMul_1",

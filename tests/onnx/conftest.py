@@ -76,7 +76,7 @@ def pytest_addoption(parser):
         "will be disable for OpenVINO.",
     )
     parser.addoption(
-        "--regen-dot",
+        "--regen-ref-data",
         action="store_true",
         default=False,
         help="If specified, the reference .dot files will be regenerated using the current state of the repository.",
@@ -85,7 +85,7 @@ def pytest_addoption(parser):
 
 
 def pytest_configure(config):
-    regen_dot = config.getoption("--regen-dot", False)
+    regen_dot = config.getoption("--regen-ref-data", False)
     if regen_dot:
         os.environ["NNCF_TEST_REGEN_DOT"] = "1"
 

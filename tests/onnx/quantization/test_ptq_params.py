@@ -28,7 +28,7 @@ from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionComma
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
-from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 from tests.common.quantization.metatypes import CatTestMetatype
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
@@ -152,6 +152,6 @@ class TestPTQParams(TemplateTestPTQParams):
             },
         }
 
-    @pytest.fixture(params=[(IgnoredScope([]), 1, 1), (IgnoredScope(["/Conv_1_0"]), 0, 0)])
+    @pytest.fixture(params=[(Scope([]), 1, 1), (Scope(["/Conv_1_0"]), 0, 0)])
     def ignored_scopes_data(self, request):
         return request.param

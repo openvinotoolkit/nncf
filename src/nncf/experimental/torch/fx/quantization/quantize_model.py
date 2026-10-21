@@ -37,9 +37,11 @@ from nncf.parameters import SensitivityMetric
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import ScopedConfig
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.scopes import IgnoredScope
+from nncf.scopes import Scope
 
 DEFAULT_RANGE_TYPE = "mean_min_max"
 
@@ -53,7 +55,7 @@ def quantize_impl(
     subset_size: int = 300,
     fast_bias_correction: bool = True,
     model_type: ModelType | None = None,
-    ignored_scope: IgnoredScope | None = None,
+    ignored_scope: Scope | IgnoredScope | None = None,
     advanced_parameters: AdvancedQuantizationParameters | None = None,
 ) -> torch.fx.GraphModule:
     """
@@ -121,7 +123,7 @@ def compress_weights_impl(
     mode: CompressWeightsMode,
     ratio: float,
     group_size: int,
-    ignored_scope: IgnoredScope,
+    ignored_scope: Scope | IgnoredScope,
     all_layers: bool,
     sensitivity_metric: SensitivityMetric,
     awq: bool,
@@ -132,6 +134,7 @@ def compress_weights_impl(
     backup_mode: BackupMode,
     compression_format: CompressionFormat,
     advanced_parameters: AdvancedCompressionParameters | None = None,
+    scoped_configs: list[ScopedConfig] | None = None,
 ) -> torch.fx.GraphModule:
     """
     Implementation of the `compress_weights()` method for the Torch Fx backend.
@@ -151,6 +154,7 @@ def compress_weights_impl(
         backup_mode,
         compression_format,
         advanced_parameters,
+        scoped_configs,
     )
     graph = build_graph(model)
     compressed_model = compression_algorithm.apply(model, graph, dataset=dataset)

@@ -35,3 +35,20 @@ class FXApplyTransformationCommand(Command):
         super().__init__(TransformationType.INSERT)
         self.transformation_fn = transformation_fn
         self.priority = priority
+
+
+class FXModelExtractionCommand(Command):
+    """
+    Extracts sub-graph based on the sub-model input and output names.
+    """
+
+    def __init__(self, input_ids: list[tuple[str, int]], output_ids: list[tuple[str, int]]):
+        """
+        :param input_ids: List of the input IDs: pairs of node names and corresponding input port ids.
+            Each pair denotes the sub-graph beginning.
+        :param output_ids: List of the output IDs: pairs of node names and corresponding output port ids.
+            Each pair denotes the sub-graph ending.
+        """
+        super().__init__(TransformationType.EXTRACT)
+        self.input_ids = input_ids
+        self.output_ids = output_ids
