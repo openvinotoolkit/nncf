@@ -247,6 +247,7 @@ select = [
     "PTH",    # flake8-use-pathlib
     "TD",     # flake8-todos
     "RSE",    # flake8-raise
+    "FLY",    # fly
 ]
 extend-select = [
     "SIM", # https://pypi.org/project/flake8-simplify
