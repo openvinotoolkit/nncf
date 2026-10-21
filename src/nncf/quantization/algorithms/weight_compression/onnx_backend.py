@@ -94,7 +94,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         self,
         compressed_weight: CompressedWeight,
         weight_shape: tuple[int],
-        reduction_axes: tuple[int],
+        reduction_axes: tuple[int, ...],
         dequantize_block_size: int | None = None,
         apply_transpose: bool = False,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
@@ -103,7 +103,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         :param compressed_weight: Compressed weight struct.
         :param weight_shape: Target shape for the weight tensor.
-        :param reduction_axis: Axis along which the statistics (e.g., min, max) were computed.
+        :param reduction_axes: Axis along which the statistics (e.g., min, max) were computed.
         :param dequantize_block_size: If given, affects squeezing shape for scale and zero_point.
         :param apply_transpose: Whether to transpose scale and zero_point.
         :return: A tuple containing the reshaped weight tensor, scale tensor, and zero point tensor (if applicable).
