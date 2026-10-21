@@ -1,6 +1,7 @@
 # AGENTS.md - PyTorch backend
 
 Backend for eager `torch.nn.Module`. General rules: [root AGENTS.md](../../../AGENTS.md).
+For `torch.fx.GraphModule` see [TorchFX AGENTS.md](../experimental/torch/fx/AGENTS.md).
 
 ## Key Modules
 
@@ -15,6 +16,14 @@ Backend for eager `torch.nn.Module`. General rules: [root AGENTS.md](../../../AG
 - `graph/transformations/commands.py` - `PTTargetPoint` and commands
 - `strip.py` - `nncf.torch.strip`
 - `extensions/` - C++/CUDA kernels
+
+## Hooks: Insertion and Execution
+
+- `wrap_model` replaces `model.forward` with `ForwardWithHooks` and adds an empty `HookStorage` to the model.
+- Hooks are `nn.Module`s registered via `register_pre/post_function_hook(model, op_name, port_id, hook)`.
+- Algorithms insert hooks via `PT2InsertionCommand` + `PT2ModelTransformer`; `op_name` is the `NNCFGraph` node name.
+- On forward, `FunctionHookMode` (`TorchFunctionMode`) intercepts each torch function call and builds its `op_name`.
+- It runs pre-hooks on inputs, calls the function, then runs post-hooks on outputs.
 
 ## Gotchas
 
