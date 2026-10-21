@@ -100,10 +100,10 @@ def test_examples(
 
         # Install whowhatbench later only if
         # explicitly required by the example
-        with open(requirements, encoding="utf-8") as f:
-            requirements_content = f.read()
-            if "whowhatbench" in requirements_content:
-                install_wwb = True
+
+        requirements_content = Path(requirements).read_text(encoding="utf-8")
+        if "whowhatbench" in requirements_content:
+            install_wwb = True
 
         run_cmd_line = f"{pip_with_venv} install -r {requirements}"
         print(f"Installing requirements: {run_cmd_line}")

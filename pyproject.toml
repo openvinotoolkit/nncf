@@ -229,6 +229,10 @@ ignore = [
     "RET503",  # implicit-return
     "RET504",  # unnecessary-assign
     "TD003",   # todo-missing-issue
+    "FURB140", # reimplemented-starmap
+    "FURB113", # repeated-append
+    "FURB118", # reimplemented-operator
+    "FURB187", # list-reverse-copy
 ]
 select = [
     "CPY001", # copyright check
@@ -250,6 +254,7 @@ select = [
     "FLY",    # fly
     "ICN",    # flake8-import-conventions
     "PIE",    # flake8-pie
+    "FURB",   # refurb
 ]
 extend-select = [
     "SIM", # https://pypi.org/project/flake8-simplify

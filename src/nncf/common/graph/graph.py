@@ -852,6 +852,5 @@ def get_node_names_matching_graph_pattern(nncf_graph: NNCFGraph, graph_pattern: 
     """
     nncf_node_names = set()
     for subgraph in nncf_graph.find_matching_subgraphs(graph_pattern, strict=False):
-        for nncf_node in subgraph:
-            nncf_node_names.add(nncf_node.node_name)
+        nncf_node_names.update(nncf_node.node_name for nncf_node in subgraph)
     return nncf_node_names

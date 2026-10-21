@@ -398,7 +398,7 @@ def scatter_plot(
         data[column] = data[column].reshape(-1)
 
     df = pd.DataFrame.from_dict(data)
-    df["X"] = df[x_column if x_column else column_names[0]]
+    df["X"] = df[x_column or column_names[0]]
 
     fig = px.scatter(data_frame=df, x="X", y=column_names)
     fig.update_traces(marker={"size": 2})

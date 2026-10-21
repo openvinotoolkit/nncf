@@ -193,8 +193,7 @@ def write_xml(xml_dict: dict, filepath: Path):
     dict_to_xml(xml_dict, write_root)
     xml_str = ET.tostring(write_root).decode()
     xml_str = '<?xml version="1.0"?>\n' + xml_str + "\n"
-    with open(filepath, "w") as f:
-        f.write(xml_str)
+    Path(filepath).write_text(xml_str)
 
 
 def take_model_subgraph(xml_dict: dict, source_node_name: str, distance: int):

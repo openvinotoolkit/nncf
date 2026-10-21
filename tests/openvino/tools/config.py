@@ -73,7 +73,7 @@ class Config(Dict):
 
     def _validate_model_conf(self):
         """Validates the correctness of model config"""
-        models = self.model.cascade if self.model.cascade else [self.model]
+        models = self.model.cascade or [self.model]
 
         if self.model.cascade and len(models) == 1:
             nncf_logger.warning("Cascade is defined with single model")
@@ -258,7 +258,7 @@ class Config(Dict):
             if engine.data_source is None:
                 msg = "Missed data dir for simplified engine"
                 raise KeyError(msg)
-            self.engine.device = engine.device if engine.device else "CPU"
+            self.engine.device = engine.device or "CPU"
             engine.data_source = Path(engine.data_source)
         else:
             msg = "Unsupported engine type"
@@ -345,7 +345,7 @@ def read_config_from_file(path):
     with path.open() as f:
         if extension in (".yaml", ".yml"):
             return yaml.load(f, Loader=yaml.SafeLoader)
-        if extension in (".json",):
+        if extension == ".json":
             return json.load(f)
         msg = f'Unknown file extension for the file "{path}"'
         raise nncf.InternalError(msg)

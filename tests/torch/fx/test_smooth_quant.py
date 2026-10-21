@@ -102,7 +102,7 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
         names_map = PT_LINEAR_MODEL_MM_MAP if model_cls is LinearMultiShapeModel else PT_CONV_MODEL_MM_MAP
         ops_list = {node.name: node for node in model.graph.nodes}
         for ref_names, ref_value in reference_values.items():
-            if not all(name.startswith("Linear") or name.startswith("Conv") for name in ref_names):
+            if not all(name.startswith(("Linear", "Conv")) for name in ref_names):
                 # Pytorch SQ algorithm supports only linear and conv modules by far,
                 # so other multiplies are skipped
                 continue

@@ -104,8 +104,7 @@ def to_markdown(df_, output_file):
     wrapped_headers = [wrap_text(header) for header in df.columns]
 
     markdown_table = tabulate(df, headers=wrapped_headers, tablefmt="pipe", showindex=False)
-    with open(output_file, "w") as f:
-        f.write(markdown_table)
+    Path(output_file).write_text(markdown_table)
 
 
 def to_plot(df, output_file):
