@@ -193,15 +193,7 @@ exclude = [
 [tool.ruff.lint]
 preview = true
 ignore = [
-    "E203",    # whitespace-before-punctuation
-    "E251",    # unexpected-spaces-around-keyword-parameter-equals
-    "E731",    # lambda-assignment
-    "SIM108",  # if-else-block-instead-of-if-exp
-    "SIM110",  # reimplemented-builtin
-    "SIM117",  # multiple-with-statements
-    "SIM103",  # needless-bool
-    "NPY002",  # numpy-legacy-random
-    "UP035",   # deprecated-import
+    "B905",    # zip-without-explicit-strict
     "D100",    # undocumented-public-module
     "D101",    # undocumented-public-class
     "D102",    # undocumented-public-method
@@ -221,40 +213,48 @@ ignore = [
     "D413",    # missing-blank-line-after-last-section
     "D415",    # missing-terminal-punctuation
     "D417",    # undocumented-param
+    "E203",    # whitespace-before-punctuation
+    "E251",    # unexpected-spaces-around-keyword-parameter-equals
+    "E731",    # lambda-assignment
+    "FURB113", # repeated-append
+    "FURB118", # reimplemented-operator
+    "FURB140", # reimplemented-starmap
+    "FURB187", # list-reverse-copy
+    "NPY002",  # numpy-legacy-random
     "PERF203", # try-except-in-loop
     "PERF401", # manual-list-comprehension
     "PERF403", # manual-dict-comprehension
-    "B905",    # zip-without-explicit-strict
     "RET502",  # implicit-return-value
     "RET503",  # implicit-return
     "RET504",  # unnecessary-assign
+    "SIM103",  # needless-bool
+    "SIM108",  # if-else-block-instead-of-if-exp
+    "SIM110",  # reimplemented-builtin
+    "SIM117",  # multiple-with-statements
     "TD003",   # todo-missing-issue
-    "FURB140", # reimplemented-starmap
-    "FURB113", # repeated-append
-    "FURB118", # reimplemented-operator
-    "FURB187", # list-reverse-copy
+    "UP035",   # deprecated-import
 ]
 select = [
+    "B",      # flake8-bugbear
     "CPY001", # copyright check
     "D",      # pydocstyle
     "E",      # pycodestyle rules
     "EM",     # flake8-errmsg
     "F",      # pyflakes rules
+    "FLY",    # fly
+    "FURB",   # refurb
     "I",      # isort
+    "ICN",    # flake8-import-conventions
     "INP",    # flake8-no-pep420
     "ISC",    # flake8-implicit-str-concat
     "NPY",    # numpy rules
-    "UP",     # pyupgrade
     "PERF",   # perflint
-    "B",      # flake8-bugbear
-    "RET",    # flake8-return
-    "PTH",    # flake8-use-pathlib
-    "TD",     # flake8-todos
-    "RSE",    # flake8-raise
-    "FLY",    # fly
-    "ICN",    # flake8-import-conventions
     "PIE",    # flake8-pie
-    "FURB",   # refurb
+    "PTH",    # flake8-use-pathlib
+    "RET",    # flake8-return
+    "RSE",    # flake8-raise
+    "TD",     # flake8-todos
+    "UP",     # pyupgrade
 ]
 extend-select = [
     "SIM", # https://pypi.org/project/flake8-simplify
