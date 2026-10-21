@@ -45,7 +45,6 @@ def test_find_constant_subgraphs(node_between_const_and_op):
 
     class ConstantMetatype(OperatorMetatype):
         num_expected_input_edges = 0
-        pass
 
     class NodeWithWeightMetatype(OperatorMetatype):
         num_expected_input_edges = 2

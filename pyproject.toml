@@ -249,6 +249,7 @@ select = [
     "RSE",    # flake8-raise
     "FLY",    # fly
     "ICN",    # flake8-import-conventions
+    "PIE",    # flake8-pie
 ]
 extend-select = [
     "SIM", # https://pypi.org/project/flake8-simplify
