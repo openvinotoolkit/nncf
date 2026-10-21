@@ -16,7 +16,6 @@ Backend for `onnx.ModelProto`. General rules: [root AGENTS.md](../../../AGENTS.m
 - Models are protobuf objects; `ONNXModelTransformer` works on a `deepcopy` unless `inplace=True`.
 - Weight/bias port detection depends on metatype definitions; check `graph/metatypes/groups.py` when adding ops.
 - Models over 2GB need external data; see `check_model_protobuf_size` / `check_external_data_location`.
-- Many files here are excluded from mypy (see `[tool.mypy]` in `pyproject.toml`).
 
 ## Tests
 

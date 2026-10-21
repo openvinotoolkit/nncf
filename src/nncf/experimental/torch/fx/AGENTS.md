@@ -17,7 +17,6 @@ Backend for `torch.fx.GraphModule` produced by `torch.export`. General rules: [r
 - Input must be an exported `GraphModule` (`torch.export.export(...).module()`), not an eager `nn.Module`.
 - `quantize_impl` deep-copies the model and rebuilds `GraphModule` after transformations; keep `model.meta` intact.
 - Not all algorithms are supported; check the `*_impl` functions for rejected parameters before adding features.
-- The whole `src/nncf/experimental` folder is excluded from mypy.
 
 ## Tests
 

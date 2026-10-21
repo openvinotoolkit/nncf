@@ -25,7 +25,6 @@ Shared core used by all backends. General rules: [root AGENTS.md](../../../AGENT
 - Backend logic goes into backend folders; add a new backend branch to every factory in `factory.py`.
 - Use `nncf.tensor` (`Tensor`, `nncf.tensor.functions`) for tensor math, not numpy/torch directly.
 - Log via `nncf_logger`, not `print`; deprecate public API with `deprecation.py` helpers.
-- Code here is under strict mypy (not in the exclude list); keep full type annotations.
 - Changes here affect every backend: run `make test-common` and the tests of all backends.
 
 ## Tests
