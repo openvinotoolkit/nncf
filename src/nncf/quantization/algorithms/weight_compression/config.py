@@ -80,6 +80,7 @@ class WeightCompressionConfig:
             CompressWeightsMode.MXFP8_E4M3: 8,
             CompressWeightsMode.INT3_SYM: 3,
             CompressWeightsMode.INT2_SYM: 2,
+            CompressWeightsMode.INT1_SYM: 1,
         }
 
         try:
@@ -150,6 +151,7 @@ class WeightCompressionConfig:
         dtype_per_mode = {
             CompressWeightsMode.INT2_SYM: TensorDataType.int2,
             CompressWeightsMode.INT3_SYM: TensorDataType.int3,
+            CompressWeightsMode.INT1_SYM: TensorDataType.sign1,
             CompressWeightsMode.INT4_SYM: TensorDataType.int4,
             CompressWeightsMode.INT4_ASYM: TensorDataType.uint4,
             CompressWeightsMode.INT8_ASYM: TensorDataType.uint8,
@@ -168,10 +170,7 @@ class WeightCompressionConfig:
         """
         True if compression type is symmetric and represented by unsigned integer, else False.
         """
-        return self.mode in [
-            CompressWeightsMode.INT2_SYM,
-            CompressWeightsMode.INT3_SYM,
-        ]
+        return self.mode in [CompressWeightsMode.INT3_SYM]
 
     def __hash__(self) -> int:
         return hash((self.mode.value, self.group_size, self.narrow_range))

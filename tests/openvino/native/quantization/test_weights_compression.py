@@ -926,6 +926,21 @@ def test_raise_error_with_unsupported_params_for_int4(mode, params):
         compress_weights(ov.Model([], []), mode=mode, **params)
 
 
+@pytest.mark.parametrize(
+    "params",
+    (
+        {"dataset": "anything"},
+        {"scale_estimation": True},
+        {"lora_correction": True},
+        {"gptq": True},
+        {"awq": True},
+    ),
+)
+def test_raise_error_with_unsupported_params_for_int1_sym(params):
+    with pytest.raises(nncf.ParameterNotSupportedError):
+        compress_weights(ov.Model([], []), mode=CompressWeightsMode.INT1_SYM, **params)
+
+
 @pytest.mark.parametrize("mode", [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3, CompressWeightsMode.NVFP4])
 class TestUnsupportedParams:
     @pytest.mark.parametrize(
@@ -1563,7 +1578,7 @@ def test_narrow_range_is_applied_by_compress_weights():
     )
 
     weights_op = {op.get_friendly_name(): op for op in compressed_model.get_ops()}["Weights"]
-    scale_op = get_next_node(get_next_node(get_next_node(weights_op))).input_value(1).get_node()
+    scale_op = get_next_node(get_next_node(weights_op)).input_value(1).get_node()
     scale = get_const_value_as_numpy_tensor(scale_op)
 
     np.testing.assert_allclose(np.abs(scale), np.abs(weight).max(axis=1, keepdims=True), rtol=1e-3)
@@ -1572,6 +1587,7 @@ def test_narrow_range_is_applied_by_compress_weights():
 @pytest.mark.parametrize(
     "mode",
     (
+        CompressWeightsMode.INT1_SYM,
         CompressWeightsMode.INT4_ASYM,
         CompressWeightsMode.INT8_ASYM,
         CompressWeightsMode.NF4,
@@ -1608,6 +1624,64 @@ def test_int_compressed_weighs_range(mode, data):
     compressed_weight = do_integer_quantization(w, config, -1)
 
     assert np.allclose(np.abs(compressed_weight.tensor.data), np.abs(w.data))
+
+
+@pytest.mark.parametrize(
+    "data",
+    (
+        np.array([-2.0, 2.0, 2.0, -2.0], np.float32),
+        np.array([0.5, -0.5, -0.5, 0.5], np.float32),
+    ),
+)
+def test_int1_sym_reconstructs_two_level_groups(data):
+    # The scale is the group's mean absolute weight, which is `d` for a `+/-d` group, so it is exact.
+    config = WeightCompressionConfig(mode=CompressWeightsMode.INT1_SYM)
+    compressed_weight = do_integer_quantization(Tensor(data), config, -1)
+
+    assert np.array_equal(do_integer_dequantization(compressed_weight).data, data)
+    assert np.array_equal(np.unique(compressed_weight.tensor.data), np.array([-1, 1], np.int8))
+    assert compressed_weight.zero_point is None
+    assert np.allclose(compressed_weight.scale.data, np.abs(data).mean())
+
+
+@pytest.mark.parametrize(
+    ("mode", "element_type", "has_offset"),
+    (
+        (CompressWeightsMode.INT2_SYM, ov.Type.i2, False),
+        (CompressWeightsMode.INT3_SYM, ov.Type.u3, True),
+    ),
+)
+def test_int2_3_sym_codes_are_emitted_in_their_element_type(mode, element_type, has_offset):
+    # 2-bit codes are stored signed.
+    model = MatMul(input_shape=[1, 1, 16], output_dim=16).ov_model
+
+    compressed_model = compress_weights(model, mode=mode, ratio=1.0, group_size=-1, all_layers=True)
+
+    constants = {op.get_friendly_name(): op for op in compressed_model.get_ops() if op.get_type_name() == "Constant"}
+    assert constants["Weights"].get_element_type() == element_type
+    assert ("Weights/zero_point" in constants) is has_offset
+
+
+def test_int1_sym_compressed_model_reproduces_the_sign_grid():
+    # The constant is a bit-packed `s1` with no zero point, and the model computes `mean|w| * sign(w)`.
+    model = MatMul(input_shape=[1, 1, 16], output_dim=16).ov_model
+    weight = get_const_value_as_numpy_tensor({op.get_friendly_name(): op for op in model.get_ops()}["Weights"])
+    config = WeightCompressionConfig(mode=CompressWeightsMode.INT1_SYM, group_size=-1)
+    decompressed = do_integer_dequantization(do_integer_quantization(Tensor(weight), config, (1,))).data
+
+    compressed_model = compress_weights(
+        model, mode=CompressWeightsMode.INT1_SYM, ratio=1.0, group_size=-1, all_layers=True
+    )
+
+    constants = {op.get_friendly_name(): op for op in compressed_model.get_ops() if op.get_type_name() == "Constant"}
+    assert constants["Weights"].get_element_type() == ov.Type.s1
+    assert constants["Weights"].get_byte_size() == int(np.prod(constants["Weights"].get_shape())) // 8
+    assert "Weights/zero_point" not in constants
+
+    input_data = np.ones([1, 1, 16], dtype=np.float32)
+    output = ov.compile_model(compressed_model, device_name="CPU")(input_data)[0]
+
+    np.testing.assert_allclose(output, input_data @ decompressed.T, rtol=1e-3)
 
 
 FP4_REF = {

@@ -22,7 +22,8 @@ from nncf.tensor.functions import numeric
 from nncf.tensor.functions.numpy_numeric import DTYPE_MAP_REV as DTYPE_MAP_REV_NUMPY
 
 DTYPE_MAP: dict[TensorDataType, ov.Type] = {
-    TensorDataType.int2: ov.Type.u2,
+    TensorDataType.int2: ov.Type.i2,
+    TensorDataType.sign1: ov.Type.s1,
     TensorDataType.int3: ov.Type.u3,
     TensorDataType.nf4: ov.Type.nf4,
     TensorDataType.f4e2m1: ov.Type.f4e2m1,
@@ -46,6 +47,7 @@ DTYPE_MAP: dict[TensorDataType, ov.Type] = {
 NATIVE_OV_CAST_DTYPES = [
     TensorDataType.bfloat16,
     TensorDataType.int2,
+    TensorDataType.sign1,
     TensorDataType.int3,
     TensorDataType.int4,
     TensorDataType.uint4,
