@@ -90,8 +90,8 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             raise nncf.ParameterNotSupportedError(msg)
         return dtype
 
-    def _preprocess_compressed_weight(
-        self,
+    @staticmethod
+    def preprocess_compressed_weight(
         compressed_weight: CompressedWeight,
         weight_shape: tuple[int],
         reduction_axes: tuple[int, ...],
@@ -285,7 +285,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                     msg = """ONNX does not support 3D weights for opset version < 21.
                              Please use a higher opset version or per-channel quantization"""
                     raise nncf.ParameterNotSupportedError(msg)
-                compressed_weight, scale, zero_point = self._preprocess_compressed_weight(
+                compressed_weight, scale, zero_point = ONNXWeightCompressionAlgoBackend.preprocess_compressed_weight(
                     compressed_weight, weight.shape, reduction_axes, dequantize_block_size=None, apply_transpose=True
                 )
                 self._replace_matmul_with_matmulnbits(
@@ -301,7 +301,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                     self._get_weight_dtype(compression_config.mode),
                 )
             else:
-                compressed_weight, scale, zero_point = self._preprocess_compressed_weight(
+                compressed_weight, scale, zero_point = ONNXWeightCompressionAlgoBackend.preprocess_compressed_weight(
                     compressed_weight, weight.shape, reduction_axes, dequantize_block_size=dequantize_block_size
                 )
                 self._add_dequantize_linear_layer(
