@@ -226,10 +226,10 @@ def check_user_compression_configuration(
     """
     validate_scoped_configs(scoped_configs, advanced_parameters)
     if mode in INT8_MODES:
-        if (ratio and ratio != 1) or (group_size and group_size != -1):
+        if (ratio and ratio != 1):
             msg = (
-                "INT8 modes require per-channel quantization of all layers in 8 bit. "
-                "Default values of `ratio` (1) and `group_size` (-1) cannot be overridden."
+                "INT8 modes require quantization of all layers in 8 bit. "
+                "Default value of `ratio` (1) cannot be overridden."
             )
             raise nncf.ParameterNotSupportedError(msg)
 
@@ -603,8 +603,12 @@ class WeightCompression(Algorithm):
         :param is_last_layer_skipped: Indicates whether the last layer was already excluded from compression.
         :return: Information about each weight node that is considered for mixed precision.
         """
-        if self._mode in [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM]:
-            return all_weight_params
+        if self._mode in INT8_MODES:
+            if self._group_size == -1:
+                return all_weight_params
+            # Group-wise quantization needs a single reduction axis. The other weights (e.g. of convolutions) keep
+            # the initial config from `_get_backup_config`: per-channel quantization in the same INT8 mode.
+            return [wp for wp in all_weight_params if len(wp.reduction_axes) == 1]
 
         ratio_defining_params = list(
             filter(
@@ -640,10 +644,12 @@ class WeightCompression(Algorithm):
         :return: A WeightCompressionConfig object for the backup precision, or None if backup is
         disabled or unsupported.
         """
-        if self._backup_mode == BackupMode.NONE:
+        if self._mode in INT8_MODES:
+            mode = self._mode
+            group_size = -1
+        elif self._backup_mode == BackupMode.NONE:
             return None
-
-        if self._backup_mode == BackupMode.FP8_E4M3:
+        elif self._backup_mode == BackupMode.FP8_E4M3:
             mode = CompressWeightsMode.FP8_E4M3
             group_size = self._group_size
         elif self._backup_mode == BackupMode.MXFP8_E4M3:
@@ -844,9 +850,14 @@ class WeightCompression(Algorithm):
 
         if invalid_weight_params:
             # Valid adjusted group size wasn't found
+            fallback = (
+                f"{self._mode.value} per-channel quantization"
+                if self._mode in INT8_MODES
+                else f"the {self._backup_mode.value} backup mode"
+            )
             nncf_logger.info(
-                "A valid adjusted group size value can't be found for some nodes. They will be quantized using the "
-                f"{self._backup_mode.value} backup mode."
+                "A valid adjusted group size value can't be found for some nodes. "
+                f"They will be quantized using {fallback}."
             )
 
         return valid_weight_params, group_size_values
