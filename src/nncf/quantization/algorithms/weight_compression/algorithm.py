@@ -619,6 +619,7 @@ class WeightCompression(Algorithm):
             mode=self._mode,
             group_size=group_size,
             codebook_values=codebook_values,
+            narrow_range=self._advanced_parameters.narrow_range,
         )
 
     def apply_mixed_precision(

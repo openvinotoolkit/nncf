@@ -55,6 +55,7 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import _cal
 from nncf.quantization.algorithms.weight_compression.weight_lowering import _calculate_normalized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
@@ -1489,6 +1490,101 @@ def test_codebook(codebook, n_layers, dst_type, group_size):
     ]
 
     assert len(names_codebook) == n_layers
+
+
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT2_SYM, CompressWeightsMode.INT4_SYM))
+@pytest.mark.parametrize(
+    "data",
+    (
+        [-0.5, 0.5],
+        [-0.5, 0.0, 0.5],
+        [0.25, -0.25, 0.0, 0.25],
+        [0.75, -0.75, -0.75, 0.75],
+    ),
+)
+def test_narrow_range_is_exact_on_magnitude_symmetric_groups(mode, data):
+    # `+/-d` and `{-d, 0, +d}` groups map to the extreme and middle codes, so the reconstruction is exact.
+    data = np.array(data).astype(np.float32)
+    config = WeightCompressionConfig(mode=mode, narrow_range=True)
+
+    compressed_weight = do_integer_quantization(Tensor(data), config, -1)
+
+    assert np.array_equal(do_integer_dequantization(compressed_weight).data, data)
+    assert np.abs(compressed_weight.tensor.data).max() == 2 ** (config.num_bits - 1) - 1
+
+
+def test_full_range_clips_magnitude_symmetric_groups():
+    # The full-range grid has no code for `+d`, so it is clipped to `+d / 2`.
+    data = np.array([-0.5, 0.5], np.float32)
+    config = WeightCompressionConfig(mode=CompressWeightsMode.INT2_SYM)
+
+    compressed_weight = do_integer_quantization(Tensor(data), config, -1)
+
+    assert not np.array_equal(do_integer_dequantization(compressed_weight).data, data)
+
+
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT2_SYM, CompressWeightsMode.INT4_SYM))
+def test_narrow_range_codes_stay_inside_the_grid(mode):
+    weight = Tensor(np.random.default_rng(0).standard_normal((8, 128)).astype(np.float32))
+    config = WeightCompressionConfig(mode=mode, narrow_range=True)
+
+    codes = do_integer_quantization(weight, config, (1,)).tensor.data
+
+    limit = 2 ** (config.num_bits - 1) - 1
+    assert codes.min() >= -limit
+    assert codes.max() <= limit
+
+
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT8_SYM))
+def test_narrow_range_in_the_optimized_path(mode):
+    # The OpenVINO implementation of integer compression must clip to the same narrow grid as the reference one.
+    weight = Tensor(np.random.default_rng(1).standard_normal((16, 128)).astype(np.float32))
+    config = WeightCompressionConfig(mode=mode, narrow_range=True)
+
+    ref = do_integer_quantization(weight, config, (1,))
+    opt = opt_fns.do_integer_quantization(weight, config, (1,))
+
+    np.testing.assert_array_equal(opt.tensor.data, ref.tensor.data)
+    np.testing.assert_allclose(opt.scale.data, ref.scale.data)
+
+
+def test_narrow_range_is_applied_by_compress_weights():
+    # `narrow_range` from `AdvancedCompressionParameters` makes the scale `max|w| / (2^(b-1) - 1)`.
+    model = MatMul(input_shape=[1, 1, 16], output_dim=16).ov_model
+    weight = get_const_value_as_numpy_tensor({op.get_friendly_name(): op for op in model.get_ops()}["Weights"])
+
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT2_SYM,
+        ratio=1.0,
+        group_size=-1,
+        all_layers=True,
+        advanced_parameters=AdvancedCompressionParameters(narrow_range=True),
+    )
+
+    weights_op = {op.get_friendly_name(): op for op in compressed_model.get_ops()}["Weights"]
+    scale_op = get_next_node(get_next_node(get_next_node(weights_op))).input_value(1).get_node()
+    scale = get_const_value_as_numpy_tensor(scale_op)
+
+    np.testing.assert_allclose(np.abs(scale), np.abs(weight).max(axis=1, keepdims=True), rtol=1e-3)
+
+
+@pytest.mark.parametrize(
+    "mode",
+    (
+        CompressWeightsMode.INT4_ASYM,
+        CompressWeightsMode.INT8_ASYM,
+        CompressWeightsMode.NF4,
+    ),
+)
+def test_narrow_range_is_rejected_for_other_modes(mode):
+    with pytest.raises(nncf.ValidationError):
+        WeightCompressionConfig(mode=mode, narrow_range=True)
+
+
+def test_narrow_range_default_is_off():
+    assert WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM).narrow_range is False
+    assert AdvancedCompressionParameters().narrow_range is False
 
 
 @pytest.mark.parametrize(

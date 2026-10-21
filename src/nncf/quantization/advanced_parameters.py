@@ -432,6 +432,9 @@ class AdvancedCompressionParameters:
     :type codebook: TTensor
     :param adaptive_codebook_params: Advanced parameters for adaptive codebook estimation.
     :type adaptive_codebook_params: AdvancedAdaptiveCodebookParameters
+    :param narrow_range: Whether the symmetric integer modes use the narrow range [-(2^(b-1) - 1), 2^(b-1) - 1]
+        with scale max|w| / (2^(b-1) - 1) instead of the full range. Defaults to False.
+    :type narrow_range: bool
     """
 
     statistics_path: str | None = None
@@ -446,6 +449,7 @@ class AdvancedCompressionParameters:
     lora_correction_params: AdvancedLoraCorrectionParameters = field(default_factory=AdvancedLoraCorrectionParameters)
     backend_params: dict[str, Any] = field(default_factory=dict)
     codebook: TTensor | None = None
+    narrow_range: bool = False
     adaptive_codebook_params: AdvancedAdaptiveCodebookParameters = field(
         default_factory=AdvancedAdaptiveCodebookParameters
     )

@@ -34,15 +34,21 @@ class WeightCompressionConfig:
     :param codebook_values: Optional codebook values for CODEBOOK compression mode.
         Must be nncf.tensor.Tensor which wraps numpy array or ov tensor. Storing ov tensor is useful for having
         destination data type information available.
+    :param narrow_range: Whether a symmetric integer mode uses the narrow range [-(2^(b-1) - 1), 2^(b-1) - 1] with
+        scale max|w| / (2^(b-1) - 1) instead of the full range with scale max|w| / 2^(b-1). Defaults to False.
     """
 
     mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM
     group_size: int = -1
     codebook_values: Tensor | None = None
+    narrow_range: bool = False
 
     def __post_init__(self) -> None:
         if self.group_size == 0 or self.group_size < -1:
             msg = f"Invalid group_size={self.group_size}. Group size must be a positive integer or -1."
+            raise ValidationError(msg)
+        if self.narrow_range and not self.is_symmetric_integer:
+            msg = f"narrow_range applies to the symmetric integer modes only, not to {self.mode.value}."
             raise ValidationError(msg)
 
     @property
@@ -85,6 +91,18 @@ class WeightCompressionConfig:
     @property
     def is_asym_mode(self) -> bool:
         return self.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT8_ASYM]
+
+    @property
+    def is_symmetric_integer(self) -> bool:
+        """
+        True if compression type is a symmetric integer grid, else False.
+        """
+        return self.mode in [
+            CompressWeightsMode.INT2_SYM,
+            CompressWeightsMode.INT3_SYM,
+            CompressWeightsMode.INT4_SYM,
+            CompressWeightsMode.INT8_SYM,
+        ]
 
     @property
     def is_integer(self) -> bool:
@@ -156,7 +174,7 @@ class WeightCompressionConfig:
         ]
 
     def __hash__(self) -> int:
-        return hash((self.mode.value, self.group_size))
+        return hash((self.mode.value, self.group_size, self.narrow_range))
 
 
 @dataclass
