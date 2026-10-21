@@ -1,6 +1,4 @@
 graft src/nncf/torch/extensions
-graft src/nncf/common/hardware/configs
-include LICENSE
 include licensing/third-party-programs.txt
-include docs/PyPiPublishing.md
 include src/custom_version.py
+global-exclude *.py[cod]
