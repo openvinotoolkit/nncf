@@ -22,7 +22,8 @@ pytest-forked==1.6.0
 pytest-split==0.11.0
 
 datasets==5.0.1
-matplotlib==3.11.2
-pandas==3.0.6
-fastprogress==1.0.5
 fastcore==1.11.5
+fastprogress==1.0.5
+matplotlib==3.10.9; python_version < "3.12"
+matplotlib==3.11.2; python_version >= "3.12"
+pandas==3.0.6
