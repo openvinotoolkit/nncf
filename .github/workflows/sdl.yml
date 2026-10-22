@@ -3,6 +3,8 @@ permissions: read-all
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
   push:
     branches:
       - develop
@@ -72,8 +74,10 @@ jobs:
     name: Trivy
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # Skip trivy for PRs to avoid blocking merge PRs by found vulnerabilities in requirements
-    # if: ${{ github.event_name != 'pull_request' }}
+    # Skip on PRs and develop pushes to avoid blocking merges by vulnerabilities found in requirements
+    if: >-
+      ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && startsWith(github.ref_name, 'release_v')) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
