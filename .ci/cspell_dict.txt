@@ -134,6 +134,7 @@ eprinttype
 errstate
 evals
 execu
+executorch
 extendleft
 facecolors
 fakequantizer
@@ -314,6 +315,7 @@ nvfp
 objwalk
 odict
 oimp
+onednn
 onnxhw
 onnxp
 onnxqdq
@@ -403,6 +405,7 @@ reducel
 reducemax
 reducemean
 reducesum
+regen
 relu
 reportviews
 requant
@@ -449,6 +452,7 @@ stabilityai_stablelm
 stdv
 stfpm
 stridedslice
+styleguide
 subarray
 subdict
 submodel
@@ -476,6 +480,7 @@ timestep
 tinyyolov
 tobytes
 togethercomputer
+torchao
 torchdynamo
 truncnorm
 tupled
