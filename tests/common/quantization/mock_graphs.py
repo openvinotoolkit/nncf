@@ -413,7 +413,7 @@ def get_sequentially_connected_model_graph(op_name_keys: list[str]) -> nx.MultiD
         node_key_appearances[node_key] += 1
         actual_keys.append(actual_key)
 
-    edges = [(actual_keys[i], actual_keys[i + 1]) for i in range(0, len(actual_keys) - 1)]
+    edges = [(actual_keys[i], actual_keys[i + 1]) for i in range(len(actual_keys) - 1)]
     for from_key, to_key in edges:
         graph.add_edge(from_key, to_key)
 

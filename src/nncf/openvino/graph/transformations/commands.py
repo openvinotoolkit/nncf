@@ -53,7 +53,7 @@ class OVOutputInsertionCommand(OVInsertionCommand):
 
     def union(self, other: "TransformationCommand") -> "TransformationCommand":
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class OVInplaceFnInsertionCommand(OVInsertionCommand):
@@ -73,7 +73,7 @@ class OVInplaceFnInsertionCommand(OVInsertionCommand):
 
     def union(self, other: "TransformationCommand") -> "TransformationCommand":
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class OVFQNodeRemovingCommand(TransformationCommand):

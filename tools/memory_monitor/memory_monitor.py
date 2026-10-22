@@ -197,8 +197,9 @@ class MemoryMonitor:
             if len(time_values) == 0:
                 log_file.write("No measurements recorded.\nPlease make sure logging duration or interval were enough.")
                 return
-            for timestamp, memory_usage in zip(time_values, memory_values):
-                log_file.write(f"{timestamp} {memory_usage:.3f}\n")
+            log_file.writelines(
+                f"{timestamp} {memory_usage:.3f}\n" for timestamp, memory_usage in zip(time_values, memory_values)
+            )
 
             log_file.writelines(
                 [

@@ -32,7 +32,6 @@ class TemplateTestStatisticsCaching:
         :param port_id: The port ID for the target point.
         :return: A backend-specific TargetPoint.
         """
-        pass
 
     @abstractmethod
     def get_statistics_aggregator(self):
@@ -41,7 +40,6 @@ class TemplateTestStatisticsCaching:
 
         :return: Statistics aggregator instance specific to the backend.
         """
-        pass
 
     @abstractmethod
     def _create_dummy_min_max_tensor(self) -> Tensor:

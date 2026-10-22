@@ -330,7 +330,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def insert_adapters(
         self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool
     ) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def _add_dequantize_linear_layer(
         self,

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import datetime
+import datetime as dt
 import itertools
 from functools import partial
 from pathlib import Path
@@ -250,13 +250,13 @@ def main():
     dataset = dataset.filter(lambda example: len(example["text"]) > 128)
     transform_func = partial(tiny_llama_transform_func, tokenizer=tokenizer, ov_model=model.model)
 
-    start = datetime.datetime.now()
+    start = dt.datetime.now()
     evaluator = Evaluator(model, tokenizer=tokenizer, metrics=("similarity",))
     nncf_dataset = get_nncf_dataset(dataset, transform_func)
     awq, ratio, group_size = find_parameters(evaluator, model, nncf_dataset)
-    end = datetime.datetime.now()
+    end = dt.datetime.now()
     delta = end - start
-    delta -= datetime.timedelta(microseconds=delta.microseconds)
+    delta -= dt.timedelta(microseconds=delta.microseconds)
     print(f"Elapsed time: {delta}")
     print(f"awq, ratio, group_size: {awq}, {ratio}, {group_size}")
     return awq, ratio, group_size
