@@ -390,7 +390,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         x = mb.add_input("input", (1, 3, 3))
         output = mb.add_output("output", (1, 3, 3))
         weights_data = np.eye(3, dtype=np.float32) * 255
-        mb.add_matmul(x, shape=weights_data.shape, output=output, data=weights_data)
+        mb.add_matmul_v2(x, shape=weights_data.shape, output=output, data=weights_data)
         return mb.build()
 
     @staticmethod
@@ -402,7 +402,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
 
         x = mb.add_input("input", (1, 10))
         x = mb.add_unsqueeze(x, axes=(2,))
-        x = mb.add_matmul(x, shape=(1, 5))
+        x = mb.add_matmul_v2(x, shape=(1, 5))
         x = mb.add_transpose(x, perm=[0, 2, 1])
         x = mb.add_concat([x], axis=-1)
         x1 = mb.add_sin(x)
@@ -421,7 +421,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         mb = ModelBuilder()
 
         x = mb.add_input("input", (-1, -1, -1, 2))
-        x = mb.add_matmul(x, shape=(2, 128))
+        x = mb.add_matmul_v2(x, shape=(2, 128))
         x = mb.add_mul_const(x, shape=(1,), data=np.array([2 * np.pi], np.float32))
         x1 = mb.add_sin(x)
         x2 = mb.add_cos(x)
@@ -454,7 +454,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
                 # for some odd reason
                 mb.add_output(x, input_shape)
             else:
-                x = mb.add_matmul(x, shape=weights_data.shape, data=weights_data)
+                x = mb.add_matmul_v2(x, shape=weights_data.shape, data=weights_data)
                 if i == 4:
                     mb.add_output(x, input_shape)
 
@@ -478,7 +478,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         if is_3d_weights:
             act = mb.add_transpose(relu, perm=(0, 2, 1)) if transpose_a else relu
             weight = np.transpose(w_data, (0, 2, 1)) if transpose_b else w_data
-            mb.add_matmul(act, shape=weight.shape, output=output, data=weight)
+            mb.add_matmul_v2(act, shape=weight.shape, output=output, data=weight)
             return mb.build(opset_version=21)
 
         mb.add_gemm(
@@ -526,7 +526,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
             transpose = mb.add_transpose(squeeze, (1, 0))
             mb.add_gemm(transpose, shape=(8, 16), output=output, weight_data=weights, trans_a=1)
         else:
-            mb.add_matmul(x, shape=(8, 16), output=output, data=weights)
+            mb.add_matmul_v2(x, shape=(8, 16), output=output, data=weights)
 
         return mb.build(opset_version=21)
 
@@ -551,7 +551,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         weights = np.arange(0, num_experts * hidden_dim * out_dim, dtype=np.float32)
         weights = weights.reshape(num_experts, hidden_dim, out_dim)
 
-        mb.add_matmul(x, shape=(num_experts, hidden_dim, out_dim), output=output, data=weights)
+        mb.add_matmul_v2(x, shape=(num_experts, hidden_dim, out_dim), output=output, data=weights)
 
         return mb.build(opset_version=21)
 
@@ -608,17 +608,17 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
         x = mb.add_input("input", (2, 8, 8))
         output = mb.add_output("output", (2, 8, 8))
 
-        x = mb.add_matmul(x, shape=data.shape, data=data)
+        x = mb.add_matmul_v2(x, shape=data.shape, data=data)
         for _ in range(n_layers):
-            a = mb.add_matmul(x, shape=data.shape, data=data)
+            a = mb.add_matmul_v2(x, shape=data.shape, data=data)
             a = mb.add_relu(a)
             if with_multiply:
-                b = mb.add_matmul(x, shape=data.shape, data=data)
+                b = mb.add_matmul_v2(x, shape=data.shape, data=data)
                 b = mb.add_selu(b)
                 x = mb.add_mul(a, b)
             else:
                 x = a
-        mb.add_matmul(x, shape=data.shape, output=output, data=data)
+        mb.add_matmul_v2(x, shape=data.shape, output=output, data=data)
 
         return mb.build(opset_version=21)
 
@@ -662,14 +662,14 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
 
         for i in range(num_blocks):
             if non_mergable_pattern:
-                a = mb.add_matmul(x, shape=w_data.shape, data=w_data)
+                a = mb.add_matmul_v2(x, shape=w_data.shape, data=w_data)
                 b = mb.add_relu(a)
-                x = mb.add_matmul(b, shape=w_data.shape, output=output if i == num_blocks - 1 else None, data=w_data)
+                x = mb.add_matmul_v2(b, shape=w_data.shape, output=output if i == num_blocks - 1 else None, data=w_data)
             else:
-                a = mb.add_matmul(x, shape=w_data.shape, data=w_data)
-                b = mb.add_matmul(x, shape=w_data.shape, data=w_data)
+                a = mb.add_matmul_v2(x, shape=w_data.shape, data=w_data)
+                b = mb.add_matmul_v2(x, shape=w_data.shape, data=w_data)
                 x = mb.add_mul(a, b)
-                x = mb.add_matmul(x, shape=w_data.shape, output=output if i == num_blocks - 1 else None, data=w_data)
+                x = mb.add_matmul_v2(x, shape=w_data.shape, output=output if i == num_blocks - 1 else None, data=w_data)
 
         return mb.build(opset_version=opset_version)
 
@@ -690,7 +690,7 @@ class TestONNXTemplateWeightCompression(TemplateWeightCompression):
                 .reshape(channel_size, prev_channel_size)
                 .T
             )
-            x = mb.add_matmul(x, shape=w_data.shape, output=output if i == len(channel_sizes) else None, data=w_data)
+            x = mb.add_matmul_v2(x, shape=w_data.shape, output=output if i == len(channel_sizes) else None, data=w_data)
 
         return mb.build(opset_version=21)
 
