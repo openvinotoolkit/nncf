@@ -90,7 +90,8 @@ compressed_model = compress_weights(model, mode=CompressWeightsMode.INT8_SYM)  #
 ```python
 from nncf import compress_weights, CompressWeightsMode
 
-compressed_model = compress_weights(model, mode=CompressWeightsMode.INT8_SYM, group_size=32)  # model is openvino.Model object
+# model is openvino.Model object
+compressed_model = compress_weights(model, mode=CompressWeightsMode.INT8_SYM, group_size=32)
 ```
 
 - Compress weights symmetrically to 4-bit integer data type with group size = 128, except embeddings, convolutions and last linear layers - they are compressed asymmetrically to 8-bit integer data type.

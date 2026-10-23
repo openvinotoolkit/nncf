@@ -226,7 +226,7 @@ def check_user_compression_configuration(
     """
     validate_scoped_configs(scoped_configs, advanced_parameters)
     if mode in INT8_MODES:
-        if (ratio and ratio != 1):
+        if ratio and ratio != 1:
             msg = (
                 "INT8 modes require quantization of all layers in 8 bit. "
                 "Default value of `ratio` (1) cannot be overridden."
