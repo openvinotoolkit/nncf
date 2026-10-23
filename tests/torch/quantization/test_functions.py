@@ -128,7 +128,7 @@ def generate_input(
                 pytest.skip("Same case as for single scale mode")
             ch_idx = [0 for _ in input_size]
             inputs = np.empty(input_size)
-            for idx in range(0, channel_count):
+            for idx in range(channel_count):
                 ch_idx[0] = idx
                 inputs[idx] = generate_one_channel_input(
                     input_low, input_range, ch_idx, input_size[1:], bits, get_deviation, min_deviation
@@ -140,7 +140,7 @@ def generate_input(
                 pytest.skip("Same case as for single scale mode")
             ch_idx = [0 for _ in input_size]
             inputs = np.empty(input_size)
-            for idx in range(0, channel_count):
+            for idx in range(channel_count):
                 ch_idx[1] = idx
                 inputs[:, idx] = generate_one_channel_input(
                     input_low, input_range, ch_idx, input_size[0:1] + input_size[2:], bits, get_deviation, min_deviation
@@ -249,7 +249,7 @@ class BaseParametrized:
                     scales_shape = [1 for _ in input_size]
                     scales_shape[0] = channel_count
                     scales = np.empty(scales_shape)
-                    for idx in range(0, channel_count):
+                    for idx in range(channel_count):
                         scales[idx] = calc_scale()
                 else:
                     channel_count = input_size[1]
@@ -258,7 +258,7 @@ class BaseParametrized:
                     scales_shape = [1 for _ in input_size]
                     scales_shape[1] = channel_count
                     scales = np.empty(scales_shape)
-                    for idx in range(0, channel_count):
+                    for idx in range(channel_count):
                         scales[0, idx] = calc_scale()
             return scales
 
@@ -447,7 +447,7 @@ class BaseParametrized:
                     scales_shape[0] = channel_count
                     input_low = np.empty(scales_shape)
                     input_range = np.empty(scales_shape)
-                    for idx in range(0, channel_count):
+                    for idx in range(channel_count):
                         input_low[idx], input_range[idx] = calc_low_and_range()
                 else:
                     channel_count = input_size[1]
@@ -457,7 +457,7 @@ class BaseParametrized:
                     scales_shape[1] = channel_count
                     input_low = np.empty(scales_shape)
                     input_range = np.empty(scales_shape)
-                    for idx in range(0, channel_count):
+                    for idx in range(channel_count):
                         input_low[0, idx], input_range[0, idx] = calc_low_and_range()
 
             return input_low, input_range

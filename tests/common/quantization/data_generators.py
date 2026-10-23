@@ -97,14 +97,14 @@ def generate_random_scale_by_input_size(input_size: tuple, is_per_channel: bool,
             scales_shape = [1 for _ in input_size]
             scales_shape[0] = channel_count
             scales = np.empty(scales_shape)
-            for idx in range(0, channel_count):
+            for idx in range(channel_count):
                 scales[idx] = generate_random_scale()
         else:
             channel_count = input_size[1]
             scales_shape = [1 for _ in input_size]
             scales_shape[1] = channel_count
             scales = np.empty(scales_shape)
-            for idx in range(0, channel_count):
+            for idx in range(channel_count):
                 scales[0, idx] = generate_random_scale()
     return scales
 
@@ -146,7 +146,7 @@ def generate_random_low_and_range_by_input_size(
             scales_shape[0] = channel_count
             input_low = np.empty(scales_shape)
             input_range = np.empty(scales_shape)
-            for idx in range(0, channel_count):
+            for idx in range(channel_count):
                 input_low[idx], input_range[idx] = generate_random_low_and_range()
         else:
             channel_count = input_size[1]
@@ -154,7 +154,7 @@ def generate_random_low_and_range_by_input_size(
             scales_shape[1] = channel_count
             input_low = np.empty(scales_shape)
             input_range = np.empty(scales_shape)
-            for idx in range(0, channel_count):
+            for idx in range(channel_count):
                 input_low[0, idx], input_range[0, idx] = generate_random_low_and_range()
 
     return input_low, input_range
@@ -294,7 +294,7 @@ def generate_sweep_data(
             inputs = np.empty(input_size)
             is_near_mid_point = np.zeros(input_size).astype(bool)
             quant_lens = np.empty(input_size)
-            for idx in range(0, channel_count):
+            for idx in range(channel_count):
                 ch_input, ch_is_near_mid_point, ch_quant_lens = generate_sweep_for_one_channel(
                     input_low[idx], input_range[idx], input_size[1:], levels, rtol_for_mid_point
                 )
@@ -306,7 +306,7 @@ def generate_sweep_data(
             inputs = np.empty(input_size)
             is_near_mid_point = np.zeros(input_size).astype(bool)
             quant_lens = np.empty(input_size)
-            for idx in range(0, channel_count):
+            for idx in range(channel_count):
                 ch_input, ch_is_near_mid_point, ch_quant_lens = generate_sweep_for_one_channel(
                     input_low[idx], input_range[idx], input_size[0:1] + input_size[2:], levels, rtol_for_mid_point
                 )
@@ -398,7 +398,7 @@ def scatter_plot(
         data[column] = data[column].reshape(-1)
 
     df = pd.DataFrame.from_dict(data)
-    df["X"] = df[x_column if x_column else column_names[0]]
+    df["X"] = df[x_column or column_names[0]]
 
     fig = px.scatter(data_frame=df, x="X", y=column_names)
     fig.update_traces(marker={"size": 2})

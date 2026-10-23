@@ -134,6 +134,7 @@ eprinttype
 errstate
 evals
 execu
+executorch
 extendleft
 facecolors
 fakequantizer
@@ -231,6 +232,7 @@ logicalnot
 logicalor
 logicalxor
 logit
+logits
 loglikelihoods
 lspec
 lstmsequence
@@ -253,6 +255,7 @@ metatype
 metatypes
 metzen
 mhsa
+microbatch
 microscaling
 minfo
 minfos
@@ -314,6 +317,7 @@ nvfp
 objwalk
 odict
 oimp
+onednn
 onnxhw
 onnxp
 onnxqdq
@@ -403,6 +407,7 @@ reducel
 reducemax
 reducemean
 reducesum
+regen
 relu
 reportviews
 requant
@@ -425,6 +430,7 @@ segm
 selu
 senina
 sess
+seqlen
 sgraph
 shamporov
 shapeof
@@ -449,6 +455,7 @@ stabilityai_stablelm
 stdv
 stfpm
 stridedslice
+styleguide
 subarray
 subdict
 submodel
@@ -476,9 +483,11 @@ timestep
 tinyyolov
 tobytes
 togethercomputer
+torchao
 torchdynamo
 truncnorm
 tupled
+ultrachat
 unet
 unflatten
 unpatch

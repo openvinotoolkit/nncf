@@ -314,7 +314,6 @@ class NNCFGraphToTestConstantFiltering:
         self,
         constant_metatype,
         node_with_weights_metatype,
-        concat_layer_attr,
         add_node_between_const_and_weight_node,
         nncf_graph_cls=NNCFGraph,
     ) -> None:
@@ -334,14 +333,14 @@ class NNCFGraphToTestConstantFiltering:
             NodeWithType("Input_2", InputNoopMetatype),
             NodeWithType("Const0", constant_metatype),
             NodeWithType("Const1", constant_metatype),
-            NodeWithType("Concat_with_input", None, layer_attributes=concat_layer_attr),
+            NodeWithType("Concat_with_input", None),
             NodeWithType("Const2", constant_metatype),
             NodeWithType("Const3", constant_metatype),
             NodeWithType("Const4", constant_metatype),
-            NodeWithType("Concat_with_constant", None, layer_attributes=concat_layer_attr),
+            NodeWithType("Concat_with_constant", None),
             NodeWithType("Const5", constant_metatype),
             NodeWithType("Const6", constant_metatype),
-            NodeWithType("Concat_with_missed_input", None, layer_attributes=concat_layer_attr),
+            NodeWithType("Concat_with_missed_input", None),
         ]
 
         edges = [

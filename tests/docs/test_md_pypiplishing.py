@@ -86,10 +86,10 @@ def test_alignment_pypi_publishing(header: str):
 
     if header == "# Neural Network Compression Framework (NNCF)":
         # This paragraph  in publishing markdown contains a special text in the begin before <div> and in the end
-        match = re.search(r"</div>(.*)", section_src, re.S)
+        match = re.search(r"</div>(.*)", section_src, re.DOTALL)
         section_src = match.group(1).strip()
 
-        match = re.search(r"(.*)For more information about NNCF, see:", section_dst, re.S)
+        match = re.search(r"(.*)For more information about NNCF, see:", section_dst, re.DOTALL)
         section_dst = match.group(1).strip()
 
     # Transform section from README.md to be published

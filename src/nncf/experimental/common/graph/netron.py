@@ -269,5 +269,4 @@ def save_for_netron(
         edges.append(edge.as_xml_element())
 
     # ET.indent(net)  # Only Python 3.9
-    with Path(save_path).open("wb") as f:
-        f.write(ET.tostring(net))
+    Path(save_path).write_bytes(ET.tostring(net))

@@ -46,7 +46,7 @@ def dump_parameters(
     :param path: Optional list of the paths.
     """
     try:
-        path = path if path else []
+        path = path or []
         for key, value in parameters.items():
             # Special condition for composed fields like Scope
             if isinstance(value, Scope):

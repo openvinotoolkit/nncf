@@ -90,11 +90,11 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             raise nncf.ParameterNotSupportedError(msg)
         return dtype
 
-    def _preprocess_compressed_weight(
-        self,
+    @staticmethod
+    def preprocess_compressed_weight(
         compressed_weight: CompressedWeight,
         weight_shape: tuple[int],
-        reduction_axis: int,
+        reduction_axes: tuple[int, ...],
         dequantize_block_size: int | None = None,
         apply_transpose: bool = False,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
@@ -103,7 +103,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         :param compressed_weight: Compressed weight struct.
         :param weight_shape: Target shape for the weight tensor.
-        :param reduction_axis: Axis along which the statistics (e.g., min, max) were computed.
+        :param reduction_axes: Axis along which the statistics (e.g., min, max) were computed.
         :param dequantize_block_size: If given, affects squeezing shape for scale and zero_point.
         :param apply_transpose: Whether to transpose scale and zero_point.
         :return: A tuple containing the reshaped weight tensor, scale tensor, and zero point tensor (if applicable).
@@ -112,13 +112,17 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         scale = compressed_weight.scale
         zero_point = compressed_weight.zero_point
 
-        # For weight tensor with [K, N] shape scale has
-        #   * [1, N] shape for per-(output)channel quantization (group_size in this case equals 0 for ONNX)
-        #         and reduction_axis=0
-        #   * [K//G, 1, N] shape for grouped quantization where G is a group size and reduction_axis=1
-        # We should remove axis of length 1 from the scale and zero point to match the expected
-        # format for the DequantizeLinear operation.
-        squeeze_axis = reduction_axis if dequantize_block_size == 0 else reduction_axis + 1
+        if len(reduction_axes) > 1:
+            squeeze_axis = reduction_axes
+        else:
+            # For weight tensor with [K, N] shape scale has
+            #   * [1, N] shape for per-(output)channel quantization (group_size in this case equals 0 for ONNX)
+            #         and reduction_axis=0
+            #   * [K//G, 1, N] shape for grouped quantization where G is a group size and reduction_axis=1
+            # We should remove axis of length 1 from the scale and zero point to match the expected
+            # format for the DequantizeLinear operation.
+            reduction_axis = reduction_axes[0]
+            squeeze_axis = reduction_axis if dequantize_block_size == 0 else reduction_axis + 1
 
         scale = scale.squeeze(axis=squeeze_axis)
         if zero_point is not None:
@@ -159,7 +163,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         channel_axes = (get_weight_quantization_axis(node_with_weight, weight_port_id),)
         const_shape = node_with_weight.layer_attributes.weight_attrs[weight_port_id]["shape"]
         # Everything remains the same, except when 3D weights, reduce by batch dimension also.
-        if len(const_shape) == 3:
+        if node_with_weight.metatype in MATMUL_METATYPES and len(const_shape) == 3:
             channel_axes = (0,) + channel_axes
         return get_reduction_axes(channel_axes, const_shape)
 
@@ -281,8 +285,8 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                     msg = """ONNX does not support 3D weights for opset version < 21.
                              Please use a higher opset version or per-channel quantization"""
                     raise nncf.ParameterNotSupportedError(msg)
-                compressed_weight, scale, zero_point = self._preprocess_compressed_weight(
-                    compressed_weight, weight.shape, reduction_axes[0], dequantize_block_size=None, apply_transpose=True
+                compressed_weight, scale, zero_point = ONNXWeightCompressionAlgoBackend.preprocess_compressed_weight(
+                    compressed_weight, weight.shape, reduction_axes, dequantize_block_size=None, apply_transpose=True
                 )
                 self._replace_matmul_with_matmulnbits(
                     model,
@@ -297,8 +301,8 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                     self._get_weight_dtype(compression_config.mode),
                 )
             else:
-                compressed_weight, scale, zero_point = self._preprocess_compressed_weight(
-                    compressed_weight, weight.shape, reduction_axes[0], dequantize_block_size=dequantize_block_size
+                compressed_weight, scale, zero_point = ONNXWeightCompressionAlgoBackend.preprocess_compressed_weight(
+                    compressed_weight, weight.shape, reduction_axes, dequantize_block_size=dequantize_block_size
                 )
                 self._add_dequantize_linear_layer(
                     model,
@@ -330,7 +334,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def insert_adapters(
         self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool
     ) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def _add_dequantize_linear_layer(
         self,
