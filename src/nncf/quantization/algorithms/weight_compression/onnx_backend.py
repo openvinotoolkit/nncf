@@ -163,7 +163,7 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         channel_axes = (get_weight_quantization_axis(node_with_weight, weight_port_id),)
         const_shape = node_with_weight.layer_attributes.weight_attrs[weight_port_id]["shape"]
         # Everything remains the same, except when 3D weights, reduce by batch dimension also.
-        if len(const_shape) == 3:
+        if node_with_weight.metatype in MATMUL_METATYPES and len(const_shape) == 3:
             channel_axes = (0,) + channel_axes
         return get_reduction_axes(channel_axes, const_shape)
 
