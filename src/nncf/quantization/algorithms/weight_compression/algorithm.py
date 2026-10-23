@@ -439,6 +439,7 @@ class WeightCompression(Algorithm):
         self._ratio = ratio
         self._ignored_scope = ignored_scope
         self._backend_entity = None
+        self._backend = None
         self._algorithm_key = f"CW_{hash(self)}"
         self._statistics = {}
         self._all_layers = all_layers
@@ -563,6 +564,7 @@ class WeightCompression(Algorithm):
         else:
             msg = f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
             raise nncf.UnsupportedBackendError(msg)
+        self._backend = model_backend
 
     def get_ignored_node_names(self, nncf_graph: NNCFGraph) -> set[str]:
         """
@@ -859,6 +861,34 @@ class WeightCompression(Algorithm):
             )
 
         return valid_weight_params, group_size_values
+
+    def _handle_lora_rank_compatible_params(
+        self, weight_params: list[WeightCompressionParameters]
+    ) -> list[WeightCompressionParameters]:
+        """
+        Filters weight parameters to include only those compatible with LoRA rank.
+
+        :param weight_params: List of weight compression parameters.
+        :return: List of weight compression parameters compatible with LoRA rank.
+        """
+        if self._backend is not BackendType.TORCH or self._compression_format not in [
+            CompressionFormat.FQ_LORA,
+            CompressionFormat.FQ_LORA_NLS,
+        ]:
+            return weight_params
+        lora_rank = self._advanced_parameters.lora_adapter_rank
+
+        compatible_params = []
+        for w_params in weight_params:
+            shape = w_params.weight_shape
+            if any(dim < lora_rank for dim in shape):
+                nncf_logger.info(
+                    f"Node {w_params.weight_name} with shape {shape} can't be quantized with the requested LoRA rank:"
+                    f" {lora_rank}. It will be skipped."
+                )
+                continue
+            compatible_params.append(w_params)
+        return compatible_params
 
     @staticmethod
     def _proportion_str(num_weights_list: list[int], total_num_weights: int, total_num_params: int) -> str:
@@ -1198,6 +1228,8 @@ class WeightCompression(Algorithm):
             ratio_defining_params, group_size_values = self._handle_adjust_group_size_fallback(
                 ratio_defining_params, group_size_values
             )
+
+        ratio_defining_params = self._handle_lora_rank_compatible_params(ratio_defining_params)
 
         # Set each ratio defining parameter to primary config
         for weight_param in ratio_defining_params:
