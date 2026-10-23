@@ -215,7 +215,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def insert_adapters(
         self, wc_params: WeightCompressionParameters, lora_A: Tensor, lora_B: Tensor, int8_lora: bool
     ) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @staticmethod
     def init_lora_adapters(svd_residual: torch.Tensor, rank: int | None = None) -> tuple[torch.Tensor, torch.Tensor]:

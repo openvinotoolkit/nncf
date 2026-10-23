@@ -18,7 +18,7 @@ NNCF_VERSION_FILE = "src/nncf/version.py"
 def test_nncf_version():
     # Validate format of version
     # Needed while src/custom_version.py exists
-    version = re.search(r"^__version__ = ['\"](.*)['\"]", Path(NNCF_VERSION_FILE).read_text(), re.M)
+    version = re.search(r"^__version__ = ['\"](.*)['\"]", Path(NNCF_VERSION_FILE).read_text(), re.MULTILINE)
     assert version, f"Cannot find version in {NNCF_VERSION_FILE}"
     version_str = version.group(1)
     version_pattern = r"^\d\.\d{1,2}\.\d{1,2}$"  # e.g., "3.0.0"

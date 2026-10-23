@@ -216,7 +216,7 @@ def get_array_from_tensor(model: onnx.ModelProto, tensor: onnx.TensorProto) -> n
     :return: A NumPy array containing the tensor's data.
     """
     external_data_dir = get_metadata(model, MetadataKey.EXTERNAL_DATA_DIR)
-    base_dir = external_data_dir if external_data_dir else ""
+    base_dir = external_data_dir or ""
     return numpy_helper.to_array(tensor, base_dir)
 
 

@@ -28,8 +28,7 @@ class PTNNCFGraph(NNCFGraph):
     def get_nodes_with_missed_input_edges(self) -> list[NNCFNode]:
         """
         Returns a list of NNCFNodes that have at least one expected input edge missed.
-        Requires MultipleInputLayerAttributes for nodes with several inputs and
-        right `num_expected_input_edges` parameter setted for nncf nodes metatypes.
+        Only nodes with PT2OpLayerAttributes are checked.
 
         :return: List of NNCFNodes that are identified as disconnected.
         """

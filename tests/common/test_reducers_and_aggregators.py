@@ -813,7 +813,7 @@ class TemplateTestReducersAggregators:
         # and combining the current histogram with the historical one (iter 1-8)
         # 3) Do not streaching the historical histogram (new_min == past_min and new_max == past_max)
         # and update the historical histogram by the new one. (iter 9)
-        for s in range(0, 10):
+        for s in range(10):
             inp = min(s, 8) * (np.arange(1, 32) - 16)
             inp = self.get_nncf_tensor(inp, dtype=Dtype.FLOAT)
             observer.register_reduced_input(inp)

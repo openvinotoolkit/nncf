@@ -49,7 +49,7 @@ def get_edge_paths(graph, start_node_key, finish_node_key) -> list[list[tuple]]:
     node_paths = list(nx.all_simple_paths(graph, start_node_key, finish_node_key))
     edge_paths = []
     for path in node_paths:
-        edge_paths.append([(path[i], path[i + 1]) for i in range(0, len(path) - 1)])
+        edge_paths.append([(path[i], path[i + 1]) for i in range(len(path) - 1)])
     return edge_paths
 
 
