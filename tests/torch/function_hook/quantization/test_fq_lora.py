@@ -50,8 +50,10 @@ REF_DIR = TEST_ROOT / "torch" / "data" / "function_hook" / "compress_weights" / 
         (nncf.CompressWeightsMode.INT4_ASYM, nncf.CompressWeightsMode.INT8_ASYM, 4),
         # LoRA A, LoRA B, scale for single linear layer
         (nncf.CompressWeightsMode.INT4_SYM, nncf.CompressWeightsMode.INT8_SYM, 3),
+        (nncf.CompressWeightsMode.INT3_SYM, nncf.CompressWeightsMode.INT8_SYM, 3),
+        (nncf.CompressWeightsMode.INT2_SYM, nncf.CompressWeightsMode.INT8_SYM, 3),
     ),
-    ids=["asym", "sym"],
+    ids=["asym", "sym", "sym_int3", "sym_int2"],
 )
 def test_fq_lora_tuning(mode, backup_mode, ref_num_trainable, _seed):
     """
@@ -111,8 +113,15 @@ def test_fq_lora_tuning(mode, backup_mode, ref_num_trainable, _seed):
 @pytest.mark.cuda
 @pytest.mark.parametrize(
     "compression_kwargs",
-    (dict(scale_estimation=True, awq=True), dict(scale_estimation=False, awq=False)),
-    ids=["se_awq", "data_free"],
+    (
+        dict(scale_estimation=True, awq=True, mode=nncf.CompressWeightsMode.INT4_ASYM),
+        dict(scale_estimation=False, awq=False, mode=nncf.CompressWeightsMode.INT4_ASYM),
+        dict(scale_estimation=True, awq=True, mode=nncf.CompressWeightsMode.INT3_SYM),
+        dict(scale_estimation=False, awq=False, mode=nncf.CompressWeightsMode.INT3_SYM),
+        dict(scale_estimation=True, awq=True, mode=nncf.CompressWeightsMode.INT2_SYM),
+        dict(scale_estimation=False, awq=False, mode=nncf.CompressWeightsMode.INT2_SYM),
+    ),
+    ids=["se_awq", "data_free", "se_awq_int3", "data_free_int3", "se_awq_int2", "data_free_int2"],
 )
 def test_fq_lora_export(compression_kwargs, _seed):
     """
@@ -126,7 +135,6 @@ def test_fq_lora_export(compression_kwargs, _seed):
     model = nncf.compress_weights(
         model,
         group_size=-1,
-        mode=nncf.CompressWeightsMode.INT4_ASYM,
         dataset=nncf.Dataset([example_input]),
         compression_format=nncf.CompressionFormat.FQ_LORA,
         advanced_parameters=AdvancedCompressionParameters(lora_adapter_rank=8),
@@ -138,7 +146,7 @@ def test_fq_lora_export(compression_kwargs, _seed):
         model = nncf.strip(model, do_copy=False, strip_format=StripFormat.DQ, example_input=example_input)
         stripped_output = model(example_input)
         model = ov.convert_model(model, example_input=example_input)
-        model = ov.compile_model(model)
+        model = ov.compile_model(model, "CPU")
         example_inputs_numpy = example_input.detach().cpu().numpy()
         stripped_ov_output = torch.tensor(model(example_inputs_numpy)[0], device=example_input.device)
 
