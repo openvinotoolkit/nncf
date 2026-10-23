@@ -29,6 +29,7 @@ By default, the algorithm applies asymmetric 8-bit integer quantization (INT8_AS
 |------------------|--------------|------------|--------------------------|----------------------------------|----------------------------|
 | INT8_ASYM        | INT8         | FP16       | Per-channel              | OpenVINO, PyTorch, ONNX, TorchFX | [Asymmetric quantization](/docs/usage/Quantization.md#asymmetric-quantization) |
 | INT8_SYM         | INT8         | FP16       | Per-channel              | OpenVINO, PyTorch, ONNX, TorchFX | [Symmetric quantization](/docs/usage/Quantization.md#symmetric-quantization) |
+| INT8_ASYM, INT8_SYM with `group_size` | INT8 | FP16 | Group-wise | OpenVINO | Weights with a single reduction axis (e.g. MatMul, Gather) are quantized group-wise, the others (e.g. Convolution) per-channel. |
 
 #### Mixed precision modes
 
@@ -82,6 +83,15 @@ compressed_model = compress_weights(model)  # model is openvino.Model object
 from nncf import compress_weights, CompressWeightsMode
 
 compressed_model = compress_weights(model, mode=CompressWeightsMode.INT8_SYM)  # model is openvino.Model object
+```
+
+- Compress weights symmetrically to 8-bit integer data type with one scale per group of 32 weights (OpenVINO backend).
+
+```python
+from nncf import compress_weights, CompressWeightsMode
+
+# model is openvino.Model object
+compressed_model = compress_weights(model, mode=CompressWeightsMode.INT8_SYM, group_size=32)
 ```
 
 - Compress weights symmetrically to 4-bit integer data type with group size = 128, except embeddings, convolutions and last linear layers - they are compressed asymmetrically to 8-bit integer data type.
