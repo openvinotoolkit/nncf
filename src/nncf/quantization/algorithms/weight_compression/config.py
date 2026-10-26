@@ -63,15 +63,26 @@ class WeightCompressionConfig:
     :param codebook_values: Optional codebook values for CODEBOOK compression mode.
         Must be nncf.tensor.Tensor which wraps numpy array or ov tensor. Storing ov tensor is useful for having
         destination data type information available.
+    :param narrow_range: Whether a symmetric integer mode uses the narrow range [-(2^(b-1) - 1), 2^(b-1) - 1]
+        with the scale max|w| / (2^(b-1) - 1) instead of the full range. Defaults to False.
     """
 
     mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM
     group_size: int = -1
     codebook_values: Tensor | None = None
+    narrow_range: bool = False
 
     def __post_init__(self) -> None:
         if self.group_size == 0 or self.group_size < -1:
             msg = f"Invalid group_size={self.group_size}. Group size must be a positive integer or -1."
+            raise ValidationError(msg)
+        if self.narrow_range and self.mode not in [
+            CompressWeightsMode.INT2_SYM,
+            CompressWeightsMode.INT3_SYM,
+            CompressWeightsMode.INT4_SYM,
+            CompressWeightsMode.INT8_SYM,
+        ]:
+            msg = f"narrow_range applies to the symmetric integer modes only, not to {self.mode.value}."
             raise ValidationError(msg)
 
     @property

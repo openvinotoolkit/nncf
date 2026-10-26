@@ -57,6 +57,8 @@ NNCF can automatically distribute precision assignments based on quantization se
 |   FP4            | E2M1         | FP16       | Per-channel / Group-wise | OpenVINO                         | [FP4](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
 | NVFP4            | E2M1         | E4M3 per group / FP32 per weight | Group-wise (16)          | OpenVINO              | [NVFP4](https://arxiv.org/abs/2509.25149) |
 
+**Note**: `narrow_range` in `AdvancedCompressionParameters` makes the symmetric integer modes (INT2_SYM, INT3_SYM, INT4_SYM, INT8_SYM) use the grid `[-(2^(b-1) - 1), 2^(b-1) - 1]` with the scale `max|w| / (2^(b-1) - 1)` instead of the full grid. A group whose weights are `{+d, -d}` is then reconstructed exactly.
+
 **Note**: Granularity refers to the scope of elements sharing quantization parameters. "Per-channel" applies different parameters for each output channel, while "Group-wise" divides weights into groups (e.g., group_size=128) that share the same parameters.
 
 **Note**: ExMy is a notation for floating point formats with one sign bit, x exponent bits, and y mantissa bits. For example, E4M3 refers to an FP8 format with one sign bit, four exponent bits, and three mantissa bits. Formats like E8M0 don't include the mantissa bits.

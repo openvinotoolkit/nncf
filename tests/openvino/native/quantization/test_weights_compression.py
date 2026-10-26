@@ -55,6 +55,7 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import _cal
 from nncf.quantization.algorithms.weight_compression.weight_lowering import _calculate_normalized_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
@@ -84,6 +85,7 @@ from tests.openvino.native.models import Phi3dot5RoPEModel
 from tests.openvino.native.models import RoPEModelWC
 from tests.openvino.native.models import SAMPEModel
 from tests.openvino.native.models import SequentialMatmulModel
+from tests.openvino.native.models import SignWeightMatmulModel
 from tests.openvino.native.models import SimpleMoEModel
 from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.quantization.test_fq_params_calculation import REFERENCE_SCALES_DIR
@@ -1491,6 +1493,186 @@ def test_codebook(codebook, n_layers, dst_type, group_size):
     ]
 
     assert len(names_codebook) == n_layers
+
+
+def _run_matmul(model: ov.Model, output_dim: int, hidden_dim: int) -> np.ndarray:
+    """Recovers a `transpose_b` MatMul's weight matrix by running the model on the one-hot basis."""
+    compiled_model = ov.compile_model(model, device_name="CPU")
+    columns = []
+    for index in range(hidden_dim):
+        input_data = np.zeros([1, 1, hidden_dim], dtype=np.float32)
+        input_data[0, 0, index] = 1.0
+        columns.append(np.asarray(compiled_model(input_data)[0]).reshape(output_dim))
+    return np.stack(columns, axis=1)
+
+
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT2_SYM, CompressWeightsMode.INT4_SYM))
+@pytest.mark.parametrize("data", ([-0.5, 0.5], [-0.5, 0.0, 0.5]))
+def test_narrow_range_is_exact_on_magnitude_symmetric_groups(mode, data):
+    # +/-d and {-d, 0, +d} groups map to the extreme and middle codes, so the reconstruction is exact.
+    data = np.array(data).astype(np.float32)
+    config = WeightCompressionConfig(mode=mode, narrow_range=True)
+
+    compressed_weight = do_integer_quantization(Tensor(data), config, -1)
+
+    assert np.array_equal(do_integer_dequantization(compressed_weight).data, data)
+    assert np.abs(compressed_weight.tensor.data).max() == 2 ** (config.num_bits - 1) - 1
+
+
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT2_SYM, CompressWeightsMode.INT4_SYM))
+def test_narrow_range_clips_weights_outside_the_grid(mode):
+    # A precomputed scale can be coarser than the group it is applied to (GPTQ quantizes a column with
+    # its group's scale), so a weight may fall outside the narrow grid and must be clipped to it.
+    config = WeightCompressionConfig(mode=mode, narrow_range=True)
+    limit = 2 ** (config.num_bits - 1) - 1
+    scale = Tensor(np.array([[1.0 / 2 ** (config.num_bits - 1)]], np.float32))
+    weight = Tensor(np.array([[-1.0], [1.0]], np.float32))
+
+    codes = do_integer_quantization(weight, config, -1, precomputed_scale=scale).tensor.data
+
+    assert codes.min() >= -limit
+    assert codes.max() <= limit
+
+
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT8_SYM))
+def test_narrow_range_in_the_optimized_path(mode):
+    # The OpenVINO implementation of integer compression must clip to the same narrow grid as the reference one.
+    weight = Tensor(np.random.default_rng(1).standard_normal((16, 128)).astype(np.float32))
+    config = WeightCompressionConfig(mode=mode, narrow_range=True)
+
+    ref = do_integer_quantization(weight, config, (1,))
+    opt = opt_fns.do_integer_quantization(weight, config, (1,))
+
+    np.testing.assert_array_equal(opt.tensor.data, ref.tensor.data)
+    np.testing.assert_allclose(opt.scale.data, ref.scale.data)
+
+
+def test_narrow_range_is_applied_by_compress_weights():
+    # `narrow_range` from `AdvancedCompressionParameters` makes the scale `max|w| / (2^(b-1) - 1)`.
+    model = MatMul(input_shape=[1, 1, 16], output_dim=16).ov_model
+    weight = get_const_value_as_numpy_tensor({op.get_friendly_name(): op for op in model.get_ops()}["Weights"])
+
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT2_SYM,
+        ratio=1.0,
+        group_size=-1,
+        all_layers=True,
+        advanced_parameters=AdvancedCompressionParameters(narrow_range=True),
+    )
+
+    constants = {op.get_friendly_name(): op for op in compressed_model.get_ops() if op.get_type_name() == "Constant"}
+    scale = get_const_value_as_numpy_tensor(constants["Weights/scale"])
+
+    np.testing.assert_allclose(np.abs(scale), np.abs(weight).max(axis=1, keepdims=True), rtol=1e-3)
+
+
+def test_narrow_range_is_applied_to_scoped_symmetric_mode():
+    weights = np.array([[-2.0, -1.0, 0.25, 1.5], [1.25, -0.75, 0.5, 2.0]], dtype=np.float32)
+    inputs = np.array([[1.0, -1.0]], dtype=np.float32)
+    input_node = opset.parameter([1, 2], ov.Type.f32, name="input")
+    weight_node = opset.constant(weights, name="scoped_weights")
+    matmul = opset.matmul(input_node, weight_node, False, False, name="MatMul_1")
+    model = ov.Model([matmul], [input_node], "scoped_narrow_range")
+    scoped_configs = [
+        nncf.ScopedConfig(names=["MatMul_1"], mode=CompressWeightsMode.INT2_SYM, group_size=-1)
+    ]
+
+    scoped_model = compress_weights(
+        model.clone(),
+        mode=CompressWeightsMode.INT4_SYM,
+        ratio=1.0,
+        group_size=-1,
+        all_layers=True,
+        advanced_parameters=AdvancedCompressionParameters(narrow_range=True),
+        scoped_configs=scoped_configs,
+    )
+    unscoped_model = compress_weights(
+        model.clone(),
+        mode=CompressWeightsMode.INT2_SYM,
+        ratio=1.0,
+        group_size=-1,
+        all_layers=True,
+        advanced_parameters=AdvancedCompressionParameters(narrow_range=True),
+    )
+
+    core = ov.Core()
+    scoped_output = core.compile_model(scoped_model, "CPU").create_infer_request().infer({"input": inputs})
+    unscoped_output = core.compile_model(unscoped_model, "CPU").create_infer_request().infer({"input": inputs})
+    scoped_scale = next(
+        get_const_value_as_numpy_tensor(op)
+        for op in scoped_model.get_ops()
+        if op.get_type_name() == "Constant" and op.get_friendly_name().endswith("/scale")
+    )
+    unscoped_scale = next(
+        get_const_value_as_numpy_tensor(op)
+        for op in unscoped_model.get_ops()
+        if op.get_type_name() == "Constant" and op.get_friendly_name().endswith("/scale")
+    )
+    scale = np.max(np.abs(weights), axis=0, keepdims=True)
+    narrow_weights = np.clip(np.rint(weights / scale), -1, 1) * scale
+    expected_output = inputs @ narrow_weights
+
+    np.testing.assert_array_equal(scoped_scale, unscoped_scale)
+    np.testing.assert_allclose(np.abs(scoped_scale), scale)
+    np.testing.assert_allclose(next(iter(scoped_output.values())), next(iter(unscoped_output.values())))
+    np.testing.assert_allclose(next(iter(scoped_output.values())), expected_output)
+
+
+@pytest.mark.parametrize(
+    "mode",
+    (
+        CompressWeightsMode.INT4_ASYM,
+        CompressWeightsMode.INT8_ASYM,
+        CompressWeightsMode.NF4,
+    ),
+)
+def test_narrow_range_is_rejected_for_other_modes(mode):
+    with pytest.raises(nncf.ValidationError):
+        WeightCompressionConfig(mode=mode, narrow_range=True)
+
+
+def test_narrow_range_reaches_the_backup_precision():
+    # The flag reaches the INT8_SYM backup precision, so every layer uses the same grid.
+    model = MatMul(input_shape=[1, 1, 16], output_dim=16).ov_model
+    weight = get_const_value_as_numpy_tensor({op.get_friendly_name(): op for op in model.get_ops()}["Weights"])
+
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        ratio=0.0,
+        group_size=-1,
+        backup_mode=BackupMode.INT8_SYM,
+        advanced_parameters=AdvancedCompressionParameters(narrow_range=True),
+    )
+
+    constants = {op.get_friendly_name(): op for op in compressed_model.get_ops() if op.get_type_name() == "Constant"}
+    assert constants["Weights"].get_element_type() == ov.Type.i8
+    scale = get_const_value_as_numpy_tensor(constants["Weights/scale"])
+
+    np.testing.assert_allclose(np.abs(scale), np.abs(weight).max(axis=1, keepdims=True) / 127, rtol=1e-3)
+
+
+def test_narrow_range_reaches_the_gptq_block_config():
+    # The block quantizer must use the grid the primary config names, or the corrected weights leave it.
+    model = SignWeightMatmulModel().ov_model
+    weight = get_const_value_as_numpy_tensor({op.get_friendly_name(): op for op in model.get_ops()}["Weights"])
+    dataset = Dataset([np.ones([1, 1, 16], dtype=np.float32)])
+
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        ratio=1.0,
+        group_size=-1,
+        dataset=dataset,
+        gptq=True,
+        all_layers=True,
+        advanced_parameters=AdvancedCompressionParameters(narrow_range=True),
+    )
+
+    decoded = _run_matmul(compressed_model, *weight.shape)
+
+    np.testing.assert_allclose(decoded, weight, atol=1e-3)
 
 
 @pytest.mark.parametrize(
