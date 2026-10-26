@@ -1492,6 +1492,22 @@ def test_codebook(codebook, n_layers, dst_type, group_size):
 
     assert len(names_codebook) == n_layers
 
+@pytest.mark.parametrize(
+    ("mode", "element_type", "has_offset"),
+    (
+        (CompressWeightsMode.INT2_SYM, ov.Type.i2, False),
+        (CompressWeightsMode.INT3_SYM, ov.Type.u3, True),
+    ),
+)
+def test_int2_3_sym_codes_are_emitted_in_their_element_type(mode, element_type, has_offset):
+    # 2-bit codes are stored signed; the 3-bit grid still needs the offset.
+    model = MatMul(input_shape=[1, 1, 16], output_dim=16).ov_model
+
+    compressed_model = compress_weights(model, mode=mode, ratio=1.0, group_size=-1, all_layers=True)
+
+    constants = {op.get_friendly_name(): op for op in compressed_model.get_ops() if op.get_type_name() == "Constant"}
+    assert constants["Weights"].get_element_type() == element_type
+    assert ("Weights/zero_point" in constants) is has_offset
 
 @pytest.mark.parametrize(
     ("mode", "data"),
