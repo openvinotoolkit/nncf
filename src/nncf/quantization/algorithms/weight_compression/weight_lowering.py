@@ -327,6 +327,11 @@ def calculate_integer_quantization_params(
         )
         return scale, zero_point
 
+    if config.mode == CompressWeightsMode.INT1_SYM:
+        scale = fns.mean(fns.abs(weight), axis=reduction_axes, keepdims=True)
+        eps = fns.finfo(scale).eps
+        return fns.where(scale < eps, eps, scale), None
+
     scale = _calculate_signed_scale(weight, reduction_axes, num_bits, config.narrow_range)
     return scale, None
 
@@ -677,6 +682,11 @@ def _calculate_integer_quantized_weight(
         weight = weight.astype(TensorDataType.float32)
     if scale.dtype != TensorDataType.float32:
         scale = scale.astype(TensorDataType.float32)
+
+    if config.mode == CompressWeightsMode.INT1_SYM:
+        # Every weight becomes +scale or -scale: the code is the sign, and zero counts as positive.
+        ones = fns.ones_like(weight)
+        return fns.where(weight < 0, -ones, ones).astype(TensorDataType.int8)
 
     num_bits = config.num_bits
     asym_quant = config.is_asym_mode

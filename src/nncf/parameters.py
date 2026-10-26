@@ -82,6 +82,9 @@ class CompressWeightsMode(StrEnum):
         Weights are quantized to a primary precision symmetrically without zero point.
     :param INT2_SYM: Stands for a mixed-precision weights quantization with 2-bit integer as a primary precision.
         Weights are quantized to a primary precision symmetrically without zero point.
+    :param INT1_SYM: Stands for a 1-bit weight format with a sign grid as a primary precision.
+        The sign grid is stored as a u1 code with a scalar zero point of 0.5 and twice the group's mean absolute
+        weight as the scale, so the weight is (code - 0.5) * 2 * mean|w|.
     :param NF4: The the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
     :param MXFP4: MX-compliant FP4 format with E2M1 values sharing group-level E8M0 scale. The size of group is 32.
     :param MXFP8_E4M3: MX-compliant FP8 format with E4M3 values sharing group-level E8M0 scale. The size of group is 32.
@@ -100,6 +103,7 @@ class CompressWeightsMode(StrEnum):
     INT4_ASYM = "int4_asym"
     INT3_SYM = "int3_sym"
     INT2_SYM = "int2_sym"
+    INT1_SYM = "int1_sym"
     NF4 = "nf4"
     CB4 = "cb4"
     MXFP4 = "mxfp4"

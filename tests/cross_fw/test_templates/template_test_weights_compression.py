@@ -1248,7 +1248,12 @@ class TemplateWeightCompression(ABC):
         if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
             dump_to_json(ref_path, configs)
 
-        assert configs == load_json(ref_path)
+        # Expected configs are built by the constructor, so fields missing from a reference take their defaults.
+        expected_configs = {
+            name: asdict(WeightCompressionConfig(**{**config, "mode": CompressWeightsMode(config["mode"])}))
+            for name, config in load_json(ref_path).items()
+        }
+        assert configs == expected_configs
 
     @pytest.mark.parametrize(
         ("scoped_configs", "ignored_scope", "warning"),

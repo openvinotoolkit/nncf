@@ -929,6 +929,21 @@ def test_raise_error_with_unsupported_params_for_int4(mode, params):
         compress_weights(ov.Model([], []), mode=mode, **params)
 
 
+@pytest.mark.parametrize(
+    "params",
+    (
+        {"dataset": "anything"},
+        {"scale_estimation": True},
+        {"lora_correction": True},
+        {"gptq": True},
+        {"awq": True},
+    ),
+)
+def test_raise_error_with_unsupported_params_for_int1_sym(params):
+    with pytest.raises(nncf.ParameterNotSupportedError):
+        compress_weights(ov.Model([], []), mode=CompressWeightsMode.INT1_SYM, **params)
+
+
 @pytest.mark.parametrize("mode", [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3, CompressWeightsMode.NVFP4])
 class TestUnsupportedParams:
     @pytest.mark.parametrize(
@@ -1519,6 +1534,65 @@ def test_narrow_range_is_exact_on_magnitude_symmetric_groups(mode, data):
     assert np.abs(compressed_weight.tensor.data).max() == 2 ** (config.num_bits - 1) - 1
 
 
+def test_int1_sym_reconstructs_two_level_groups():
+    # A +/-d group is the least-squares fixpoint of a sign grid, so it is exact.
+    data = np.array([0.5, -0.5, -0.5, 0.5], np.float32)
+    config = WeightCompressionConfig(mode=CompressWeightsMode.INT1_SYM)
+    compressed_weight = do_integer_quantization(Tensor(data), config, -1)
+
+    assert np.array_equal(do_integer_dequantization(compressed_weight).data, data)
+    assert np.array_equal(np.unique(compressed_weight.tensor.data), np.array([-1, 1], np.int8))
+    assert compressed_weight.zero_point is None
+
+
+def test_int1_sym_scale_is_the_mean_absolute_weight():
+    # The least-squares scale for a sign grid is mean|w|; max|w| would fit the grid to its extremes instead.
+    data = np.array([1.0, 0.0, 0.0, 0.0], np.float32)
+    config = WeightCompressionConfig(mode=CompressWeightsMode.INT1_SYM)
+    compressed_weight = do_integer_quantization(Tensor(data), config, -1)
+
+    assert np.isclose(compressed_weight.scale.data.item(), 0.25)
+    assert np.array_equal(compressed_weight.tensor.data, np.ones(4, np.int8))
+
+
+def test_int1_sym_zero_group_uses_the_eps_floor():
+    # A group of zeros has no mean magnitude; the scale must stay positive and finite.
+    config = WeightCompressionConfig(mode=CompressWeightsMode.INT1_SYM)
+    compressed_weight = do_integer_quantization(Tensor(np.zeros((1, 8), np.float32)), config, -1)
+
+    scale = compressed_weight.scale.data
+    assert np.isfinite(scale).all() and (scale > 0).all()
+    assert np.array_equal(compressed_weight.tensor.data, np.ones((1, 8), np.int8))
+
+
+def test_int1_sym_compressed_model_reproduces_the_sign_grid():
+    # The u1 constant is bit-packed; the decode is (code - 0.5) * 2 * mean|w|.
+    model = MatMul(input_shape=[1, 1, 16], output_dim=16).ov_model
+    weight = get_const_value_as_numpy_tensor({op.get_friendly_name(): op for op in model.get_ops()}["Weights"])
+    config = WeightCompressionConfig(mode=CompressWeightsMode.INT1_SYM, group_size=-1)
+    decompressed = do_integer_dequantization(do_integer_quantization(Tensor(weight), config, (1,))).data
+
+    compressed_model = compress_weights(
+        model, mode=CompressWeightsMode.INT1_SYM, ratio=1.0, group_size=-1, all_layers=True
+    )
+
+    constants = {op.get_friendly_name(): op for op in compressed_model.get_ops() if op.get_type_name() == "Constant"}
+    assert constants["Weights"].get_element_type() == ov.Type.u1
+    assert constants["Weights"].get_byte_size() == int(np.prod(constants["Weights"].get_shape())) // 8
+    assert constants["Weights/zero_point"].get_element_type() == ov.Type.f16
+    assert constants["Weights/zero_point"].get_data().item() == 0.5
+    np.testing.assert_allclose(
+        get_const_value_as_numpy_tensor(constants["Weights/scale"]),
+        2 * np.abs(weight).mean(axis=-1, keepdims=True),
+        rtol=1e-6,
+    )
+
+    input_data = np.ones([1, 1, 16], dtype=np.float32)
+    output = ov.compile_model(compressed_model, device_name="CPU")(input_data)[0]
+
+    np.testing.assert_allclose(output, input_data @ decompressed.T, rtol=1e-3)
+
+
 @pytest.mark.parametrize(
     ("mode", "element_type", "has_offset"),
     (
@@ -1642,6 +1716,7 @@ def test_narrow_range_is_applied_to_scoped_symmetric_mode():
     (
         CompressWeightsMode.INT4_ASYM,
         CompressWeightsMode.INT8_ASYM,
+        CompressWeightsMode.INT1_SYM,
         CompressWeightsMode.NF4,
     ),
 )

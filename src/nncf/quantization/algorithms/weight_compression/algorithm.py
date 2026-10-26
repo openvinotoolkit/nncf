@@ -252,6 +252,15 @@ def check_user_compression_configuration(
             msg = f"INT8 modes do not support {', '.join(unsupported_for_int8)} option(s). Set them to None."
             raise nncf.ParameterNotSupportedError(msg)
 
+    if mode == CompressWeightsMode.INT1_SYM and any(
+        option is not None for option in (dataset, awq, scale_estimation, gptq, lora_correction)
+    ):
+        msg = (
+            f"{mode.value} derives its scale from the weights and does not support the data-aware options "
+            "(dataset, awq, scale_estimation, gptq, lora_correction). Set them to None."
+        )
+        raise nncf.ParameterNotSupportedError(msg)
+
     if ratio is not None and not (0 <= ratio <= 1):
         msg = f"The ratio should be between 0 and 1, but ratio={ratio} is specified."
         raise nncf.ValidationError(msg)
