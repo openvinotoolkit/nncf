@@ -881,7 +881,7 @@ class WeightCompression(Algorithm):
         compatible_params = []
         for w_params in weight_params:
             shape = w_params.weight_shape
-            if any(dim < lora_rank for dim in shape):
+            if any(dim < lora_rank for dim in shape[-2:]):
                 nncf_logger.info(
                     f"Node {w_params.weight_name} with shape {shape} can't be quantized with the requested LoRA rank:"
                     f" {lora_rank}. It will be skipped."
