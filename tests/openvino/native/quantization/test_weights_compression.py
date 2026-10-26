@@ -1519,6 +1519,24 @@ def test_narrow_range_is_exact_on_magnitude_symmetric_groups(mode, data):
     assert np.abs(compressed_weight.tensor.data).max() == 2 ** (config.num_bits - 1) - 1
 
 
+@pytest.mark.parametrize(
+    ("mode", "element_type", "has_offset"),
+    (
+        (CompressWeightsMode.INT2_SYM, ov.Type.i2, False),
+        (CompressWeightsMode.INT3_SYM, ov.Type.u3, True),
+    ),
+)
+def test_int2_3_sym_codes_are_emitted_in_their_element_type(mode, element_type, has_offset):
+    # 2-bit codes are stored signed; the 3-bit grid still needs the offset.
+    model = MatMul(input_shape=[1, 1, 16], output_dim=16).ov_model
+
+    compressed_model = compress_weights(model, mode=mode, ratio=1.0, group_size=-1, all_layers=True)
+
+    constants = {op.get_friendly_name(): op for op in compressed_model.get_ops() if op.get_type_name() == "Constant"}
+    assert constants["Weights"].get_element_type() == element_type
+    assert ("Weights/zero_point" in constants) is has_offset
+
+
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT2_SYM, CompressWeightsMode.INT4_SYM))
 def test_narrow_range_clips_weights_outside_the_grid(mode):
     # A precomputed scale can be coarser than the group it is applied to (GPTQ quantizes a column with

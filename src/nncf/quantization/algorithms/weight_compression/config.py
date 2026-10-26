@@ -190,10 +190,7 @@ class WeightCompressionConfig:
         """
         True if compression type is symmetric and represented by unsigned integer, else False.
         """
-        return self.mode in [
-            CompressWeightsMode.INT2_SYM,
-            CompressWeightsMode.INT3_SYM,
-        ]
+        return self.mode == CompressWeightsMode.INT3_SYM
 
     def __hash__(self) -> int:
         return hash((self.mode.value, self.group_size))
