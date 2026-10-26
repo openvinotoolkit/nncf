@@ -26,4 +26,4 @@ fastcore==1.11.5
 fastprogress==1.0.5
 matplotlib==3.10.9; python_version < "3.12"
 matplotlib==3.11.2; python_version >= "3.12"
-pandas==3.0.6
+pandas==3.1.0
