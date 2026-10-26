@@ -862,7 +862,7 @@ class WeightCompression(Algorithm):
 
         return valid_weight_params, group_size_values
 
-    def _handle_lora_rank_compatible_params(
+    def _handle_lora_rank_compatible_params_fallback(
         self, weight_params: list[WeightCompressionParameters]
     ) -> list[WeightCompressionParameters]:
         """
@@ -1229,7 +1229,7 @@ class WeightCompression(Algorithm):
                 ratio_defining_params, group_size_values
             )
 
-        ratio_defining_params = self._handle_lora_rank_compatible_params(ratio_defining_params)
+        ratio_defining_params = self._handle_lora_rank_compatible_params_fallback(ratio_defining_params)
 
         # Set each ratio defining parameter to primary config
         for weight_param in ratio_defining_params:
