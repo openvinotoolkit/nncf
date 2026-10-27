@@ -256,29 +256,6 @@ def register_parametrization_with_decompressor(model: TModel) -> TModel:
     for module, attr_name, decompressor in targets:
         nn.utils.parametrize.register_parametrization(module, attr_name, decompressor, unsafe=True)
 
-    # # Track which parameters have already been registered to preserve weight-tying identity
-    # param_to_registered_module = {}
-
-    # for module, attr_name, decompressor in targets:
-    #     # Fetch the underlying original parameter before we alter it
-    #     original_param = getattr(module, attr_name)
-
-    #     if original_param in param_to_registered_module:
-    #         # create copy of decompressor
-    #         import copy
-    #         decompressor_cp = copy.deepcopy(decompressor)
-    #         # copy parameters from the original decompressor to the copy to share the same underlying data
-    #         parameter_names = ["_scale", "_zero_point"]
-    #         for name in parameter_names:
-    #             if hasattr(decompressor_cp, name):
-    #                 setattr(decompressor_cp, name, getattr(decompressor, name))
-    #         nn.utils.parametrize.register_parametrization(module, attr_name, decompressor_cp, unsafe=True)
-    #     else:
-    #         # First time seeing this parameter: register normally
-    #         nn.utils.parametrize.register_parametrization(module, attr_name, decompressor, unsafe=True)
-    #         # Cache its mapping so subsequent tied layers can share it
-    #         param_to_registered_module[original_param] = (module, attr_name)
-
     for hook_name in hooks_to_delete:
         hook_storage.delete_hook(hook_name)
     return model
