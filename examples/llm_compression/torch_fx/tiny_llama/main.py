@@ -8,10 +8,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from functools import partial
-from itertools import chain
+import os
 import time
 import warnings
+from functools import partial
+from itertools import chain
 
 import torch
 from datasets import load_dataset
@@ -21,7 +22,7 @@ from transformers import PreTrainedModel
 from transformers.integrations.executorch import TorchExportableModuleForDecoderOnlyLM
 from transformers.integrations.executorch import convert_and_export_with_cache
 from transformers.models.llama import LlamaTokenizerFast
-import os
+
 import nncf
 
 warnings.filterwarnings("ignore", category=torch.jit.TracerWarning)
@@ -76,7 +77,10 @@ class TextGenerator:
     @torch.no_grad()
     def generate(self, prompt: str) -> str:
         return TorchExportableModuleForDecoderOnlyLM.generate(
-            self, self.tokenizer, prompt, max_new_tokens=self.max_new_tokens,
+            self,
+            self.tokenizer,
+            prompt,
+            max_new_tokens=self.max_new_tokens,
         )
 
 
