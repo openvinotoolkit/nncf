@@ -59,6 +59,8 @@ def strip_model(model: TModel, example_input: Any = None, strip_format: StripFor
         model = replace_quantizer_to_compressed_weight_with_decompressor(model)
     elif strip_format == StripFormat.IN_PLACE:
         model = apply_compression_in_place(model)
+    elif strip_format == StripFormat.RP:
+        model = register_parametrization_with_decompressor(model)
     else:
         msg = f"Unsupported strip format: {strip_format}"
         raise nncf.ParameterNotSupportedError(msg)
@@ -195,6 +197,87 @@ def apply_compression_in_place(model: TModel) -> TModel:
             weight_param.data = hook_module(weight_param)
 
         hooks_to_delete.append(hook_name)
+
+    for hook_name in hooks_to_delete:
+        hook_storage.delete_hook(hook_name)
+    return model
+
+
+@torch.no_grad()
+def register_parametrization_with_decompressor(model: TModel) -> TModel:
+    """
+    Performs transformation from fake quantize format (FQ) to dequantization one (DQ):
+        (weights + FQ) -> (compressed_weights + DQ)
+
+    The decompressor is registered as a parametrization of every module attribute that holds the compressed
+    weight, so tied weights (e.g. shared between lm_head and embeddings) are decompressed correctly
+    for any number of bits.
+
+    :param model: Compressed model
+    :return: The modified NNCF network.
+    """
+    hook_storage = get_hook_storage(model)
+    hooks_to_delete = []
+    decompressor_per_param: dict[nn.Parameter, BaseWeightsDecompressor] = {}
+
+    for hook_name, hook_module in hook_storage.named_hooks():
+        if not isinstance(hook_module, (SymmetricQuantizer, AsymmetricQuantizer)):
+            continue
+        if hook_module._qspec.half_range or hook_module._qspec.narrow_range:
+            msg = "Unexpected parameters of quantizers on strip: half_range and narrow_range should be False.\n"
+            raise nncf.ValidationError(msg)
+
+        _, op_name, _ = decode_hook_name(hook_name)
+        module_name, weight_attr_name = split_const_name(op_name)
+        weight_param = getattr(get_module_by_name(module_name, model), weight_attr_name)
+        hooks_to_delete.append(hook_name)
+
+        if weight_param in decompressor_per_param:
+            # The weight is already packed through another hook
+            continue
+
+        if isinstance(hook_module, AsymmetricQuantizer):
+            decompressor, q_weight = asym_fq_to_decompressor(hook_module, weight_param)
+        else:
+            decompressor, q_weight = sym_fq_to_decompressor(hook_module, weight_param)  # type: ignore[assignment]
+
+        weight_param.requires_grad = False
+        weight_param.data = decompressor.pack_weight(q_weight)
+        decompressor_per_param[weight_param] = decompressor
+
+    # A parameter can be shared by several modules, all of them have to decompress it.
+    # Targets are collected before registration, because registration changes the module parameters.
+    targets = [
+        (module, attr_name, decompressor_per_param[param])
+        for module in model.modules()
+        for attr_name, param in module.named_parameters(recurse=False)
+        if param in decompressor_per_param
+    ]
+    for module, attr_name, decompressor in targets:
+        nn.utils.parametrize.register_parametrization(module, attr_name, decompressor, unsafe=True)
+
+    # # Track which parameters have already been registered to preserve weight-tying identity
+    # param_to_registered_module = {}
+
+    # for module, attr_name, decompressor in targets:
+    #     # Fetch the underlying original parameter before we alter it
+    #     original_param = getattr(module, attr_name)
+
+    #     if original_param in param_to_registered_module:
+    #         # create copy of decompressor
+    #         import copy
+    #         decompressor_cp = copy.deepcopy(decompressor)
+    #         # copy parameters from the original decompressor to the copy to share the same underlying data
+    #         parameter_names = ["_scale", "_zero_point"]
+    #         for name in parameter_names:
+    #             if hasattr(decompressor_cp, name):
+    #                 setattr(decompressor_cp, name, getattr(decompressor, name))
+    #         nn.utils.parametrize.register_parametrization(module, attr_name, decompressor_cp, unsafe=True)
+    #     else:
+    #         # First time seeing this parameter: register normally
+    #         nn.utils.parametrize.register_parametrization(module, attr_name, decompressor, unsafe=True)
+    #         # Cache its mapping so subsequent tied layers can share it
+    #         param_to_registered_module[original_param] = (module, attr_name)
 
     for hook_name in hooks_to_delete:
         hook_storage.delete_hook(hook_name)
