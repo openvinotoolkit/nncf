@@ -218,7 +218,7 @@ def register_parametrization_with_decompressor(model: TModel) -> TModel:
     """
     hook_storage = get_hook_storage(model)
     hooks_to_delete = []
-    decompressor_per_param: dict[nn.Parameter, BaseWeightsDecompressor] = {}
+    decompressor_per_param = {}
 
     for hook_name, hook_module in hook_storage.named_hooks():
         if not isinstance(hook_module, (SymmetricQuantizer, AsymmetricQuantizer)):
