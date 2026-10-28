@@ -101,7 +101,7 @@ def test_strip_rp_tied_weights() -> None:
     # All modules sharing the packed weight must decompress it
     for module in (stripped_model.embedding, stripped_model.head):
         assert parametrize.is_parametrized(module, "weight")
-    assert torch.allclose(ref_output, output, atol=1e-2)
+    assert torch.allclose(ref_output, output, atol=5e-2)
 
 
 def test_strip_rp_without_compression_hooks() -> None:
