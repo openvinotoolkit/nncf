@@ -228,6 +228,33 @@ def llm_compression_distillation_qat_with_lora() -> float:
     return {"best_ov_perplexity": best_ov_perplexity}
 
 
+def llm_compression_distillation_qad_with_lora_2_3_bit() -> dict[str, float]:
+    from examples.llm_compression.torch.distillation_qad_with_lora_2_3_bit.main import (
+        main as distillation_qad_with_lora_2_3_bit_main,
+    )
+
+    set_torch_cuda_seed()
+
+    args = [
+        "--epochs=1",
+        "--bits=3",
+        "--group_size=64",
+        "--pretrained=HuggingFaceTB/SmolLM2-135M-Instruct",
+        "--dataset=wikitext-2",
+        "--num_train_samples=128",
+        "--train_seqlen=128",
+        "--lora_rank=8",
+        "--batch_size=16",
+        "--microbatch_size=4",
+        "--lr=5e-4",
+        "--full_determinism",
+    ]
+
+    final_loss = distillation_qad_with_lora_2_3_bit_main(args)
+
+    return {"final_loss": final_loss}
+
+
 def llm_compression_qat_with_nls() -> float:
     from examples.llm_compression.torch.downstream_qat_with_nls.main import main as qat_with_nls_main
 
