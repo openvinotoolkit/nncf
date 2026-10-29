@@ -109,7 +109,7 @@ def test_all_openvino_metatypes_are_registered() -> None:
     defined = [
         cls
         for _, cls in inspect.getmembers(ovm, inspect.isclass)
-        if issubclass(cls, ovm.OVOpMetatype) and cls.__module__ == ovm.__name__ and cls.op_names
+        if issubclass(cls, ovm.OVOpMetatype) and cls is not ovm.OVOpMetatype
     ]
     assert defined, "No OpenVINO metatypes found in the module"
     not_registered = [cls.__name__ for cls in defined if cls not in registered]

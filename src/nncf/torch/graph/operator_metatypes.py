@@ -27,7 +27,6 @@ from nncf.common.hardware.opset import HWOpName
 ModuleAttributes = TypeVar("ModuleAttributes", bound=BaseLayerAttributes)
 
 PT_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
-FX_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
 
 
 class NamespaceTarget(Enum):
@@ -788,7 +787,7 @@ class PTEmbeddingMetatype(PTOperatorMetatype):
     weight_port_ids = [1]
 
 
-@FX_OPERATOR_METATYPES.register()
+# Used for FX backend to represent ATEN PTEmbeddingMetatype
 class PTAtenEmbeddingMetatype(OperatorMetatype):
     name = "EmbeddingOp"
     module_to_function_names = {NamespaceTarget.ATEN: ["embedding"]}
@@ -805,7 +804,7 @@ class PTEmbeddingBagMetatype(PTOperatorMetatype):
     weight_port_ids = [1]
 
 
-@FX_OPERATOR_METATYPES.register()
+# Used for FX backend to represent ATEN PTEmbeddingBagMetatype
 class PTAtenEmbeddingBagMetatype(OperatorMetatype):
     name = "EmbeddingBagOp"
     module_to_function_names = {NamespaceTarget.ATEN: ["embedding_bag"]}

@@ -15,20 +15,7 @@ import pytest
 
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
-from nncf.onnx.graph.metatypes import onnx_metatypes
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXBatchNormMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConcatMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConstantOfShapeMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGlobalAveragePoolMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReluMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
+from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from tests.onnx.models import LinearModel
 from tests.onnx.models import ModelWithIntEdges
@@ -40,48 +27,48 @@ TEST_MODELS = [LinearModel, MultiInputOutputModel, ModelWithIntEdges, OneDepthwi
 REF_METATYPES_COUNTERS = [
     [
         InputNoopMetatype,
-        ONNXConvolutionMetatype,
-        ONNXBatchNormMetatype,
-        ONNXReluMetatype,
-        ONNXGlobalAveragePoolMetatype,
-        ONNXConvolutionMetatype,
+        om.ONNXConvolutionMetatype,
+        om.ONNXBatchNormMetatype,
+        om.ONNXReluMetatype,
+        om.ONNXGlobalAveragePoolMetatype,
+        om.ONNXConvolutionMetatype,
         OutputNoopMetatype,
     ],
     [
         InputNoopMetatype,
         InputNoopMetatype,
         InputNoopMetatype,
-        ONNXConcatMetatype,
-        ONNXAddLayerMetatype,
+        om.ONNXConcatMetatype,
+        om.ONNXAddLayerMetatype,
         OutputNoopMetatype,
         OutputNoopMetatype,
     ],
-    [InputNoopMetatype, ONNXConstantOfShapeMetatype, ONNXShapeMetatype, OutputNoopMetatype],
-    [InputNoopMetatype, ONNXDepthwiseConvolutionMetatype, OutputNoopMetatype],
+    [InputNoopMetatype, om.ONNXConstantOfShapeMetatype, om.ONNXShapeMetatype, OutputNoopMetatype],
+    [InputNoopMetatype, om.ONNXDepthwiseConvolutionMetatype, OutputNoopMetatype],
 ]
 QUANTIZED_REF_METATYPES_COUNTERS = [
     REF_METATYPES_COUNTERS[0]
     + [
-        ONNXQuantizeLinearMetatype,
-        ONNXDequantizeLinearMetatype,
+        om.ONNXQuantizeLinearMetatype,
+        om.ONNXDequantizeLinearMetatype,
     ]
     * 5,
     REF_METATYPES_COUNTERS[1]
     + [
-        ONNXQuantizeLinearMetatype,
-        ONNXDequantizeLinearMetatype,
+        om.ONNXQuantizeLinearMetatype,
+        om.ONNXDequantizeLinearMetatype,
     ]
     * 2,
     REF_METATYPES_COUNTERS[2]
     + [
-        ONNXQuantizeLinearMetatype,
-        ONNXDequantizeLinearMetatype,
+        om.ONNXQuantizeLinearMetatype,
+        om.ONNXDequantizeLinearMetatype,
     ]
     * 0,
     REF_METATYPES_COUNTERS[3]
     + [
-        ONNXQuantizeLinearMetatype,
-        ONNXDequantizeLinearMetatype,
+        om.ONNXQuantizeLinearMetatype,
+        om.ONNXDequantizeLinearMetatype,
     ]
     * 2,
 ]
@@ -108,11 +95,11 @@ def test_all_onnx_metatypes_are_registered() -> None:
     Checks that every metatype with op names defined in the onnx_metatypes module
     is registered in ONNX_OPERATION_METATYPES.
     """
-    registered = set(ONNX_OPERATION_METATYPES.registry_dict.values())
+    registered = set(om.ONNX_OPERATION_METATYPES.registry_dict.values())
     defined = [
         cls
-        for _, cls in inspect.getmembers(onnx_metatypes, inspect.isclass)
-        if issubclass(cls, ONNXOpMetatype) and cls.__module__ == onnx_metatypes.__name__ and cls.op_names
+        for _, cls in inspect.getmembers(om, inspect.isclass)
+        if issubclass(cls, om.ONNXOpMetatype) and cls not in [om.ONNXOpMetatype, om.ONNXOpWithWeightsMetatype]
     ]
     assert defined, "No ONNX metatypes found in the module"
     not_registered = [cls.__name__ for cls in defined if cls not in registered]

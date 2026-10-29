@@ -17,16 +17,15 @@ import nncf.torch.graph.operator_metatypes as om
 def test_all_torch_metatypes_are_registered() -> None:
     """
     Checks that every metatype with aliases defined in the torch operator_metatypes module
-    is registered in PT_OPERATOR_METATYPES or FX_OPERATOR_METATYPES.
+    is registered in PT_OPERATOR_METATYPES.
     """
-    registered = set(om.PT_OPERATOR_METATYPES.registry_dict.values()) | set(
-        om.FX_OPERATOR_METATYPES.registry_dict.values()
-    )
+    registered = set(om.PT_OPERATOR_METATYPES.registry_dict.values())
     defined = [
         cls
         for _, cls in inspect.getmembers(om, inspect.isclass)
-        if issubclass(cls, om.PTOperatorMetatype) and cls.__module__ == om.__name__ and cls.get_all_aliases()
+        if issubclass(cls, om.PTOperatorMetatype) and not issubclass(cls, om.PTOperatorSubtype) and cls is not om.PTOperatorMetatype
     ]
+
     assert defined, "No torch metatypes found in the module"
     not_registered = [cls.__name__ for cls in defined if cls not in registered]
-    assert not not_registered, f"Metatypes are not registered in PT/FX operator metatype registries: {not_registered}"
+    assert not not_registered, f"Metatypes are not registered in PT_OPERATOR_METATYPES: {not_registered}"
