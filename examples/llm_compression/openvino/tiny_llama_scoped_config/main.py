@@ -21,7 +21,7 @@ import nncf
 
 def main():
     MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-    OUTPUT_DIR = "tinyllama_compressed"
+    OUTPUT_DIR = "tinyllama_scoped_config_compressed"
 
     dataset = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split="test")
 
