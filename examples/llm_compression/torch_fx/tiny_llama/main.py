@@ -24,7 +24,6 @@ from transformers.models.llama import LlamaTokenizerFast
 
 import nncf
 
-
 MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 MAX_CACHE_LEN = 512
 MAX_NEW_TOKENS = 100
