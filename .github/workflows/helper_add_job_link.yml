@@ -16,7 +16,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: "update-description"
+  group: "update-description-${{ github.event.workflow_run.display_title }}"
   cancel-in-progress: false
 
 defaults:
