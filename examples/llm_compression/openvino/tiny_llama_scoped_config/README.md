@@ -4,7 +4,7 @@ This example demonstrates how to assign custom compression settings to specific 
 
 ## Scoped Configs
 
-Each `nncf.ScopedConfig` selects layers by node `names`, regular expression `patterns`, operation `types` or `subgraphs` (the same rules as [the ignored scope](../../../../docs/usage/IgnoredScope.md)) and assigns them a compression `mode` and `group_size`:
+Each `nncf.ScopedConfig` selects layers by node `names`, regular expression `patterns`, operation `types` or `subgraphs` (the same rules as [the ignored scope](/docs/usage/IgnoredScope.md)) and assigns them a compression `mode` and `group_size`:
 
 ```python
 model.model = nncf.compress_weights(
