@@ -8,81 +8,143 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 import time
-import warnings
 from functools import partial
+from itertools import chain
 
 import torch
 from datasets import load_dataset
-from modelling import FXAutoModelForCausalLM
-from modelling import convert_and_export_with_cache
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
+from transformers import PreTrainedModel
+from transformers.integrations.executorch import TorchExportableModuleForDecoderOnlyLM
+from transformers.integrations.executorch import convert_and_export_with_cache
 from transformers.models.llama import LlamaTokenizerFast
 
 import nncf
 
 MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+MAX_CACHE_LEN = 512
+MAX_NEW_TOKENS = 100
 
 
 def transform_fn(data: str, tokenizer: LlamaTokenizerFast) -> tuple[torch.Tensor, torch.Tensor]:
-    tokenized_text = tokenizer(data["text"], return_tensors="pt")
+    """Transform input text into model-compatible input tensors."""
+    tokenized_text = tokenizer(data["text"], max_length=MAX_CACHE_LEN, truncation=True, return_tensors="pt")
     input_ids = tokenized_text["input_ids"]
-    attention_mask = tokenized_text["attention_mask"]
+    cache_position = torch.arange(input_ids.shape[1], dtype=torch.long)
+    return {"input_ids": input_ids, "cache_position": cache_position}
 
-    position_ids = torch.cumsum(attention_mask, axis=1) - 1
-    position_ids[attention_mask == 0] = 1
 
-    inputs = (
-        input_ids,
-        position_ids.squeeze(0),
+@torch.no_grad()
+def export_with_static_cache(model: PreTrainedModel) -> torch.export.ExportedProgram:
+    """
+    Export a `PreTrainedModel` with a static KV cache via `torch.export`,
+    with `input_ids` and `cache_position` inputs of dynamic sequence length.
+    """
+    model.generation_config.use_cache = True
+    model.generation_config.cache_implementation = "static"
+    model.generation_config.cache_config = {"batch_size": 1, "max_cache_len": MAX_CACHE_LEN}
+
+    exported_program = convert_and_export_with_cache(
+        model,
+        example_input_ids=torch.ones(1, 8, dtype=torch.long),
+        example_cache_position=torch.arange(8, dtype=torch.long),
+        dynamic_shapes={"input_ids": {1: torch.export.Dim.DYNAMIC}, "cache_position": {0: torch.export.Dim.DYNAMIC}},
+        strict=True,
     )
+    return exported_program
 
-    return inputs
+
+class TextGenerator:
+    """
+    Wrapper `TorchExportableModuleForDecoderOnlyLM.generate` to provide a simpler interface for text generation.
+    """
+
+    def __init__(self, model: torch.nn.Module, tokenizer: LlamaTokenizerFast, max_new_tokens: int):
+        self.model = model
+        self.tokenizer = tokenizer
+        self.max_new_tokens = max_new_tokens
+
+    def module(self) -> torch.nn.Module:
+        # `generate` expects an ExportedProgram and only calls its `.module()`.
+        return self.model
+
+    @torch.no_grad()
+    def generate(self, prompt: str) -> str:
+        return TorchExportableModuleForDecoderOnlyLM.generate(
+            self,
+            self.tokenizer,
+            prompt,
+            max_new_tokens=self.max_new_tokens,
+        )
+
+
+def model_size(model: torch.nn.Module) -> int:
+    """Calculate the size of the model in Megabytes."""
+    param_size = sum(param.nelement() * param.element_size() for param in chain(model.parameters(), model.buffers()))
+    size_all_mb = param_size / 1000**2
+    return round(size_all_mb)
+
+
+@torch.no_grad()
+def run_text_generation(model: torch.nn.Module, tokenizer: LlamaTokenizerFast) -> str:
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a friendly chatbot who always responds in the style of a pirate",
+        },
+        {"role": "user", "content": "How many helicopters can a human eat in one sitting?"},
+    ]
+    prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    text_generator = TextGenerator(model, tokenizer, max_new_tokens=MAX_NEW_TOKENS)
+
+    # Single forward to trigger torch.compile so compilation time is excluded from the measurement.
+    model(input_ids=torch.zeros(1, 1, dtype=torch.long), cache_position=torch.zeros(1, dtype=torch.long))
+
+    start_t = time.time()
+    output_text = text_generator.generate(prompt)
+    elapsed = round(time.time() - start_t)
+    print(f"Elapsed time: {elapsed} seconds")
+    print(f"Model size:   {model_size(model)} MB")
+    print("Output: ")
+    print(output_text)
+    return output_text
 
 
 def main() -> str:
+
+    ###############################################################################
+    # Step 1: Prepare model and dataset
+    print(os.linesep + "[Step 1] Prepare model and dataset")
+
     dataset = load_dataset("Salesforce/wikitext", "wikitext-2-raw-v1", split="test")
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
     model_hf = AutoModelForCausalLM.from_pretrained(MODEL_ID)
     quantization_dataset = nncf.Dataset(dataset, partial(transform_fn, tokenizer=tokenizer))
 
-    model, model_config, gen_config = convert_and_export_with_cache(model_hf)
-    model = model.module()
-    # Comment this text to turn off model optimization and measure performance of baseline model
-    model = nncf.compress_weights(
-        model,
+    exported_model = export_with_static_cache(model_hf)
+
+    run_text_generation(exported_model.module(), tokenizer)
+
+    ###############################################################################
+    # Step 2: Compress model by NNCF
+    print(os.linesep + "[Step 2] Compress model by NNCF")
+    compressed_model = nncf.compress_weights(
+        exported_model.module(),
         dataset=quantization_dataset,
         mode=nncf.CompressWeightsMode.INT4_SYM,
         ratio=0.8,
         sensitivity_metric=nncf.SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
     )
-    compressed_model_hf = FXAutoModelForCausalLM(model, model_config, generation_config=gen_config)
+    compiled_model = torch.compile(compressed_model, backend="openvino")
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        messages = [
-            {
-                "role": "system",
-                "content": "You are a friendly chatbot who always responds in the style of a pirate",
-            },
-            {"role": "user", "content": "How many helicopters can a human eat in one sitting?"},
-        ]
-        batch_feature = tokenizer.apply_chat_template(
-            messages, tokenize=True, add_generation_prompt=True, return_tensors="pt"
-        )
-        input_ids = batch_feature["input_ids"]
-
-        print("Warmup...")
-        output = compressed_model_hf.generate(input_ids)
-
-        start_t = time.time()
-        output = compressed_model_hf.generate(input_ids)
-        print("Elapsed time: ", time.time() - start_t)
-
-    output_text = tokenizer.decode(output[0])
-    print(output_text)
+    ###############################################################################
+    # Step 3 Running text generation with compressed model
+    print(os.linesep + "[Step 3] Running text generation with compressed model")
+    output_text = run_text_generation(compiled_model, tokenizer)
 
     return output_text
 
