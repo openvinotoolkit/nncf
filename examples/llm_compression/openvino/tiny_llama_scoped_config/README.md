@@ -34,7 +34,7 @@ In this example:
 - The embeddings and the last layer (`lm_head`) are compressed to the backup precision, INT8 asymmetric per-channel. By default (`all_layers=False`), they are excluded from the mixed precision selection.
 - All other layers are compressed with the main settings: 80% of them (`ratio=0.8`) to INT4 symmetric, chosen by the mixed precision algorithm, and the rest to INT8.
 
-If a layer is matched by several scoped configs, the last one in the list wins. Scoped configs also take precedence over the `ignored_scope`. See the [weight compression documentation](../../../../docs/usage/post_training_compression/weights_compression/Usage.md#custom-precision-for-specific-layers) for more details.
+If a layer is matched by several scoped configs, the last one in the list wins. Scoped configs also take precedence over the `ignored_scope`. See the [weight compression documentation](/docs/usage/post_training_compression/weights_compression/Usage.md#custom-precision-for-specific-layers) for more details.
 
 ## Prerequisites
 
