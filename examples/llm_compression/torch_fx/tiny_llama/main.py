@@ -10,7 +10,6 @@
 # limitations under the License.
 import os
 import time
-import warnings
 from functools import partial
 from itertools import chain
 
@@ -25,8 +24,6 @@ from transformers.models.llama import LlamaTokenizerFast
 
 import nncf
 
-warnings.filterwarnings("ignore", category=torch.jit.TracerWarning)
-
 
 MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 MAX_CACHE_LEN = 512
@@ -34,6 +31,7 @@ MAX_NEW_TOKENS = 100
 
 
 def transform_fn(data: str, tokenizer: LlamaTokenizerFast) -> tuple[torch.Tensor, torch.Tensor]:
+    """Transform input text into model-compatible input tensors."""
     tokenized_text = tokenizer(data["text"], max_length=MAX_CACHE_LEN, truncation=True, return_tensors="pt")
     input_ids = tokenized_text["input_ids"]
     cache_position = torch.arange(input_ids.shape[1], dtype=torch.long)
@@ -85,14 +83,14 @@ class TextGenerator:
 
 
 def model_size(model: torch.nn.Module) -> int:
-    """Calculate the size of the model in Mebibytes."""
+    """Calculate the size of the model in Megabytes."""
     param_size = sum(param.nelement() * param.element_size() for param in chain(model.parameters(), model.buffers()))
     size_all_mb = param_size / 1000**2
     return round(size_all_mb)
 
 
-@torch.no_grad
-def run_text_generation(model, tokenizer):
+@torch.no_grad()
+def run_text_generation(model: torch.nn.Module, tokenizer: LlamaTokenizerFast) -> str:
     messages = [
         {
             "role": "system",
@@ -110,7 +108,7 @@ def run_text_generation(model, tokenizer):
     output_text = text_generator.generate(prompt)
     elapsed = round(time.time() - start_t)
     print(f"Elapsed time: {elapsed} seconds")
-    print(f"Model size:   {model_size(model)} MiB")
+    print(f"Model size:   {model_size(model)} MB")
     print("Output: ")
     print(output_text)
     return output_text
@@ -133,8 +131,8 @@ def main() -> str:
     run_text_generation(exported_model.module(), tokenizer)
 
     ###############################################################################
-    # Step 2: Compress the model
-    print(os.linesep + "[Step 2] Compressing the model")
+    # Step 2: Compress model by NNCF
+    print(os.linesep + "[Step 2] Compress model by NNCF")
     compressed_model = nncf.compress_weights(
         exported_model.module(),
         dataset=quantization_dataset,
