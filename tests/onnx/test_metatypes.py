@@ -8,12 +8,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import inspect
 from collections import Counter
 
 import pytest
 
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
+from nncf.onnx.graph.metatypes import onnx_metatypes
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXBatchNormMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConcatMetatype
@@ -22,6 +25,7 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGlobalAveragePoolMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReluMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
@@ -97,3 +101,19 @@ def test_mapping_onnx_metatypes(model_creator_func, ref_metatypes, q_ref_metatyp
     q_model = min_max_quantize_model(model)
     _check_metatypes(model, ref_metatypes)
     _check_metatypes(q_model, q_ref_metatypes)
+
+
+def test_all_onnx_metatypes_are_registered() -> None:
+    """
+    Checks that every metatype with op names defined in the onnx_metatypes module
+    is registered in ONNX_OPERATION_METATYPES.
+    """
+    registered = set(ONNX_OPERATION_METATYPES.registry_dict.values())
+    defined = [
+        cls
+        for _, cls in inspect.getmembers(onnx_metatypes, inspect.isclass)
+        if issubclass(cls, ONNXOpMetatype) and cls.__module__ == onnx_metatypes.__name__ and cls.op_names
+    ]
+    assert defined, "No ONNX metatypes found in the module"
+    not_registered = [cls.__name__ for cls in defined if cls not in registered]
+    assert not not_registered, f"Metatypes are not registered in ONNX_OPERATION_METATYPES: {not_registered}"

@@ -631,6 +631,7 @@ class PTAdaptiveMaxPool3dMetatype(PTOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["adaptive_max_pool3d"]}
 
 
+@PT_OPERATOR_METATYPES.register()
 class PTMaxPool1dMetatype(PTOperatorMetatype):
     name = "MaxPool1DOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_pool1d"]}
