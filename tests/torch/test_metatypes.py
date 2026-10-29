@@ -24,8 +24,7 @@ def test_all_torch_metatypes_are_registered() -> None:
         cls
         for _, cls in inspect.getmembers(om, inspect.isclass)
         if issubclass(cls, om.PTOperatorMetatype)
-        and not issubclass(cls, om.PTOperatorSubtype)
-        and cls is not om.PTOperatorMetatype
+        and cls not in (om.PTOperatorMetatype, om.PTOperatorSubtype, om.PTDepthwiseConvOperatorSubtype)
     ]
 
     assert defined, "No torch metatypes found in the module"
