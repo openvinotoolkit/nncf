@@ -72,6 +72,7 @@ from tests.openvino.native.models import AWQMatmulModel
 from tests.openvino.native.models import AWQModel
 from tests.openvino.native.models import AWQModel_fp16_overlow
 from tests.openvino.native.models import DifferentChannelSizeMatmulModel
+from tests.openvino.native.models import EmbeddingMatmulConvModel
 from tests.openvino.native.models import GatherAndMatmulShareData
 from tests.openvino.native.models import GatherWithTwoReductionAxes
 from tests.openvino.native.models import GroupedMatMulModel
@@ -571,76 +572,6 @@ def test_conv_in_8_bit_if_mode_8bit(mode):
         node = nodes_map[node_name]
         assert node.get_type_name() == "Constant"
         assert node.get_element_type() == dtype
-
-
-@pytest.mark.parametrize("mode", INT8_MODES)
-def test_int8_group_wise(mode):
-    group_size = 4
-    model = IntegerModel(dim2=8, dim3=8, positive_w=False).ov_model
-    weights = {
-        op.get_friendly_name(): op.get_data().copy()
-        for op in model.get_ops()
-        if op.get_type_name() == "Constant" and op.get_friendly_name() in TEST_MODELS[IntegerModel]
-    }
-    compressed_model = compress_weights(model, mode=mode, group_size=group_size)
-
-    nodes = {op.get_friendly_name(): op for op in compressed_model.get_ops()}
-    is_asym = mode == CompressWeightsMode.INT8_ASYM
-    assert len(weights) == 3
-    for name, weight in weights.items():
-        num_out, num_in = weight.shape
-        codes = nodes[name]
-        assert codes.get_element_type() == (ov.Type.u8 if is_asym else ov.Type.i8)
-        assert list(codes.shape) == [num_out, num_in // group_size, group_size]
-        scale = nodes[f"{name}/scale"]
-        assert scale.get_element_type() == ov.Type.f16
-        assert list(scale.shape) == [num_out, num_in // group_size, 1]
-        assert (f"{name}/zero_point" in nodes) == is_asym
-
-        decompressed = codes.get_data().astype(np.float32)
-        if is_asym:
-            decompressed -= nodes[f"{name}/zero_point"].get_data().astype(np.float32)
-        decompressed = (decompressed * scale.get_data().astype(np.float32)).reshape(weight.shape)
-        # Each group has its own scale, so the error of a weight is bounded by the quantization step of its group
-        step = np.repeat(np.abs(scale.get_data().astype(np.float32)), group_size, axis=-1).reshape(weight.shape)
-        assert np.all(np.abs(decompressed - weight) <= 1.1 * step)
-
-
-@pytest.mark.parametrize("fallback_mode", list(GroupSizeFallbackMode))
-@pytest.mark.parametrize("group_size", [16, -1])
-@pytest.mark.parametrize("mode", INT8_MODES)
-def test_int8_group_wise_conv_per_channel(mode, group_size, fallback_mode):
-    rng = np.random.default_rng(0)
-    x = opset.parameter([1, 32], name="Input_1")
-    matmul_weights = opset.constant(rng.random((16, 32)) - 0.5, dtype=np.float32, name="matmul_weights")
-    matmul = opset.matmul(x, matmul_weights, transpose_a=False, transpose_b=True, name="MatMul")
-    image = opset.parameter([1, 3, 8, 8], name="Input_2")
-    conv_weights = opset.constant(rng.random((4, 3, 3, 3)) - 0.5, dtype=np.float32, name="conv_weights")
-    conv = opset.convolution(image, conv_weights, [1, 1], [0, 0], [0, 0], [1, 1], name="Conv")
-    model = ov.Model([matmul, conv], [x, image])
-
-    compressed_model = compress_weights(
-        model,
-        mode=mode,
-        group_size=group_size,
-        advanced_parameters=AdvancedCompressionParameters(group_size_fallback_mode=fallback_mode),
-    )
-
-    nodes = {op.get_friendly_name(): op for op in compressed_model.get_ops()}
-    dtype = ov.Type.u8 if mode == CompressWeightsMode.INT8_ASYM else ov.Type.i8
-    # MatMul weights are quantized group-wise, or per-channel with group_size=-1
-    assert nodes["matmul_weights"].get_element_type() == dtype
-    if group_size == -1:
-        assert list(nodes["matmul_weights"].shape) == [16, 32]
-        assert list(nodes["matmul_weights/scale"].shape) == [16, 1]
-    else:
-        assert list(nodes["matmul_weights"].shape) == [16, 2, 16]
-        assert list(nodes["matmul_weights/scale"].shape) == [16, 2, 1]
-    # Convolution weights have several reduction axes: they are quantized per-channel in the same mode, whatever
-    # the group size fallback mode
-    assert nodes["conv_weights"].get_element_type() == dtype
-    assert list(nodes["conv_weights"].shape) == [4, 3, 3, 3]
-    assert list(nodes["conv_weights/scale"].shape) == [4, 1, 1, 1]
 
 
 @pytest.mark.parametrize("all_layers", (True, False))
@@ -2643,6 +2574,10 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     def get_scoped_configs_ref_path(ref_name: str) -> Path:
         return get_actual_reference_for_current_openvino(SCOPED_CONFIGS_REFERENCES_DIR / f"{ref_name}.json")
 
+    @staticmethod
+    def supports_int8_group_wise() -> bool:
+        return True
+
     @pytest.fixture
     def transpose_a_supported(self) -> bool:
         return True
@@ -2655,3 +2590,47 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
             group_size=-1,
         )
         assert self.get_num_int8_nodes(compressed_model) == 0
+
+    @pytest.mark.parametrize("use_scoped_config", [False, True], ids=["mode", "scoped_config"])
+    @pytest.mark.parametrize(
+        ("group_size", "fallback_mode"),
+        [
+            # The reduction channel sizes of all the weights with a single reduction axis are divisible by 4
+            (4, GroupSizeFallbackMode.ERROR),
+            # The reduction channel sizes 24 and 20 are not divisible by 16
+            (16, GroupSizeFallbackMode.IGNORE),
+            (16, GroupSizeFallbackMode.ADJUST),
+        ],
+        ids=["group_size_4_fallback_error", "group_size_16_fallback_ignore", "group_size_16_fallback_adjust"],
+    )
+    @pytest.mark.parametrize("mode", INT8_MODES, ids=[mode.value for mode in INT8_MODES])
+    def test_int8_group_wise(self, mode, group_size, fallback_mode, use_scoped_config):
+        """
+        Compares the compression config assigned to each weight node with the reference one when an INT8 mode is used
+        with a group size: the weights with a single reduction axis are quantized group-wise, and the weights with
+        several reduction axes, e.g. of convolutions, per-channel. The INT8 mode and the group size given by a scoped
+        config that matches all the nodes are expected to result in the same configs.
+
+        Set the NNCF_TEST_REGEN_DOT environment variable to regenerate the reference file.
+        """
+        advanced_parameters = AdvancedCompressionParameters(
+            group_size_fallback_mode=fallback_mode, min_adjusted_group_size=8
+        )
+        if use_scoped_config:
+            # The scoped config overrides the default INT8_ASYM per-channel configuration for all the nodes
+            kwargs = dict(scoped_configs=[nncf.ScopedConfig(patterns=[".*"], mode=mode, group_size=group_size)])
+        else:
+            kwargs = dict(mode=mode, group_size=group_size)
+
+        configs = self._compress_and_get_configs(
+            model=EmbeddingMatmulConvModel().ov_model, advanced_parameters=advanced_parameters, **kwargs
+        )
+
+        ref_path = self.get_scoped_configs_ref_path(
+            f"int8_group_wise_{mode.value}_group_size_{group_size}_fallback_{fallback_mode.value}"
+        )
+        # The reference is generated with the mode and the group size, and the scoped config is compared with it
+        if os.getenv("NNCF_TEST_REGEN_DOT") is not None and not use_scoped_config:
+            dump_to_json(ref_path, configs)
+
+        assert configs == load_json(ref_path)

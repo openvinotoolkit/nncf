@@ -459,9 +459,7 @@ def compress_weights(
         and the rest to INT8_ASYM).
     :type ratio: float
     :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
-        The value -1 means no grouping. INT8 modes are per-channel (-1) by default; with a group size (OpenVINO
-        backend only), the weights with a single reduction axis are quantized group-wise and the others
-        (e.g. of convolutions) per-channel.
+        The value -1 means no grouping.
     :type group_size: int
     :param ignored_scope: An ignored scope that defined the list of model control
         flow graph nodes to be ignored during quantization.
@@ -516,6 +514,12 @@ def compress_weights(
     # Validate the scoped configs here since we access the mode in the next line.
     validate_scoped_configs(scoped_configs, advanced_parameters)
     selected_modes = {mode} | {scoped_config.mode for scoped_config in scoped_configs or []}
+
+    int8_group_sizes = {group_size} if mode in INT8_MODES else set()
+    int8_group_sizes |= {sc.group_size for sc in scoped_configs or [] if sc.mode in INT8_MODES}
+    if backend != BackendType.OPENVINO and int8_group_sizes - {None, -1}:
+        msg = f"Group-wise quantization in INT8 modes is supported only by the OpenVINO backend, not {backend.value}."
+        raise nncf.ParameterNotSupportedError(msg)
 
     if backend == BackendType.TORCH:
         from nncf.torch.function_hook.quantization.quantize_model import (
@@ -682,10 +686,6 @@ def compress_weights(
     if compression_weights_impl is None:
         msg = f"Unsupported type of backend: {backend}"
         raise nncf.UnsupportedBackendError(msg)
-
-    if mode in INT8_MODES and group_size not in (None, -1) and backend != BackendType.OPENVINO:
-        msg = f"Group-wise quantization in INT8 modes is supported only by the OpenVINO backend, not {backend.value}."
-        raise nncf.ParameterNotSupportedError(msg)
 
     check_user_compression_configuration(
         mode,

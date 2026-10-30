@@ -192,14 +192,6 @@ def validate_scoped_configs(
             )
             raise nncf.ParameterNotSupportedError(msg)
 
-        if config.mode in INT8_MODES and config.group_size != -1:
-            msg = (
-                "INT8 modes require per-channel quantization in 8 bit, so the group size of a scoped config "
-                f"with the {config.mode.value} mode must be -1, but "
-                f"group_size={config.group_size} is given."
-            )
-            raise nncf.ParameterNotSupportedError(msg)
-
         validate_fixed_group_size(config.mode, config.group_size, advanced_parameters)
 
 
@@ -1340,6 +1332,10 @@ class WeightCompression(Algorithm):
         for w_params in all_weight_params:
             config = weight_name_to_config_mapping.get(w_params.weight_name)
             if config is not None:
+                if config.mode in INT8_MODES and len(w_params.reduction_axes) != 1:
+                    # Group-wise quantization needs a single reduction axis: the weights with several reduction axes
+                    # (e.g. of convolutions) are quantized per-channel
+                    config = dataclasses.replace(config, group_size=-1)
                 # A deep copy is required for some methods/modes like codebook
                 w_params.compression_config = copy.deepcopy(config)
                 scoped_weight_names.add(w_params.weight_name)

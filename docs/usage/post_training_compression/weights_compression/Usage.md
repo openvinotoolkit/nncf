@@ -25,10 +25,6 @@ The Weights Compression algorithm is aimed at compressing the weights of the mod
 
 By default, the algorithm applies asymmetric 8-bit integer quantization (INT8_ASYM mode) to all weights. For symmetric quantization without zero point, the INT8_SYM mode is also available. Both modes typically preserve model accuracy while providing decent performance improvements.
 
-| Compression Mode | Element type | Scale type | Granularity              | Supported backends               | Description                |
-|------------------|--------------|------------|--------------------------|----------------------------------|----------------------------|
-| INT8_ASYM        | INT8         | FP16       | Per-channel              | OpenVINO, PyTorch, ONNX, TorchFX | [Asymmetric quantization](/docs/usage/Quantization.md#asymmetric-quantization) |
-| INT8_SYM         | INT8         | FP16       | Per-channel              | OpenVINO, PyTorch, ONNX, TorchFX | [Symmetric quantization](/docs/usage/Quantization.md#symmetric-quantization) |
 | Compression Mode    | Element type | Scale type | Granularity              | Supported backends               | Description                |
 |---------------------|--------------|------------|--------------------------|----------------------------------|----------------------------|
 | INT8_ASYM           | INT8         | FP16       | Per-channel              | OpenVINO, PyTorch, ONNX, TorchFX | [Asymmetric quantization](/docs/usage/Quantization.md#asymmetric-quantization) |
@@ -94,7 +90,6 @@ compressed_model = compress_weights(model, mode=CompressWeightsMode.INT8_SYM)  #
 ```python
 from nncf import compress_weights, CompressWeightsMode
 
-# model is openvino.Model object
 compressed_model = compress_weights(model, mode=CompressWeightsMode.INT8_SYM, group_size=32)
 ```
 
