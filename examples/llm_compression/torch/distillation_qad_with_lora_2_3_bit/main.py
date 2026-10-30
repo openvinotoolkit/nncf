@@ -23,13 +23,16 @@ import transformers
 from datasets import load_dataset
 from optimum.exporters.openvino.convert import export_from_model
 from optimum.intel.openvino import OVModelForCausalLM
+from optimum.intel.openvino import OVModelForVisualCausalLM
 from torch import Tensor
 from torch import nn
 from torch.jit import TracerWarning
 from torch.optim.lr_scheduler import LinearLR
 from torch.optim.lr_scheduler import LRScheduler
 from torch.utils.tensorboard import SummaryWriter
+from transformers import AutoConfig
 from transformers import AutoModelForCausalLM
+from transformers import AutoModelForMultimodalLM
 from transformers import AutoTokenizer
 
 import nncf
@@ -281,29 +284,88 @@ def load_checkpoint(model: nn.Module, ckpt_file: Path) -> nn.Module:
     return model
 
 
+def extract_causal_lm_from_visual(model: nn.Module) -> nn.Module:
+    """
+    Extracts the causal language model part from a visual model.
+
+    :param model: The visual model containing a causal language model.
+    :returns: The extracted causal language model.
+    """
+    model_container = getattr(model, "model", None)
+    language_model = getattr(model_container, "language_model", None)
+    lm_head = getattr(model, "lm_head", None)
+    text_config = getattr(getattr(model, "config", None), "text_config", None)
+    if not isinstance(language_model, nn.Module) or not isinstance(lm_head, nn.Module) or text_config is None:
+        msg = "Expected a multimodal model with model.language_model, lm_head, and config.text_config."
+        raise ValueError(msg)
+
+    with torch.device("meta"):
+        causal_lm = AutoModelForCausalLM.from_config(text_config)
+
+    causal_lm.model = language_model
+    causal_lm.lm_head = lm_head
+    return causal_lm
+
+
 @torch.no_grad()
-def export_to_openvino(pretrained: str, ckpt_file: Path, ir_dir: Path, tokenizer: AutoTokenizer, bits: int):
+def export_to_openvino(
+    pretrained: str,
+    ckpt_file: Path,
+    ir_dir: Path,
+    tokenizer: AutoTokenizer,
+    bits: int,
+) -> None:
     """
     Export the quantized model to OpenVINO IR format.
-
     :param pretrained: The name or path of the pretrained model.
     :param ckpt_file: The path to the checkpoint file to load the model weights and NNCF configurations.
     :param ir_dir: The directory where the OpenVINO model will be saved.
-    :return: None. The OpenVINO model is exported and saved to the specified directory.
+    :param tokenizer: The tokenizer to save alongside the repacked model.
+    :param bits: Number of bits used for quantization.
     """
-    model_to_eval = AutoModelForCausalLM.from_pretrained(pretrained, torch_dtype=torch.float32, device_map="cpu")
-    model_to_eval = load_checkpoint(model_to_eval, ckpt_file)
-    model_to_eval = nncf.strip(model_to_eval, do_copy=False, strip_format=StripFormat.DQ)
-    export_from_model(model_to_eval, ir_dir, device="cpu")
-    print(f"The OpenVINO model has been exported and saved to: {ir_dir}")
-    tokenizer.save_pretrained(ir_dir)
+    config = AutoConfig.from_pretrained(pretrained)
+    is_visual = hasattr(config, "vision_config") and hasattr(config, "text_config")
 
-    if bits < 4:
-        model_to_eval = OVModelForCausalLM.from_pretrained(ir_dir)
-        model_to_eval.model = nncf.repack_weights(model_to_eval.model)
-        model_to_eval.save_pretrained(ir_dir / "repacked")
-        tokenizer.save_pretrained(ir_dir / "repacked")
-        print(f"The OpenVINO model has been repacked and saved to: {ir_dir / 'repacked'}")
+    if is_visual:
+        model = AutoModelForMultimodalLM.from_pretrained(pretrained, device_map="cpu", torch_dtype=torch.float32)
+        if "gemma" in pretrained.lower():
+            model = load_checkpoint(model, ckpt_file)
+            nncf.strip(model, do_copy=False, strip_format=StripFormat.RP)
+        else:
+            language_model = extract_causal_lm_from_visual(model)
+            language_model = load_checkpoint(language_model, ckpt_file)
+            nncf.strip(language_model, do_copy=False, strip_format=StripFormat.RP)
+    else:
+        model = AutoModelForCausalLM.from_pretrained(pretrained, device_map="cpu", torch_dtype=torch.float32)
+        model = load_checkpoint(model, ckpt_file)
+        model = nncf.strip(model, do_copy=False, strip_format=StripFormat.DQ)
+
+    model.eval()
+    try:
+        export_from_model(model, ir_dir, device="cpu")
+    except Exception as e:
+        print(f"Failed to export the model or part of the model, but repacking will still proceed: {e}")
+
+    if is_visual:
+        ov_model = OVModelForVisualCausalLM.from_pretrained(ir_dir)
+        if bits < 4:
+            ov_model.language_model.model = nncf.repack_weights(ov_model.language_model.model)
+        for component in ov_model.components.values():
+            if component is ov_model.language_model:
+                continue
+            component.model = nncf.compress_weights(
+                component.model,
+                mode=nncf.CompressWeightsMode.INT8_ASYM,
+            )
+    else:
+        ov_model = OVModelForCausalLM.from_pretrained(ir_dir)
+        if bits < 4:
+            ov_model.model = nncf.repack_weights(ov_model.model)
+
+    repacked_dir = ir_dir / "repacked"
+    ov_model.save_pretrained(repacked_dir)
+    tokenizer.save_pretrained(repacked_dir)
+    print(f"The OpenVINO model has been repacked and saved to: {repacked_dir}")
 
 
 @torch.no_grad()
