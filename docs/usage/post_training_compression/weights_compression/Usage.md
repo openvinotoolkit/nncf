@@ -33,7 +33,7 @@ By default, the algorithm applies asymmetric 8-bit integer quantization (INT8_AS
 |---------------------|--------------|------------|--------------------------|----------------------------------|----------------------------|
 | INT8_ASYM           | INT8         | FP16       | Per-channel              | OpenVINO, PyTorch, ONNX, TorchFX | [Asymmetric quantization](/docs/usage/Quantization.md#asymmetric-quantization) |
 | INT8_SYM            | INT8         | FP16       | Per-channel              | OpenVINO, PyTorch, ONNX, TorchFX | [Symmetric quantization](/docs/usage/Quantization.md#symmetric-quantization) |
-| INT8_ASYM, INT8_SYM | INT8         | FP16       | Group-wise               | OpenVINO                         | Only for weights with a single reduction axis, other per-chanel |
+| INT8_ASYM, INT8_SYM | INT8         | FP16       | Group-wise               | OpenVINO                         | Only for weights with a single reduction axis, other per-channel |
 
 #### Mixed precision modes
 

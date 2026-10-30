@@ -606,8 +606,10 @@ def test_int8_group_wise(mode):
         assert np.all(np.abs(decompressed - weight) <= 1.1 * step)
 
 
+@pytest.mark.parametrize("fallback_mode", list(GroupSizeFallbackMode))
+@pytest.mark.parametrize("group_size", [16, -1])
 @pytest.mark.parametrize("mode", INT8_MODES)
-def test_int8_group_wise_conv_per_channel(mode):
+def test_int8_group_wise_conv_per_channel(mode, group_size, fallback_mode):
     rng = np.random.default_rng(0)
     x = opset.parameter([1, 32], name="Input_1")
     matmul_weights = opset.constant(rng.random((16, 32)) - 0.5, dtype=np.float32, name="matmul_weights")
@@ -617,15 +619,25 @@ def test_int8_group_wise_conv_per_channel(mode):
     conv = opset.convolution(image, conv_weights, [1, 1], [0, 0], [0, 0], [1, 1], name="Conv")
     model = ov.Model([matmul, conv], [x, image])
 
-    compressed_model = compress_weights(model, mode=mode, group_size=16)
+    compressed_model = compress_weights(
+        model,
+        mode=mode,
+        group_size=group_size,
+        advanced_parameters=AdvancedCompressionParameters(group_size_fallback_mode=fallback_mode),
+    )
 
     nodes = {op.get_friendly_name(): op for op in compressed_model.get_ops()}
     dtype = ov.Type.u8 if mode == CompressWeightsMode.INT8_ASYM else ov.Type.i8
-    # MatMul weights are quantized group-wise
+    # MatMul weights are quantized group-wise, or per-channel with group_size=-1
     assert nodes["matmul_weights"].get_element_type() == dtype
-    assert list(nodes["matmul_weights"].shape) == [16, 2, 16]
-    assert list(nodes["matmul_weights/scale"].shape) == [16, 2, 1]
-    # Convolution weights have several reduction axes: they are quantized per-channel in the same mode
+    if group_size == -1:
+        assert list(nodes["matmul_weights"].shape) == [16, 32]
+        assert list(nodes["matmul_weights/scale"].shape) == [16, 1]
+    else:
+        assert list(nodes["matmul_weights"].shape) == [16, 2, 16]
+        assert list(nodes["matmul_weights/scale"].shape) == [16, 2, 1]
+    # Convolution weights have several reduction axes: they are quantized per-channel in the same mode, whatever
+    # the group size fallback mode
     assert nodes["conv_weights"].get_element_type() == dtype
     assert list(nodes["conv_weights"].shape) == [4, 3, 3, 3]
     assert list(nodes["conv_weights/scale"].shape) == [4, 1, 1, 1]

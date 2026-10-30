@@ -603,12 +603,8 @@ class WeightCompression(Algorithm):
         :param is_last_layer_skipped: Indicates whether the last layer was already excluded from compression.
         :return: Information about each weight node that is considered for mixed precision.
         """
-        if self._mode in INT8_MODES:
-            if self._group_size == -1:
-                return all_weight_params
-            # Group-wise quantization needs a single reduction axis. The other weights (e.g. of convolutions) keep
-            # the initial config from `_get_backup_config`: per-channel quantization in the same INT8 mode.
-            return [wp for wp in all_weight_params if len(wp.reduction_axes) == 1]
+        if self._mode in [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM]:
+            return all_weight_params
 
         ratio_defining_params = list(
             filter(
@@ -644,12 +640,10 @@ class WeightCompression(Algorithm):
         :return: A WeightCompressionConfig object for the backup precision, or None if backup is
         disabled or unsupported.
         """
-        if self._mode in INT8_MODES:
-            mode = self._mode
-            group_size = -1
-        elif self._backup_mode == BackupMode.NONE:
+        if self._backup_mode == BackupMode.NONE:
             return None
-        elif self._backup_mode == BackupMode.FP8_E4M3:
+
+        if self._backup_mode == BackupMode.FP8_E4M3:
             mode = CompressWeightsMode.FP8_E4M3
             group_size = self._group_size
         elif self._backup_mode == BackupMode.MXFP8_E4M3:
@@ -826,8 +820,14 @@ class WeightCompression(Algorithm):
         adjusted_weight_params = []
         for w_params in weight_params:
             group_size = group_sizes[w_params.weight_name]
+            # Per-channel quantization does not depend on the channel size, which weights with several reduction
+            # axes (e.g. of convolutions) do not have
+            if group_size == -1:
+                valid_weight_params.append(w_params)
+                group_size_values[w_params.weight_name] = group_size
+                continue
             reduction_channel_size, _ = get_reduction_channel_size(w_params.weight_shape, w_params.reduction_axes)
-            if group_size == -1 or reduction_channel_size % group_size == 0:
+            if reduction_channel_size % group_size == 0:
                 valid_weight_params.append(w_params)
                 group_size_values[w_params.weight_name] = group_size
                 continue
@@ -850,14 +850,9 @@ class WeightCompression(Algorithm):
 
         if invalid_weight_params:
             # Valid adjusted group size wasn't found
-            fallback = (
-                f"{self._mode.value} per-channel quantization"
-                if self._mode in INT8_MODES
-                else f"the {self._backup_mode.value} backup mode"
-            )
             nncf_logger.info(
-                "A valid adjusted group size value can't be found for some nodes. "
-                f"They will be quantized using {fallback}."
+                "A valid adjusted group size value can't be found for some nodes. They will be quantized using the "
+                f"{self._backup_mode.value} backup mode."
             )
 
         return valid_weight_params, group_size_values
@@ -1192,6 +1187,12 @@ class WeightCompression(Algorithm):
 
         # Handle group size fallback modes
         group_size_values = self._get_requested_group_sizes(ratio_defining_params, self._group_size)
+        if self._mode in INT8_MODES:
+            # Group-wise quantization needs a single reduction axis: the weights with several reduction axes
+            # (e.g. of convolutions) are quantized per-channel
+            for weight_param in ratio_defining_params:
+                if len(weight_param.reduction_axes) != 1:
+                    group_size_values[weight_param.weight_name] = -1
         if self._group_size_fallback_mode == GroupSizeFallbackMode.IGNORE:
             all_weight_params, ratio_defining_params, skipped_weight_params = self._handle_ignore_group_size_fallback(
                 all_weight_params, ratio_defining_params, skipped_weight_params, group_size_values
