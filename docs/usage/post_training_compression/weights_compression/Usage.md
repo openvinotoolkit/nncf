@@ -29,7 +29,11 @@ By default, the algorithm applies asymmetric 8-bit integer quantization (INT8_AS
 |------------------|--------------|------------|--------------------------|----------------------------------|----------------------------|
 | INT8_ASYM        | INT8         | FP16       | Per-channel              | OpenVINO, PyTorch, ONNX, TorchFX | [Asymmetric quantization](/docs/usage/Quantization.md#asymmetric-quantization) |
 | INT8_SYM         | INT8         | FP16       | Per-channel              | OpenVINO, PyTorch, ONNX, TorchFX | [Symmetric quantization](/docs/usage/Quantization.md#symmetric-quantization) |
-| INT8_ASYM, INT8_SYM with `group_size` | INT8 | FP16 | Group-wise | OpenVINO | Weights with a single reduction axis (e.g. MatMul, Gather) are quantized group-wise, the others (e.g. Convolution) per-channel. |
+| Compression Mode    | Element type | Scale type | Granularity              | Supported backends               | Description                |
+|---------------------|--------------|------------|--------------------------|----------------------------------|----------------------------|
+| INT8_ASYM           | INT8         | FP16       | Per-channel              | OpenVINO, PyTorch, ONNX, TorchFX | [Asymmetric quantization](/docs/usage/Quantization.md#asymmetric-quantization) |
+| INT8_SYM            | INT8         | FP16       | Per-channel              | OpenVINO, PyTorch, ONNX, TorchFX | [Symmetric quantization](/docs/usage/Quantization.md#symmetric-quantization) |
+| INT8_ASYM, INT8_SYM | INT8         | FP16       | Group-wise               | OpenVINO                         | Only for weights with a single reduction axis, other per-chanel |
 
 #### Mixed precision modes
 
