@@ -1,0 +1,27 @@
+{
+    "Conv": {
+        "mode": "int8_asym",
+        "group_size": -1,
+        "codebook_values": null
+    },
+    "Embedding": {
+        "mode": "int8_asym",
+        "group_size": 4,
+        "codebook_values": null
+    },
+    "MatMul_1": {
+        "mode": "int8_asym",
+        "group_size": 4,
+        "codebook_values": null
+    },
+    "MatMul_2": {
+        "mode": "int8_asym",
+        "group_size": 4,
+        "codebook_values": null
+    },
+    "MatMul_3": {
+        "mode": "int8_asym",
+        "group_size": 4,
+        "codebook_values": null
+    }
+}

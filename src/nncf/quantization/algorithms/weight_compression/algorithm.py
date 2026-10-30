@@ -192,14 +192,6 @@ def validate_scoped_configs(
             )
             raise nncf.ParameterNotSupportedError(msg)
 
-        if config.mode in INT8_MODES and config.group_size != -1:
-            msg = (
-                "INT8 modes require per-channel quantization in 8 bit, so the group size of a scoped config "
-                f"with the {config.mode.value} mode must be -1, but "
-                f"group_size={config.group_size} is given."
-            )
-            raise nncf.ParameterNotSupportedError(msg)
-
         validate_fixed_group_size(config.mode, config.group_size, advanced_parameters)
 
 
@@ -226,10 +218,10 @@ def check_user_compression_configuration(
     """
     validate_scoped_configs(scoped_configs, advanced_parameters)
     if mode in INT8_MODES:
-        if (ratio and ratio != 1) or (group_size and group_size != -1):
+        if ratio and ratio != 1:
             msg = (
-                "INT8 modes require per-channel quantization of all layers in 8 bit. "
-                "Default values of `ratio` (1) and `group_size` (-1) cannot be overridden."
+                "INT8 modes require quantization of all layers in 8 bit. "
+                "Default value of `ratio` (1) cannot be overridden."
             )
             raise nncf.ParameterNotSupportedError(msg)
 
@@ -829,8 +821,14 @@ class WeightCompression(Algorithm):
         adjusted_weight_params = []
         for w_params in weight_params:
             group_size = group_sizes[w_params.weight_name]
+            # Per-channel quantization does not depend on the channel size, which weights with several reduction
+            # axes (e.g. of convolutions) do not have
+            if group_size == -1:
+                valid_weight_params.append(w_params)
+                group_size_values[w_params.weight_name] = group_size
+                continue
             reduction_channel_size, _ = get_reduction_channel_size(w_params.weight_shape, w_params.reduction_axes)
-            if group_size == -1 or reduction_channel_size % group_size == 0:
+            if reduction_channel_size % group_size == 0:
                 valid_weight_params.append(w_params)
                 group_size_values[w_params.weight_name] = group_size
                 continue
@@ -1190,6 +1188,12 @@ class WeightCompression(Algorithm):
 
         # Handle group size fallback modes
         group_size_values = self._get_requested_group_sizes(ratio_defining_params, self._group_size)
+        if self._mode in INT8_MODES:
+            # Group-wise quantization needs a single reduction axis: the weights with several reduction axes
+            # (e.g. of convolutions) are quantized per-channel
+            for weight_param in ratio_defining_params:
+                if len(weight_param.reduction_axes) != 1:
+                    group_size_values[weight_param.weight_name] = -1
         if self._group_size_fallback_mode == GroupSizeFallbackMode.IGNORE:
             all_weight_params, ratio_defining_params, skipped_weight_params = self._handle_ignore_group_size_fallback(
                 all_weight_params, ratio_defining_params, skipped_weight_params, group_size_values
@@ -1337,6 +1341,10 @@ class WeightCompression(Algorithm):
         for w_params in all_weight_params:
             config = weight_name_to_config_mapping.get(w_params.weight_name)
             if config is not None:
+                if config.mode in INT8_MODES and len(w_params.reduction_axes) != 1:
+                    # Group-wise quantization needs a single reduction axis: the weights with several reduction axes
+                    # (e.g. of convolutions) are quantized per-channel
+                    config = dataclasses.replace(config, group_size=-1)
                 # A deep copy is required for some methods/modes like codebook
                 w_params.compression_config = copy.deepcopy(config)
                 scoped_weight_names.add(w_params.weight_name)

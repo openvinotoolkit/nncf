@@ -38,6 +38,7 @@ from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipel
 from nncf.quantization.algorithms.weight_compression.algorithm import check_user_compression_configuration
 from nncf.quantization.algorithms.weight_compression.algorithm import get_weight_compression_configuration
 from nncf.quantization.algorithms.weight_compression.algorithm import validate_scoped_configs
+from nncf.quantization.algorithms.weight_compression.config import INT8_MODES
 from nncf.quantization.telemetry_extractors import CompressionStartedWithCompressWeightsApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeWithAccuracyControlApi
@@ -513,6 +514,12 @@ def compress_weights(
     # Validate the scoped configs here since we access the mode in the next line.
     validate_scoped_configs(scoped_configs, advanced_parameters)
     selected_modes = {mode} | {scoped_config.mode for scoped_config in scoped_configs or []}
+
+    int8_group_sizes = {group_size} if mode in INT8_MODES else set()
+    int8_group_sizes |= {sc.group_size for sc in scoped_configs or [] if sc.mode in INT8_MODES}
+    if backend != BackendType.OPENVINO and int8_group_sizes - {None, -1}:
+        msg = f"Group-wise quantization in INT8 modes is supported only by the OpenVINO backend, not {backend.value}."
+        raise nncf.ParameterNotSupportedError(msg)
 
     if backend == BackendType.TORCH:
         from nncf.torch.function_hook.quantization.quantize_model import (
