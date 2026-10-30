@@ -1484,6 +1484,22 @@ class MatMul(OVReferenceModel):
         return model
 
 
+class SignWeightMatmulModel(OVReferenceModel):
+    """
+    Linear model whose weights are only -d and +d, so the symmetric narrow grid represents them exactly.
+    """
+
+    def _create_ov_model(self):
+        input_node = opset.parameter([1, 1, 16], name="Input")
+        signs = self._rng.integers(0, 2, (16, 16)) * 2 - 1
+        weights_data = (signs * 0.5).astype(np.float32)
+        weights_node = opset.constant(weights_data, dtype=np.float32, name="Weights")
+        matmul_node = opset.matmul(input_node, weights_node, transpose_a=False, transpose_b=True, name="MatMul")
+        result_node = opset.result(matmul_node, name="Result")
+        result_node.get_output_tensor(0).set_names(set(["Result"]))
+        return ov.Model([result_node], [input_node], name="SignWeightModel")
+
+
 @SYNTHETIC_MODELS.register()
 class YOLO26AttentionBlock(OVReferenceModel):
     def _create_ov_model(self):

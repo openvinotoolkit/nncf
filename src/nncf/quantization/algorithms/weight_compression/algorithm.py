@@ -252,6 +252,15 @@ def check_user_compression_configuration(
             msg = f"INT8 modes do not support {', '.join(unsupported_for_int8)} option(s). Set them to None."
             raise nncf.ParameterNotSupportedError(msg)
 
+    if mode == CompressWeightsMode.INT1_SYM and any(
+        option is not None for option in (dataset, awq, scale_estimation, gptq, lora_correction)
+    ):
+        msg = (
+            f"{mode.value} derives its scale from the weights and does not support the data-aware options "
+            "(dataset, awq, scale_estimation, gptq, lora_correction). Set them to None."
+        )
+        raise nncf.ParameterNotSupportedError(msg)
+
     if ratio is not None and not (0 <= ratio <= 1):
         msg = f"The ratio should be between 0 and 1, but ratio={ratio} is specified."
         raise nncf.ValidationError(msg)
@@ -667,7 +676,8 @@ class WeightCompression(Algorithm):
 
         if not self.is_weight_compression_supported(weight_dtype, mode):
             return None
-        return WeightCompressionConfig(mode=mode, group_size=group_size)
+        narrow_range = mode == CompressWeightsMode.INT8_SYM and self._advanced_parameters.narrow_range
+        return WeightCompressionConfig(mode=mode, group_size=group_size, narrow_range=narrow_range)
 
     def _get_primary_config(self, group_size: int) -> WeightCompressionConfig:
         codebook_values = None
@@ -685,6 +695,7 @@ class WeightCompression(Algorithm):
             mode=self._mode,
             group_size=group_size,
             codebook_values=codebook_values,
+            narrow_range=self._advanced_parameters.narrow_range,
         )
 
     def apply_mixed_precision(
@@ -1266,6 +1277,16 @@ class WeightCompression(Algorithm):
         weight_name_to_config_mapping, overlapped_weight_names = self._get_weight_name_to_config_mapping(
             scoped_configs, graph, node_name_to_weight_names_mapping
         )
+
+        if self._advanced_parameters.narrow_range:
+            for config in weight_name_to_config_mapping.values():
+                if config.mode in (
+                    CompressWeightsMode.INT2_SYM,
+                    CompressWeightsMode.INT3_SYM,
+                    CompressWeightsMode.INT4_SYM,
+                    CompressWeightsMode.INT8_SYM,
+                ):
+                    config.narrow_range = True
 
         if overlapped_weight_names:
             overlapped_configs = []

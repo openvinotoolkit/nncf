@@ -47,6 +47,8 @@ NNCF can automatically distribute precision assignments based on quantization se
 | Compression Mode | Element type | Scale type | Granularity              | Supported backends               | Description |
 |------------------|--------------|------------|--------------------------|----------------------------------|-------------|
 | INT4_SYM         | INT4         | FP16       | Per-channel / Group-wise | OpenVINO, PyTorch, ONNX, TorchFX | [Symmetric quantization](/docs/usage/Quantization.md#symmetric-quantization) |
+| INT2_SYM         | INT2         | FP16       | Per-channel / Group-wise | OpenVINO                         | Symmetric, signed two's-complement `i2` codes, no zero point |
+| INT1_SYM         | U1           | FP16       | Per-channel / Group-wise | OpenVINO                         | Symmetric sign grid, one bit per weight: u1 codes with a zero point of 0.5 and twice `mean\|w\|` as the scale |
 | INT4_ASYM        | INT4         | FP16       | Per-channel / Group-wise | OpenVINO, PyTorch, ONNX, TorchFX | [Asymmetric quantization](/docs/usage/Quantization.md#asymmetric-quantization) |
 | NF4              | FP32         | FP16       | Per-channel / Group-wise | OpenVINO                         | [NormalFloat-4](https://arxiv.org/pdf/2305.14314v1.pdf) lookup table with 16 FP32 values |
 | CODEBOOK         | Any          | FP16       | Per-channel / Group-wise | OpenVINO                         | Arbitrary lookup table (codebook) |
@@ -56,6 +58,8 @@ NNCF can automatically distribute precision assignments based on quantization se
 |   FP8_E4M3       | E4M3         | FP16       | Per-channel / Group-wise | OpenVINO, ONNX                   | [FP8](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
 |   FP4            | E2M1         | FP16       | Per-channel / Group-wise | OpenVINO                         | [FP4](https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf) |
 | NVFP4            | E2M1         | E4M3 per group / FP32 per weight | Group-wise (16)          | OpenVINO              | [NVFP4](https://arxiv.org/abs/2509.25149) |
+
+**Note**: `narrow_range` in `AdvancedCompressionParameters` makes the symmetric integer modes INT2_SYM through INT8_SYM use the grid `[-(2^(b-1) - 1), 2^(b-1) - 1]` with the scale `max|w| / (2^(b-1) - 1)` instead of the full grid. A group whose weights are `{+d, -d}` is then reconstructed exactly. INT1_SYM is the separate sign grid (`-mean|w|`, `+mean|w|`) and rejects `narrow_range`, whose one-bit narrow grid would contain only zero.
 
 **Note**: Granularity refers to the scope of elements sharing quantization parameters. "Per-channel" applies different parameters for each output channel, while "Group-wise" divides weights into groups (e.g., group_size=128) that share the same parameters.
 
