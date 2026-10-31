@@ -27,7 +27,6 @@ from nncf.common.hardware.opset import HWOpName
 ModuleAttributes = TypeVar("ModuleAttributes", bound=BaseLayerAttributes)
 
 PT_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
-FX_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
 
 
 class NamespaceTarget(Enum):
@@ -631,6 +630,7 @@ class PTAdaptiveMaxPool3dMetatype(PTOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["adaptive_max_pool3d"]}
 
 
+@PT_OPERATOR_METATYPES.register()
 class PTMaxPool1dMetatype(PTOperatorMetatype):
     name = "MaxPool1DOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_pool1d"]}
@@ -787,7 +787,7 @@ class PTEmbeddingMetatype(PTOperatorMetatype):
     weight_port_ids = [1]
 
 
-@FX_OPERATOR_METATYPES.register()
+# Used for FX backend to represent ATEN PTEmbeddingMetatype
 class PTAtenEmbeddingMetatype(OperatorMetatype):
     name = "EmbeddingOp"
     module_to_function_names = {NamespaceTarget.ATEN: ["embedding"]}
@@ -804,7 +804,7 @@ class PTEmbeddingBagMetatype(PTOperatorMetatype):
     weight_port_ids = [1]
 
 
-@FX_OPERATOR_METATYPES.register()
+# Used for FX backend to represent ATEN PTEmbeddingBagMetatype
 class PTAtenEmbeddingBagMetatype(OperatorMetatype):
     name = "EmbeddingBagOp"
     module_to_function_names = {NamespaceTarget.ATEN: ["embedding_bag"]}
