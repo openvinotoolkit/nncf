@@ -573,6 +573,64 @@ def test_conv_in_8_bit_if_mode_8bit(mode):
         assert node.get_element_type() == dtype
 
 
+@pytest.mark.parametrize("mode", INT8_MODES)
+def test_int8_group_wise(mode):
+    group_size = 4
+    model = IntegerModel(dim2=8, dim3=8, positive_w=False).ov_model
+    weights = {
+        op.get_friendly_name(): op.get_data().copy()
+        for op in model.get_ops()
+        if op.get_type_name() == "Constant" and op.get_friendly_name() in TEST_MODELS[IntegerModel]
+    }
+    compressed_model = compress_weights(model, mode=mode, group_size=group_size)
+
+    nodes = {op.get_friendly_name(): op for op in compressed_model.get_ops()}
+    is_asym = mode == CompressWeightsMode.INT8_ASYM
+    assert len(weights) == 3
+    for name, weight in weights.items():
+        num_out, num_in = weight.shape
+        codes = nodes[name]
+        assert codes.get_element_type() == (ov.Type.u8 if is_asym else ov.Type.i8)
+        assert list(codes.shape) == [num_out, num_in // group_size, group_size]
+        scale = nodes[f"{name}/scale"]
+        assert scale.get_element_type() == ov.Type.f16
+        assert list(scale.shape) == [num_out, num_in // group_size, 1]
+        assert (f"{name}/zero_point" in nodes) == is_asym
+
+        decompressed = codes.get_data().astype(np.float32)
+        if is_asym:
+            decompressed -= nodes[f"{name}/zero_point"].get_data().astype(np.float32)
+        decompressed = (decompressed * scale.get_data().astype(np.float32)).reshape(weight.shape)
+        # Each group has its own scale, so the error of a weight is bounded by the quantization step of its group
+        step = np.repeat(np.abs(scale.get_data().astype(np.float32)), group_size, axis=-1).reshape(weight.shape)
+        assert np.all(np.abs(decompressed - weight) <= 1.1 * step)
+
+
+@pytest.mark.parametrize("mode", INT8_MODES)
+def test_int8_group_wise_conv_per_channel(mode):
+    rng = np.random.default_rng(0)
+    x = opset.parameter([1, 32], name="Input_1")
+    matmul_weights = opset.constant(rng.random((16, 32)) - 0.5, dtype=np.float32, name="matmul_weights")
+    matmul = opset.matmul(x, matmul_weights, transpose_a=False, transpose_b=True, name="MatMul")
+    image = opset.parameter([1, 3, 8, 8], name="Input_2")
+    conv_weights = opset.constant(rng.random((4, 3, 3, 3)) - 0.5, dtype=np.float32, name="conv_weights")
+    conv = opset.convolution(image, conv_weights, [1, 1], [0, 0], [0, 0], [1, 1], name="Conv")
+    model = ov.Model([matmul, conv], [x, image])
+
+    compressed_model = compress_weights(model, mode=mode, group_size=16)
+
+    nodes = {op.get_friendly_name(): op for op in compressed_model.get_ops()}
+    dtype = ov.Type.u8 if mode == CompressWeightsMode.INT8_ASYM else ov.Type.i8
+    # MatMul weights are quantized group-wise
+    assert nodes["matmul_weights"].get_element_type() == dtype
+    assert list(nodes["matmul_weights"].shape) == [16, 2, 16]
+    assert list(nodes["matmul_weights/scale"].shape) == [16, 2, 1]
+    # Convolution weights have several reduction axes: they are quantized per-channel in the same mode
+    assert nodes["conv_weights"].get_element_type() == dtype
+    assert list(nodes["conv_weights"].shape) == [4, 3, 3, 3]
+    assert list(nodes["conv_weights/scale"].shape) == [4, 1, 1, 1]
+
+
 @pytest.mark.parametrize("all_layers", (True, False))
 def test_conv_in_8_bit_if_mode_4bit(all_layers):
     model = WeightsModel().ov_model
@@ -891,7 +949,6 @@ def test_raise_error_for_many_axes():
     "params",
     (
         {"ratio": 0.5},
-        {"group_size": 64},
         {"all_layers": True},
         {"all_layers": False},
         *({"sensitivity_metric": metric} for metric in ALL_SENSITIVITY_METRICS),
@@ -1269,6 +1326,82 @@ def test_call_max_var_criterion_with_dataset_scale_estimation_neg_group_size(mod
     dataset = Dataset([np.ones([1, 8, 8])])
 
     compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, scale_estimation=True)
+
+
+@pytest.mark.parametrize("mode", INT8_MODES)
+def test_int8_scale_estimation(mode):
+    rng = np.random.default_rng(0)
+    weight = (rng.standard_t(4, size=(16, 64)) * 0.1).astype(np.float32)
+    # One token per sample, so the statistics scale estimation works on are the activations themselves
+    samples = [(rng.standard_normal((1, 64)) * np.where(np.arange(64) < 2, 20, 1)).astype(np.float32) for _ in range(8)]
+
+    def build():
+        x = opset.parameter([1, 64], name="Input")
+        return ov.Model([opset.matmul(x, opset.constant(weight, name="weights"), False, True)], [x])
+
+    def output_error(model):
+        compiled = ov.Core().compile_model(
+            model, "CPU", {"INFERENCE_PRECISION_HINT": "f32", "DYNAMIC_QUANTIZATION_GROUP_SIZE": "0"}
+        )
+        return sum(float(np.sum((compiled(x)[0] - x @ weight.T) ** 2)) for x in samples)
+
+    rtn_model = compress_weights(build(), mode=mode)
+    se_model = compress_weights(
+        build(), mode=mode, scale_estimation=True, dataset=Dataset(samples), subset_size=len(samples)
+    )
+
+    nodes = {op.get_friendly_name(): op for op in se_model.get_ops()}
+    assert nodes["weights"].get_element_type() == (ov.Type.u8 if mode == CompressWeightsMode.INT8_ASYM else ov.Type.i8)
+    assert list(nodes["weights/scale"].shape) == [16, 1]
+    rtn_scale = {op.get_friendly_name(): op for op in rtn_model.get_ops()}["weights/scale"].get_data()
+    assert not np.array_equal(nodes["weights/scale"].get_data(), rtn_scale)
+    # Scale estimation replaces the min-max scale of a channel only if this reduces the error on the calibration data
+    assert output_error(se_model) < output_error(rtn_model)
+
+
+@pytest.mark.parametrize("group_size", [-1, 16])
+@pytest.mark.parametrize("mode", INT8_MODES + INT4_MODES)
+def test_scale_estimation_without_calibration_signal(mode, group_size):
+    """
+    Checks that scale estimation keeps the min-max scales of the groups whose calibration activations are all zero.
+    The estimated scale of such a group is zero and ties the min-max one on the calibration error, so the weights of
+    the group would be dequantized to zeros.
+    """
+    rng = np.random.default_rng(0)
+    weight = (rng.standard_normal((16, 64)) * 0.1).astype(np.float32)
+    # No signal in the first group of input channels, which per-channel is all of them
+    num_zero_channels = 64 if group_size == -1 else group_size
+    samples = [rng.standard_normal((1, 64)).astype(np.float32) for _ in range(8)]
+    for sample in samples:
+        sample[:, :num_zero_channels] = 0.0
+    # The only MatMul is the last one, which INT4 modes otherwise keep in the backup precision
+    kwargs = {"all_layers": True} if mode in INT4_MODES else {}
+
+    def build():
+        x = opset.parameter([1, 64], name="Input")
+        return ov.Model([opset.matmul(x, opset.constant(weight, name="weights"), False, True)], [x])
+
+    def scales(model):
+        scale = {op.get_friendly_name(): op for op in model.get_ops()}["weights/scale"].get_data()
+        return scale.reshape(16, -1)  # [output channels, groups]
+
+    rtn_scale = scales(compress_weights(build(), mode=mode, group_size=group_size, **kwargs))
+    se_scale = scales(
+        compress_weights(
+            build(),
+            mode=mode,
+            group_size=group_size,
+            scale_estimation=True,
+            dataset=Dataset(samples),
+            subset_size=len(samples),
+            **kwargs,
+        )
+    )
+
+    np.testing.assert_array_equal(se_scale[:, 0], rtn_scale[:, 0])
+    if group_size != -1:
+        # The groups with calibration signal are still estimated
+        assert not np.array_equal(se_scale[:, 1:], rtn_scale[:, 1:])
 
 
 @pytest.mark.parametrize("mode", INT4_NF4_MODES + INT2_3_MODES)
