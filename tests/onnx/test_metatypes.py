@@ -8,12 +8,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import inspect
 from collections import Counter
 
 import pytest
 
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
+from nncf.onnx.graph.metatypes import onnx_metatypes
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNX_OPERATION_METATYPES
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXBatchNormMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConcatMetatype
@@ -22,7 +25,10 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGlobalAveragePoolMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpWithWeightsMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXQuantizeLinearMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReduceL2Metatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXReluMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXShapeMetatype
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
@@ -97,3 +103,20 @@ def test_mapping_onnx_metatypes(model_creator_func, ref_metatypes, q_ref_metatyp
     q_model = min_max_quantize_model(model)
     _check_metatypes(model, ref_metatypes)
     _check_metatypes(q_model, q_ref_metatypes)
+
+
+def test_all_onnx_metatypes_are_registered():
+    base_metatypes = {ONNXOpMetatype, ONNXOpWithWeightsMetatype}
+    unregistered = [
+        metatype.__name__
+        for _, metatype in inspect.getmembers(onnx_metatypes, inspect.isclass)
+        if issubclass(metatype, ONNXOpMetatype)
+        and metatype.__module__ == onnx_metatypes.__name__
+        and metatype not in base_metatypes
+        and metatype not in ONNX_OPERATION_METATYPES
+    ]
+    assert not unregistered, f"Metatypes are not registered in ONNX_OPERATION_METATYPES: {unregistered}"
+
+
+def test_reduce_l2_metatype_mapping():
+    assert ONNX_OPERATION_METATYPES.get_operator_metatype_by_op_name("ReduceL2") is ONNXReduceL2Metatype
