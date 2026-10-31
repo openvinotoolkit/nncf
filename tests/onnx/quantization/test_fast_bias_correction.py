@@ -82,10 +82,10 @@ def _build_matmul_add_model() -> onnx.ModelProto:
 
     x = mb.add_input("X", (2, 3))
 
-    x = mb.add_matmul(x, (3, 3))
+    x = mb.add_matmul(x, mb.add_initializer(np.random.rand(3, 3).astype(np.float32)))
     x = mb.add_add(x, mb.add_initializer(np.array([1, 1, 1], dtype=np.float32)))
 
-    x = mb.add_matmul(x, (3, 3))
+    x = mb.add_matmul(x, mb.add_initializer(np.random.rand(3, 3).astype(np.float32)))
     x = mb.add_add(x, mb.add_initializer(np.array([2, 2, 2], dtype=np.float32)))
 
     mb.add_output(x, (2, 3))
