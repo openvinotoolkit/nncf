@@ -72,6 +72,7 @@ from tests.openvino.native.models import AWQMatmulModel
 from tests.openvino.native.models import AWQModel
 from tests.openvino.native.models import AWQModel_fp16_overlow
 from tests.openvino.native.models import DifferentChannelSizeMatmulModel
+from tests.openvino.native.models import EmbeddingMatmulConvModel
 from tests.openvino.native.models import GatherAndMatmulShareData
 from tests.openvino.native.models import GatherWithTwoReductionAxes
 from tests.openvino.native.models import GroupedMatMulModel
@@ -891,7 +892,6 @@ def test_raise_error_for_many_axes():
     "params",
     (
         {"ratio": 0.5},
-        {"group_size": 64},
         {"all_layers": True},
         {"all_layers": False},
         *({"sensitivity_metric": metric} for metric in ALL_SENSITIVITY_METRICS),
@@ -2574,6 +2574,10 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
     def get_scoped_configs_ref_path(ref_name: str) -> Path:
         return get_actual_reference_for_current_openvino(SCOPED_CONFIGS_REFERENCES_DIR / f"{ref_name}.json")
 
+    @staticmethod
+    def supports_int8_group_wise() -> bool:
+        return True
+
     @pytest.fixture
     def transpose_a_supported(self) -> bool:
         return True
@@ -2586,3 +2590,47 @@ class TestOVTemplateWeightCompression(TemplateWeightCompression):
             group_size=-1,
         )
         assert self.get_num_int8_nodes(compressed_model) == 0
+
+    @pytest.mark.parametrize("use_scoped_config", [False, True], ids=["mode", "scoped_config"])
+    @pytest.mark.parametrize(
+        ("group_size", "fallback_mode"),
+        [
+            # The reduction channel sizes of all the weights with a single reduction axis are divisible by 4
+            (4, GroupSizeFallbackMode.ERROR),
+            # The reduction channel sizes 24 and 20 are not divisible by 16
+            (16, GroupSizeFallbackMode.IGNORE),
+            (16, GroupSizeFallbackMode.ADJUST),
+        ],
+        ids=["group_size_4_fallback_error", "group_size_16_fallback_ignore", "group_size_16_fallback_adjust"],
+    )
+    @pytest.mark.parametrize("mode", INT8_MODES, ids=[mode.value for mode in INT8_MODES])
+    def test_int8_group_wise(self, mode, group_size, fallback_mode, use_scoped_config):
+        """
+        Compares the compression config assigned to each weight node with the reference one when an INT8 mode is used
+        with a group size: the weights with a single reduction axis are quantized group-wise, and the weights with
+        several reduction axes, e.g. of convolutions, per-channel. The INT8 mode and the group size given by a scoped
+        config that matches all the nodes are expected to result in the same configs.
+
+        Set the NNCF_TEST_REGEN_DOT environment variable to regenerate the reference file.
+        """
+        advanced_parameters = AdvancedCompressionParameters(
+            group_size_fallback_mode=fallback_mode, min_adjusted_group_size=8
+        )
+        if use_scoped_config:
+            # The scoped config overrides the default INT8_ASYM per-channel configuration for all the nodes
+            kwargs = dict(scoped_configs=[nncf.ScopedConfig(patterns=[".*"], mode=mode, group_size=group_size)])
+        else:
+            kwargs = dict(mode=mode, group_size=group_size)
+
+        configs = self._compress_and_get_configs(
+            model=EmbeddingMatmulConvModel().ov_model, advanced_parameters=advanced_parameters, **kwargs
+        )
+
+        ref_path = self.get_scoped_configs_ref_path(
+            f"int8_group_wise_{mode.value}_group_size_{group_size}_fallback_{fallback_mode.value}"
+        )
+        # The reference is generated with the mode and the group size, and the scoped config is compared with it
+        if os.getenv("NNCF_TEST_REGEN_DOT") is not None and not use_scoped_config:
+            dump_to_json(ref_path, configs)
+
+        assert configs == load_json(ref_path)
