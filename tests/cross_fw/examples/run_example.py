@@ -176,6 +176,14 @@ def llm_compression_synthetic() -> dict[str, float]:
     return {"word_count": len(result.split())}
 
 
+def llm_compression_scoped_config() -> dict[str, float]:
+    from examples.llm_compression.openvino.tiny_llama_scoped_config.main import main as llm_compression_main
+
+    result = llm_compression_main()
+
+    return {"word_count": len(result.split())}
+
+
 def fp8_llm_quantization() -> dict[str, float]:
     from examples.llm_compression.openvino.smollm2_360m_fp8.main import main as fp8_llm_quantization_main
 

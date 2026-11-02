@@ -183,6 +183,14 @@
             "word_count": 80
         }
     },
+    "llm_compression_scoped_config": {
+        "backend": "openvino",
+        "requirements": "examples/llm_compression/openvino/tiny_llama_scoped_config/requirements.txt",
+        "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
+        "accuracy_metrics": {
+            "word_count": 84
+        }
+    },
     "llm_compression_fx": {
         "xfail": "Differ output on windows: ticket-187175",
         "backend": "torchfx",
