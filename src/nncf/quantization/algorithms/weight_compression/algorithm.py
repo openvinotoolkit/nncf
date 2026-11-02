@@ -812,8 +812,8 @@ class WeightCompression(Algorithm):
         adjusted_weight_params = []
         for w_params in weight_params:
             group_size = group_sizes[w_params.weight_name]
-            # Per-channel quantization does not depend on the channel size, which weights with several reduction
-            # axes (e.g. of convolutions) do not have
+            # get_reduction_channel_size() raises for weights with several reduction axes (e.g. of convolutions),
+            # while per-channel quantization does not need the channel size
             if group_size == -1:
                 valid_weight_params.append(w_params)
                 group_size_values[w_params.weight_name] = group_size
