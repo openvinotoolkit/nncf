@@ -587,6 +587,28 @@ def align_scale(s: Tensor, min=0.1, max=1.0) -> Tensor:
     return s
 
 
+def is_not_linear(layer_norm_type: str) -> bool:
+    ln_type = layer_norm_type.lower()
+    # list of layer norms with x * (weight + 1.0) form in forward pass
+    # for example Gemma3 uses (1 + weight) RMSNorm (weight initialized to zeros):
+    #   effective multiplier = (1 + weight)
+    #   to scale output by s: (1 + w_new) = s*(1 + w_old)  →  w_new = s*(1+w_old) - 1
+    # Standard RMSNorm (e.g. Llama) uses weight*x (weight initialized to ones):
+    #   effective multiplier = weight
+    #   to scale output by s: w_new = s * w_old
+    linear_ln_types = [
+        "gemma3rmsnorm",
+        "qwen3nextrmsnorm",
+        "qwen3_5rmsnorm",
+        "gemmarmsnorm",
+        "gemma2rmsnorm",
+        "museglimmertextcenteredrmsnorm",
+        "qwen3_5moermsnorm",
+        "qwen4exptextrmsnorm",
+    ]
+    return any(t in ln_type for t in linear_ln_types)
+
+
 @torch.no_grad()
 def equalize_up_gate_with_layernorm(model: nn.Module, eps: float = 1e-5, use_align_scale: bool = True) -> int:
     groups = _find_up_gate_groups(model)
@@ -617,14 +639,8 @@ def equalize_up_gate_with_layernorm(model: nn.Module, eps: float = 1e-5, use_ali
 
         # Scale producer (LayerNorm/RMSNorm) so its output is multiplied by s.
         s_dev = s.to(dtype=w_prod.dtype)
-        # Gemma3 uses (1 + weight) RMSNorm (weight initialized to zeros):
-        #   effective multiplier = (1 + weight)
-        #   to scale output by s: (1 + w_new) = s*(1 + w_old)  →  w_new = s*(1+w_old) - 1
-        # Standard RMSNorm (e.g. Llama) uses weight*x (weight initialized to ones):
-        #   effective multiplier = weight
-        #   to scale output by s: w_new = s * w_old
         ln_type = type(producer).__name__.lower()
-        not_linear = "gemma" in ln_type or "qwen3nextrmsnorm" in ln_type or "qwen3_5rmsnorm" in ln_type
+        not_linear = is_not_linear(ln_type)
         if not_linear:
             _set_weight_data(producer, s_dev * (1.0 + w_prod) - 1.0)
         else:
