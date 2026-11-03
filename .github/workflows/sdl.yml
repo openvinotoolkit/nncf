@@ -3,6 +3,8 @@ permissions: read-all
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
   push:
     branches:
       - develop
@@ -72,8 +74,10 @@ jobs:
     name: Trivy
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # Skip trivy for PRs to avoid blocking merge PRs by found vulnerabilities in requirements
-    if: ${{ github.event_name != 'pull_request' }}
+    # Skip on PRs and develop pushes to avoid blocking merges by vulnerabilities found in requirements
+    if: >-
+      ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && startsWith(github.ref_name, 'release_v')) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -83,12 +87,41 @@ jobs:
           scan-type: "fs"
           scan-ref: .
           scanners: "misconfig,license,vuln"
-          format: template
-          template: "@.github/scripts/trivy_html.tpl"
-          output: trivy_report.html
+          format: json
+          output: trivy_report.json
           cache: false
           hide-progress: true
           exit-code: 1
+      - name: Convert Report
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          trivy convert --format template --template "@.github/scripts/trivy_html.tpl" \
+            --output trivy_report.html trivy_report.json
+          trivy convert --format table --scanners misconfig,license,vuln \
+            --output trivy_report.txt trivy_report.json
+      - name: Print Scan Results
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          cat trivy_report.txt
+          ROWS=$(jq -r '
+            [.Results[]? | .Target as $target | .Vulnerabilities[]? | . + {Target: $target}]
+            | group_by([.Target, .PkgName, .InstalledVersion])[]
+            | "| \(.[0].Target) | \(.[0].PkgName) | \(.[0].InstalledVersion) "
+              + "| \([.[].FixedVersion // empty | select(. != "")] | unique | join(", ")) "
+              + "| \([.[] | "\(.VulnerabilityID) (\(.Severity))"] | unique | join(", ")) |"
+          ' trivy_report.json)
+          {
+            echo "## Trivy: packages to update"
+            if [[ -z "$ROWS" ]]; then
+              echo "No vulnerable packages found."
+            else
+              echo "| Target | Package | Installed | Fixed in | Vulnerabilities |"
+              echo "|---|---|---|---|---|"
+              echo "$ROWS"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Rename Report
         if: ${{ !cancelled() }}
         shell: bash
