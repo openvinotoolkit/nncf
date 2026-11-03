@@ -32,6 +32,7 @@ MAX_NEW_TOKENS = 100
 if hasattr(torch._dynamo.config, "prepare_freezing"):
     torch._dynamo.config.prepare_freezing = True
 
+
 def transform_fn(data: str, tokenizer: LlamaTokenizerFast) -> tuple[torch.Tensor, torch.Tensor]:
     """Transform input text into model-compatible input tensors."""
     tokenized_text = tokenizer(data["text"], max_length=MAX_CACHE_LEN, truncation=True, return_tensors="pt")
