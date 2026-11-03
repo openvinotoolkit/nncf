@@ -93,14 +93,14 @@ jobs:
           retention-days: 7
 
   examples-cuda:
-    name: Test examples CUDA [${{ matrix.group }}/1]
+    name: Test examples CUDA [${{ matrix.group }}/2]
     runs-on: aks-linux-6-cores-55gb-gpu-a10
     timeout-minutes: 40
     if: ${{ !inputs.skip_gpu }}
     strategy:
       fail-fast: false
       matrix:
-        group: [1]
+        group: [1, 2]
     env:
       DEBIAN_FRONTEND: noninteractive
     steps:
@@ -135,7 +135,7 @@ jobs:
             --junit-xml=${{ env.RESULT_XML }} \
             --durations-path=tests/cross_fw/examples/test_durations.json \
             --splitting-algorithm=least_duration \
-            --splits 1 \
+            --splits 2 \
             --group ${{ matrix.group }} \
             ${{ env.PYTEST_ARGS }}
           ret=$?
