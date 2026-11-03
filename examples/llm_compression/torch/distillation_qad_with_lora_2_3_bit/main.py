@@ -651,7 +651,7 @@ def run_training(
     epoch_samples: int,
     microbatches_per_epoch: int,
     model_state: bool,
-) -> int:
+) -> tuple[int, float]:
     """
     Run the distillation-based training loop for the compressed model.
 
@@ -672,9 +672,10 @@ def run_training(
     :param epoch_samples: The available number of samples in the epoch after rounding.
     :param microbatches_per_epoch: Number of microbatch chunks in the epoch.
     :param model_state: Whether to save full model weights in the checkpoint.
-    :return: The total number of optimizer steps performed.
+    :return: The total number of optimizer steps performed and the loss aggregated over the last optimizer step.
     """
     loss_numerator = grad_steps = 0
+    aggregated_loss = float("nan")
     total_steps = start_total_steps
     for epoch in range(num_epochs):
         batch_indices_epoch = torch.randperm(num_samples)[:epoch_samples].chunk(microbatches_per_epoch)
@@ -721,7 +722,7 @@ def run_training(
                 epoch_tracker.update(advance=0, description=f"{phase_desc} {epoch} | loss={aggregated_loss:.4f}")
 
         save_checkpoint(model, ckpt_file, model_state=model_state)
-    return total_steps
+    return total_steps, aggregated_loss
 
 
 def check_args(args):
@@ -734,7 +735,11 @@ def check_args(args):
 
 
 def main(argv) -> float:
-    """Fine-tune the specified model and export the compressed model."""
+    """
+    Fine-tune the specified model and export the compressed model to OpenVINO.
+
+    :return: The distillation loss aggregated over the last optimizer step (NaN if no training was performed).
+    """
     parser = get_argument_parser()
     args = parser.parse_args(argv)
     check_args(args)
@@ -829,7 +834,7 @@ def main(argv) -> float:
 
     microbatches_per_epoch = epoch_samples // args.microbatch_size
 
-    total_steps = run_training(
+    total_steps, final_loss = run_training(
         model=model,
         train_loader=train_loader,
         orig_hiddens=orig_hiddens,
@@ -855,7 +860,7 @@ def main(argv) -> float:
     if args.scale_epochs > 0:
         scale_params = set_trainable(model, lora_lr=args.lr, fq_lr=fq_lr, scales_only=True)
         opt = torch.optim.AdamW(scale_params, weight_decay=weight_decay)
-        run_training(
+        _, final_loss = run_training(
             model=model,
             train_loader=train_loader,
             orig_hiddens=orig_hiddens,
@@ -890,8 +895,10 @@ def main(argv) -> float:
         export_to_dequantized_torch(args.pretrained, ckpt_file, ckpt_file.parent / "dequantized")
         print(f"The finetuned model has been exported to torch and saved to: {ckpt_file.parent / 'dequantized'}\n")
 
-    # Export the best tuned model to OpenVINO.
+    # Export the tuned model to OpenVINO.
     export_to_openvino(args.pretrained, ckpt_file, ckpt_file.parent, tokenizer, args.bits)
+    print(f"The final distillation loss = {final_loss:.4f}")
+    return final_loss
 
 
 if __name__ == "__main__":
