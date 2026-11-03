@@ -176,6 +176,14 @@ def llm_compression_synthetic() -> dict[str, float]:
     return {"word_count": len(result.split())}
 
 
+def llm_compression_scoped_config() -> dict[str, float]:
+    from examples.llm_compression.openvino.tiny_llama_scoped_config.main import main as llm_compression_main
+
+    result = llm_compression_main()
+
+    return {"word_count": len(result.split())}
+
+
 def fp8_llm_quantization() -> dict[str, float]:
     from examples.llm_compression.openvino.smollm2_360m_fp8.main import main as fp8_llm_quantization_main
 
@@ -226,6 +234,33 @@ def llm_compression_distillation_qat_with_lora() -> float:
     best_ov_perplexity = distillation_qat_with_lora_main(args)
 
     return {"best_ov_perplexity": best_ov_perplexity}
+
+
+def llm_compression_distillation_qad_with_lora_2_3_bit() -> dict[str, float]:
+    from examples.llm_compression.torch.distillation_qad_with_lora_2_3_bit.main import (
+        main as distillation_qad_with_lora_2_3_bit_main,
+    )
+
+    set_torch_cuda_seed()
+
+    args = [
+        "--epochs=1",
+        "--bits=3",
+        "--group_size=64",
+        "--pretrained=HuggingFaceTB/SmolLM2-135M-Instruct",
+        "--dataset=wikitext-2",
+        "--num_train_samples=128",
+        "--train_seqlen=128",
+        "--lora_rank=8",
+        "--batch_size=16",
+        "--microbatch_size=4",
+        "--lr=5e-4",
+        "--full_determinism",
+    ]
+
+    final_loss = distillation_qad_with_lora_2_3_bit_main(args)
+
+    return {"final_loss": final_loss}
 
 
 def llm_compression_qat_with_nls() -> float:

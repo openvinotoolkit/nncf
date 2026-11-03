@@ -1052,6 +1052,13 @@ class TemplateWeightCompression(ABC):
         """
         return None
 
+    @staticmethod
+    def supports_int8_group_wise() -> bool:
+        """
+        Returns True if the backend supports group-wise quantization in INT8 modes.
+        """
+        return False
+
     def _compress_and_get_configs(self, **kwargs) -> dict[str, dict[str, Any]]:
         """
         Compresses a model and returns the compression config assigned to each compressed weight node.
@@ -1338,6 +1345,8 @@ class TemplateWeightCompression(ABC):
             if mode is None:
                 pytest.skip("The backend supports all the compression modes")
             scoped_configs = [nncf.ScopedConfig(patterns=[".*"], mode=mode, group_size=-1)]
+        if request.node.callspec.id == "int8_with_group_size" and self.supports_int8_group_wise():
+            pytest.skip("The backend supports group-wise quantization in INT8 modes")
 
         with pytest.raises(error):
             compress_weights(

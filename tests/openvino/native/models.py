@@ -922,6 +922,27 @@ class DifferentChannelSizeMatmulModel(OVReferenceModel):
         return model
 
 
+class EmbeddingMatmulConvModel(OVReferenceModel):
+    """
+    Model with the weights of an embedding and three MatMul nodes, whose reduction channel sizes are 32, 32, 24 and 20,
+    and the weights of a convolution, which have several reduction axes.
+    """
+
+    def _create_ov_model(self):
+        input_ids = opset.parameter([1, 4], dtype=np.int64, name="Input_ids")
+        embedding_data = opset.constant(self._rng.random((8, 32)) - 0.5, dtype=np.float32, name="embedding_data")
+        last_node = opset.gather(embedding_data, input_ids, axis=0, name="Embedding")
+        for i, (channel_size, prev_channel_size) in enumerate([(24, 32), (20, 24), (8, 20)], start=1):
+            weights_data = self._rng.random((channel_size, prev_channel_size)) - 0.5
+            weights = opset.constant(weights_data, dtype=np.float32, name=f"weights_{i}")
+            last_node = opset.matmul(last_node, weights, transpose_a=False, transpose_b=True, name=f"MatMul_{i}")
+
+        image = opset.parameter([1, 3, 8, 8], name="Image")
+        conv_weights = opset.constant(self._rng.random((4, 3, 3, 3)) - 0.5, dtype=np.float32, name="conv_weights")
+        conv = opset.convolution(image, conv_weights, [1, 1], [0, 0], [0, 0], [1, 1], name="Conv")
+        return ov.Model([last_node, conv], [input_ids, image])
+
+
 class IdentityMatmul(OVReferenceModel):
     def _create_ov_model(self, weights_dtype: ov.Type | None = None, activation_dtype: ov.Type | None = None):
         """
