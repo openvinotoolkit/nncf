@@ -28,6 +28,9 @@ MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 MAX_CACHE_LEN = 512
 MAX_NEW_TOKENS = 100
 
+# TODO(anazir299): Remove after this is moved to openvino: https://github.com/openvinotoolkit/openvino/pull/37910
+if hasattr(torch._dynamo.config, "prepare_freezing"):
+    torch._dynamo.config.prepare_freezing = True
 
 def transform_fn(data: str, tokenizer: LlamaTokenizerFast) -> tuple[torch.Tensor, torch.Tensor]:
     """Transform input text into model-compatible input tensors."""
