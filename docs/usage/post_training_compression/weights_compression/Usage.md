@@ -129,7 +129,7 @@ compressed_model = compress_weights(
 #### Custom precision for specific layers
 
 - The `scoped_configs` parameter assigns a compression configuration (`mode`, `group_size`) to certain layers
-  explicitly. A typical use case is a Mixture-of-Experts model, where the experts are compressed to 4 bits, while the router layers are kept in 8 bits to preserve accuracy.
+  explicitly. A typical use case is a Mixture-of-Experts model, where the experts are compressed to 4 bits, while the router layers are kept in 8 bits to preserve accuracy. See [the scoped config](/docs/usage/ScopedConfig.md) documentation for more details.
 
 ```python
 import nncf
