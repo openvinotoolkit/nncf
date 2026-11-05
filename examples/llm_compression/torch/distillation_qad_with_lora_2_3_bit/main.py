@@ -341,6 +341,8 @@ def export_to_openvino(
         model = nncf.strip(model, do_copy=False, strip_format=StripFormat.DQ)
 
     model.eval()
+
+    # TODO(aanufriev): remove try-cath after fixing of https://github.com/huggingface/optimum-intel/pull/2108
     try:
         export_from_model(model, ir_dir, device="cpu")
     except Exception as e:

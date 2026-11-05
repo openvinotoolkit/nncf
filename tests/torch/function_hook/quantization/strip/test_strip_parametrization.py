@@ -51,6 +51,8 @@ def _compress(model: nn.Module, example_input: torch.Tensor, mode: CompressWeigh
 @pytest.mark.parametrize(
     "mode",
     (
+        CompressWeightsMode.INT2_SYM,
+        CompressWeightsMode.INT3_SYM,
         CompressWeightsMode.INT4_SYM,
         CompressWeightsMode.INT4_ASYM,
         CompressWeightsMode.INT8_SYM,
