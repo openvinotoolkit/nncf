@@ -334,6 +334,7 @@ def export_to_openvino(
         else:
             language_model = extract_causal_lm_from_visual(model)
             language_model = load_checkpoint(language_model, ckpt_file)
+            # TODO(aanufriev): handle the case for visual models with non-merged AWQ scales
             nncf.strip(language_model, do_copy=False, strip_format=StripFormat.RP)
     else:
         model = AutoModelForCausalLM.from_pretrained(pretrained, device_map="cpu", torch_dtype=torch.float32)
