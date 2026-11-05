@@ -328,7 +328,7 @@ def export_to_openvino(
 
     if is_visual:
         model = AutoModelForMultimodalLM.from_pretrained(pretrained, device_map="cpu", torch_dtype=torch.float32)
-        if "gemma" in pretrained.lower():
+        if "gemma" in config.model_type.lower():
             model = load_checkpoint(model, ckpt_file)
             nncf.strip(model, do_copy=False, strip_format=StripFormat.RP)
         else:
