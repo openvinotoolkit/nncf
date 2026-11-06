@@ -214,5 +214,5 @@ def get_quantized_tensor_shape(
     :return: Shape of a quantized tensor, if shape is existed. Otherwise - None.
     """
     if target_point.is_weight_target_point():
-        return node.layer_attributes.weight_attrs[target_point.port_id]["shape"]
+        return node.layer_attributes.weight_attrs[target_point.port_id]["weight_input_shape"]
     return _get_activation_tensor_shape(nncf_graph, node, target_point)
