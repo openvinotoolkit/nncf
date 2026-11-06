@@ -709,6 +709,8 @@ The functionality of the model object is still preserved as a compressed model.<
 in low-bit precision using fake quantize parameters. This is the default format for deploying models
 with compressed weights.</p></li>
 <li><p><strong>IN_PLACE</strong> – Directly applies NNCF operations to the weights, replacing the original weights.</p></li>
+<li><p><strong>RP</strong> – Registers parametrization for the compressed weights, allowing to handle decompression graph
+without hooks then changing the model infernce graph in optimum-intel.</p></li>
 </ul>
 </dd>
 </dl>
