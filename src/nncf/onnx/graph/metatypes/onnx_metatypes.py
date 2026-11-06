@@ -569,6 +569,7 @@ class ONNXReduceSumMetatype(ONNXOpMetatype):
     hw_config_names = [HWOpName.REDUCE_SUM]
 
 
+@ONNX_OPERATION_METATYPES.register()
 class ONNXReduceL2Metatype(ONNXOpMetatype):
     name = "ReduceL2Op"
     op_names = ["ReduceL2"]

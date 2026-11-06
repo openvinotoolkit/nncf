@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 from collections import Counter
 
 import pytest
@@ -97,3 +98,19 @@ def test_determining_weights_port():
             const_port_id = const_port_ids[0]
             assert const_port_id == REF_WEIGHTS_PORT_IDS[node.node_name]
     assert counter == len(REF_WEIGHTS_PORT_IDS)
+
+
+def test_all_openvino_metatypes_are_registered() -> None:
+    """
+    Checks that every metatype with op names defined in the openvino_metatypes module
+    is registered in OV_OPERATOR_METATYPES.
+    """
+    registered = set(ovm.OV_OPERATOR_METATYPES.registry_dict.values())
+    defined = [
+        cls
+        for _, cls in inspect.getmembers(ovm, inspect.isclass)
+        if issubclass(cls, ovm.OVOpMetatype) and cls is not ovm.OVOpMetatype
+    ]
+    assert defined, "No OpenVINO metatypes found in the module"
+    not_registered = [cls.__name__ for cls in defined if cls not in registered]
+    assert not not_registered, f"Metatypes are not registered in OV_OPERATOR_METATYPES: {not_registered}"
