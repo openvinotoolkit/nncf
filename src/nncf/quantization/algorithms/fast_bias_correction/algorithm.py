@@ -286,16 +286,19 @@ class FastBiasCorrection(Algorithm):
             output_fp.extend(tensor_collector.get_statistics().mean_values)
         return output_fp
 
-    def _add_statistic_point(self, container: StatisticPointsContainer, point: TargetPoint, axis: int) -> None:
+    def _add_statistic_point(
+        self, container: StatisticPointsContainer, point: TargetPoint, axis: int, input_rank: int | None = None
+    ) -> None:
         """
         Adds specific statistic point.
 
         :param container: StatisticPointsContainer instance.
         :param point: TargetPoint for statistic collection.
         :param axis: Channel axis for the statistics calculation.
+        :param input_rank: Rank of the statistics collection target tensor, if known.
         """
         stat_collector = self._backend_entity.mean_statistic_collector(
-            channel_axis=axis, num_samples=self.subset_size, inplace=self.inplace_statistics
+            channel_axis=axis, num_samples=self.subset_size, inplace=self.inplace_statistics, input_rank=input_rank
         )
         container.add_statistic_point(
             StatisticPoint(target_point=point, tensor_collector=stat_collector, algorithm=self._algorithm_key)
@@ -323,7 +326,9 @@ class FastBiasCorrection(Algorithm):
         engine = EngineFactory.create(model)
         raw_output = engine.infer(input_blob)
         q_outputs = self._backend_entity.process_model_output(raw_output, output_name)
-        q_outputs = mean_per_channel(q_outputs, output_channel_axis)
+        # A 1D output has no batch dimension to reduce: it is already the per-channel data.
+        if q_outputs.ndim > 1:
+            q_outputs = mean_per_channel(q_outputs, output_channel_axis)
         bias_shift = fns.stack(output_fp) - q_outputs
         return bias_shift
 
@@ -346,10 +351,14 @@ class FastBiasCorrection(Algorithm):
             )
             input_shape = graph.get_input_edges(node)[input_port_id].tensor_shape
             input_channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port_id, input_shape)
+            output_edges = graph.get_output_edges_by_port_id(node, output_port_id)
+            output_rank = len(output_edges[0].tensor_shape) if output_edges else None
 
-            self._add_statistic_point(statistic_container, pre_layer_statistic_point, input_channel_axis)
             self._add_statistic_point(
-                statistic_container, post_layer_statistic_point, node.metatype.output_channel_axis
+                statistic_container, pre_layer_statistic_point, input_channel_axis, len(input_shape)
+            )
+            self._add_statistic_point(
+                statistic_container, post_layer_statistic_point, node.metatype.output_channel_axis, output_rank
             )
 
         return statistic_container
