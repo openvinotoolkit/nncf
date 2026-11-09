@@ -11,12 +11,16 @@
 
 import re
 import tempfile
+from pathlib import Path
 
+import numpy as np
 import onnx
+import onnxruntime
 import pytest
 
 import nncf
 from nncf.common.utils.os import is_windows
+from nncf.onnx.graph.model_metadata import MetadataKey
 from nncf.onnx.quantization.quantize_model import check_external_data_location
 from tests.onnx.models import build_matmul_model
 
@@ -76,3 +80,27 @@ def test_valid_external_data_dir():
     with tempfile.TemporaryDirectory(dir=tempfile.gettempdir()) as temp_dir:
         model = _build_model_with_external_data(temp_dir)
         assert check_external_data_location(model, temp_dir) == temp_dir
+
+
+def test_compress_weights_ignores_external_data_dir_from_input_model(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    model_dir = tmp_path / "model"
+    other_dir = tmp_path / "other"
+    model_dir.mkdir()
+    other_dir.mkdir()
+    model = _build_model_with_external_data(str(model_dir))
+    weight = onnx.numpy_helper.to_array(model.graph.initializer[0], str(model_dir))
+    # A data file with the same name but different values in another directory.
+    (weight + 100.0).tofile(other_dir / "model.data")
+    # The input model already carries the NNCF metadata key that points to the other directory.
+    entry = model.metadata_props.add()
+    entry.key = MetadataKey.EXTERNAL_DATA_DIR.value
+    entry.value = str(other_dir)
+
+    monkeypatch.chdir(model_dir)
+    compressed_model = nncf.compress_weights(model)
+
+    x = np.ones((2, 3), dtype=np.float32)
+    (actual,) = onnxruntime.InferenceSession(compressed_model.SerializeToString()).run(None, {"X": x})
+    np.testing.assert_allclose(actual, x @ weight, atol=1e-2)
