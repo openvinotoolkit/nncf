@@ -1,5 +1,33 @@
 # Release Notes
 
+## New in Release 3.5.0
+
+- Breaking changes:
+  - Dropped support for Python 3.10; the minimum supported version is now Python 3.11 (https://github.com/openvinotoolkit/nncf/pull/4242).
+- Features:
+  - Introduced the `nncf.Scope` class, which generalizes `nncf.IgnoredScope` for selecting nodes by names, patterns, types, and subgraphs; `nncf.IgnoredScope` is kept as an alias (https://github.com/openvinotoolkit/nncf/pull/4236).
+  - Introduced `nncf.ScopedConfig` and the `scoped_configs` parameter of `nncf.compress_weights` to assign a compression mode and group size to the nodes selected by a `nncf.Scope` (https://github.com/openvinotoolkit/nncf/pull/4171), with documentation (https://github.com/openvinotoolkit/nncf/pull/4299) and an example (https://github.com/openvinotoolkit/nncf/pull/4290).
+  - (OpenVINO) Allowed the `group_size` parameter for INT8 weight compression modes (https://github.com/openvinotoolkit/nncf/pull/4278).
+  - (PyTorch) Added the `INT2_SYM` and `INT3_SYM` modes to LoRA-QAT (https://github.com/openvinotoolkit/nncf/pull/4158).
+  - (PyTorch) Added the `GroupedMatMul` operation support for data-free weight compression (https://github.com/openvinotoolkit/nncf/pull/4241).
+- Fixes:
+  - (ONNX) Fixed the incorrect scale shape for the `Conv` layer when grouping is disabled (https://github.com/openvinotoolkit/nncf/pull/4265).
+  - (PyTorch) Fixed the TorchFX TinyLlama weight compression example for `transformers` 5.5 (https://github.com/openvinotoolkit/nncf/pull/4289).
+- Improvements:
+  - (PyTorch) Layers with a dimension smaller than `lora_rank` are now compressed with the backup mode instead of the LoRA low-rank scope in QAT/QAD (https://github.com/openvinotoolkit/nncf/pull/4287).
+  - (PyTorch) Added a `register_parametrization`-based representation of the compressed model on strip and enabled the export of image-text-to-text models after 2-3 bit QAD (https://github.com/openvinotoolkit/nncf/pull/4288).
+  - (PyTorch) Migrated the TorchFX model extraction to the `FXModelExtractionCommand` instead of PyTorch commands (https://github.com/openvinotoolkit/nncf/pull/4183).
+- Deprecations/Removals:
+  - Removed the deprecated `nncf.common.utils.logger` module (https://github.com/openvinotoolkit/nncf/pull/4244).
+  - Removed the `equivalent_to` method of `QuantizerSetupBase` (https://github.com/openvinotoolkit/nncf/pull/4228) and unused layer attributes (https://github.com/openvinotoolkit/nncf/pull/4280).
+  - Removed the `anomaly_stfpm_quantize_with_accuracy_control` example (https://github.com/openvinotoolkit/nncf/pull/4199).
+- Requirements:
+  - Updated `torch` to 2.14.0 (https://github.com/openvinotoolkit/nncf/pull/4230).
+  - Updated `onnx` to 1.23.0 (https://github.com/openvinotoolkit/nncf/pull/4229).
+  - Updated the `numpy` upper bound to < 2.6.0 (https://github.com/openvinotoolkit/nncf/pull/4111).
+  - Updated `optimum-intel` to 2.2.0 (https://github.com/openvinotoolkit/nncf/pull/4225) and `accelerate` to 1.15.0 (https://github.com/openvinotoolkit/nncf/pull/4234).
+  - Removed the `tabulate` dependency; tables are rendered with `rich` (https://github.com/openvinotoolkit/nncf/pull/4243).
+
 ## New in Release 3.4.0
 
 - Features:
