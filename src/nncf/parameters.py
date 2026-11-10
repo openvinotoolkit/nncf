@@ -150,11 +150,14 @@ class StripFormat(StrEnum):
         in low-bit precision using fake quantize parameters. This is the default format for deploying models
         with compressed weights.
     :param IN_PLACE: Directly applies NNCF operations to the weights, replacing the original weights.
+    :param RP: Registers parametrization for the compressed weights, allowing to handle decompression graph
+        without hooks then changing the model infernce graph in optimum-intel.
     """
 
     NATIVE = "native"
     DQ = "dequantize"
     IN_PLACE = "in_place"
+    RP = "register_parametrization"
 
 
 @api(canonical_alias="nncf.BackupMode")
