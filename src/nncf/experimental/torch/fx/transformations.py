@@ -259,7 +259,9 @@ def constant_update(
         new_const = create_getattr_from_value(model, graph, node_name, value, device=tensor_device)
 
     old_const.replace_all_uses_with(new_const, propagate_meta=True)
-    graph.eliminate_dead_code()
+    # Remove only the replaced constant: eliminate_dead_code() walks the whole graph on every update
+    # and also removes inserted statistic collectors, whose outputs have no users.
+    graph.erase_node(old_const)
 
 
 def qdq_insertion_transformation_builder(
