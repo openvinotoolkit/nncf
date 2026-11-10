@@ -514,7 +514,7 @@ def _build_integer_quantization_model(
 
     num_bits = config.num_bits
     eps = np.finfo(np.float32).eps
-    level_low = 0 if is_asym_mode else -(2 ** (num_bits - 1))
+    level_low = 0 if is_asym_mode else -(2 ** (num_bits - 1)) + int(config.narrow_range)
     level_high = 2**num_bits - 1 if is_asym_mode else 2 ** (num_bits - 1) - 1
 
     divide_op = opset.divide if ov_model_params.convertable_division else non_convertable_divide_op

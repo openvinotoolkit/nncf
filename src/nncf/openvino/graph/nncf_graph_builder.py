@@ -53,6 +53,7 @@ class GraphConverter:
             "bf16": "float",
             "f32": "float",
             "f64": "float",
+            "i2": "int",
             "i4": "int",
             "i8": "int",
             "i16": "int",
