@@ -312,7 +312,7 @@ def test_constant_update_transformation_keeps_leaf_modules() -> None:
 
     nodes = list(transformed_model.graph.nodes)
     assert [node.target for node in nodes if node.op == "call_module"] == ["collector"]
-    assert old_const_node not in nodes
+    assert old_const_node.name not in {node.name for node in nodes}
 
 
 def test_constant_update_transformation_no_constant():
