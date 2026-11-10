@@ -573,7 +573,7 @@ def _get_pattern_replacement_per_channel() -> tuple[
         return dequantized
 
     def replacement_graph_per_channel(weight, scale, zero_point, axis, low, high, dtype):
-        return torch.ops.aten.sub.Tensor(torch.ops.aten.mul.Tensor(weight, scale), zero_point)
+        return torch.ops.aten.mul.Tensor(torch.ops.aten.sub.Tensor(weight, zero_point), scale)
 
     return pattern_per_channel, replacement_graph_per_channel
 
@@ -596,7 +596,7 @@ def _get_pattern_replacement_per_tensor() -> tuple[
         return dequantized
 
     def replacement_graph_per_tensor(weight, scale, zero_point, low, high, dtype):
-        return torch.ops.aten.sub.Tensor(torch.ops.aten.mul.Tensor(weight, scale), zero_point)
+        return torch.ops.aten.mul.Tensor(torch.ops.aten.sub.Tensor(weight, zero_point), scale)
 
     return pattern_per_tensor, replacement_graph_per_tensor
 
@@ -609,10 +609,10 @@ def _set_meta_for_matches(model: torch.fx.GraphModule, matches: torch.fx.subgrap
     :param matches: matches returned by the subgraph_rewriter
     """
     for match in matches:
-        mul_node = match.replacements[0]
-        sub_node = match.replacements[1]
-        _set_new_node_meta(mul_node, mul_node.args, torch.mul, model)
+        sub_node = match.replacements[0]
+        mul_node = match.replacements[1]
         _set_new_node_meta(sub_node, sub_node.args, torch.sub, model)
+        _set_new_node_meta(mul_node, mul_node.args, torch.mul, model)
 
 
 def _get_node_inputs(node: torch.fx.Node, model: torch.fx.GraphModule) -> tuple[torch.Tensor | int] | None:
@@ -649,30 +649,38 @@ def _get_value(
 
 def _compress_qdq_constant_transformation(model: torch.fx.GraphModule, matches) -> None:
     """
-    Change the FP32 weight value to Int8 and also reshape the scale for per_channel_quantization.
+    Replaces the FP32 weight value with its integer codes, using the quantization range and dtype
+    of the matched quantizer (for example int8 [-128, 127] or uint8 [0, 255]).
+    The zero point is converted to a floating point value, so that subtracting it from the integer codes
+    cannot overflow. The scale and the zero point are also reshaped for per channel quantization.
 
     :param: model: Model to apply transformations to.
+    :param matches: Matches returned by the subgraph rewriter.
     """
     for match in matches:
-        mul_node = match.replacements[0]
-        sub_node = match.replacements[1]
+        sub_node = match.replacements[0]
+        mul_node = match.replacements[1]
         nodes_map = {node.name: match.nodes_map[node] for node in match.nodes_map}
 
         weight_node = _get_value(nodes_map["weight"], model)
         scale_node = _get_value(nodes_map["scale"], model)
         zp_node = _get_value(nodes_map["zero_point"], model)
         axis = _get_value(nodes_map.get("axis"), model)
+        quant_min = _get_value(nodes_map["low"], model)
+        quant_max = _get_value(nodes_map["high"], model)
+        dtype = _get_value(nodes_map["dtype"], model)
         port_id = 0
         if axis is not None:
             result = torch.ops.quantized_decomposed.quantize_per_channel.default(
-                weight_node, scale_node, zp_node, axis, -128, 127, torch.int8
+                weight_node, scale_node, zp_node, axis, quant_min, quant_max, dtype
             )
             _reshape_scale_zp(model, sub_node, mul_node, weight_node, scale_node, zp_node, axis)
         else:
             result = torch.ops.quantized_decomposed.quantize_per_tensor.default(
-                weight_node, scale_node, zp_node, -128, 127, torch.int8
+                weight_node, scale_node, zp_node, quant_min, quant_max, dtype
             )
-        constant_update(model, mul_node, result, port_id, updated_node_name="compressed_weight_updated_constant")
+            sub_node.update_arg(1, float(zp_node))
+        constant_update(model, sub_node, result, port_id, updated_node_name="compressed_weight_updated_constant")
 
 
 def _reshape_scale_zp(
@@ -685,7 +693,8 @@ def _reshape_scale_zp(
     axis: int,
 ) -> None:
     """
-    Reshape scale and zero point so that it can be multiplied elementwise with the weight for per channel quantization.
+    Reshape scale and zero point so that they can be applied elementwise to the weight for per channel quantization.
+    The zero point is converted to the scale dtype, so that subtracting it from the integer weight cannot overflow.
 
     :param model: Model to apply transformations to.
     :param node: quantize node whose scale has to be reshaped
@@ -693,7 +702,7 @@ def _reshape_scale_zp(
     new_shape = [1] * weight.dim()
     new_shape[axis] = scale.shape[0]
     scale = scale.reshape(new_shape)
-    zp = zp.reshape(new_shape)
+    zp = zp.reshape(new_shape).to(scale.dtype)
     constant_update(model, sub_node, zp, 1, updated_node_name="zero_point_updated_constant")
     constant_update(model, mul_node, scale, 1, updated_node_name="scale_updated_constant")
 
@@ -728,7 +737,7 @@ def fq_weights_transformation(model: torch.fx.GraphModule) -> None:
 
 def compress_post_quantize_transformation(model: torch.fx.GraphModule) -> None:
     r"""
-    Applies transformation to compress the weights to Int8 after the quantization step.
+    Applies transformation to compress the weights to integer values after the quantization step.
     Starts by removing the Quantize/De-Quantize nodes for weight nodes by matching the pattern
     to be like follows:
 
@@ -739,13 +748,14 @@ def compress_post_quantize_transformation(model: torch.fx.GraphModule) -> None:
         Dequantize
 
     and replace with the following:
-     weight scale
+     weight  Zero Point
        \     /
-       Multiply  Zero Point
+       Subtract  scale
           |     /
-        Subtract
+       Multiply
 
-    and then also updates the weights to int8 values and reshape the scale and zero point.
+    and then also updates the weights to integer values of the matched quantizer dtype
+    and reshape the scale and zero point.
 
     :param model: Model to apply transformations to.
     """

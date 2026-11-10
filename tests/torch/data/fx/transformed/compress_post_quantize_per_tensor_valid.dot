@@ -7,8 +7,8 @@ digraph {
 "5 bias" [id=5, type="get_attr"];
 "6 x" [id=6, type=input];
 "7 compressed_weight_updated_constant0" [id=7, type="get_attr"];
-"8 mul_tensor" [id=8, type=mul];
-"9 sub_tensor" [id=9, type=sub];
+"8 sub_tensor" [id=8, type=sub];
+"9 mul_tensor" [id=9, type=mul];
 "10 conv2d" [id=10, type=conv2d];
 "11 conv2d_1" [id=11, type=conv2d];
 "12 add_" [id=12, type="add_"];
@@ -26,9 +26,9 @@ digraph {
 "5 bias" -> "13 add__1" [key=0, style=solid, label="(1,)"];
 "5 bias" -> "16 add_1" [key=0, style=solid, label="(1,)"];
 "6 x" -> "10 conv2d" [key=0, style=solid, label="(1, 3, 224, 224)"];
-"7 compressed_weight_updated_constant0" -> "8 mul_tensor" [key=0, style=solid, label="(3, 3, 1, 1)"];
-"8 mul_tensor" -> "9 sub_tensor" [key=0, style=solid, label="(3, 3, 1, 1)"];
-"9 sub_tensor" -> "10 conv2d" [key=0, style=solid, label="(3, 3, 1, 1)"];
+"7 compressed_weight_updated_constant0" -> "8 sub_tensor" [key=0, style=solid, label="(3, 3, 1, 1)"];
+"8 sub_tensor" -> "9 mul_tensor" [key=0, style=solid, label="(3, 3, 1, 1)"];
+"9 mul_tensor" -> "10 conv2d" [key=0, style=solid, label="(3, 3, 1, 1)"];
 "10 conv2d" -> "11 conv2d_1" [key=0, style=solid, label="(1, 3, 224, 224)"];
 "10 conv2d" -> "12 add_" [key=0, style=solid, label="(1, 3, 224, 224)"];
 "11 conv2d_1" -> "13 add__1" [key=0, style=solid, label="(1, 3, 224, 224)"];
