@@ -19,7 +19,6 @@
   - (PyTorch) Migrated the TorchFX model extraction to the `FXModelExtractionCommand` instead of PyTorch commands (https://github.com/openvinotoolkit/nncf/pull/4183).
 - Deprecations/Removals:
   - Removed the deprecated `nncf.common.utils.logger` module (https://github.com/openvinotoolkit/nncf/pull/4244).
-  - Removed the `equivalent_to` method of `QuantizerSetupBase` (https://github.com/openvinotoolkit/nncf/pull/4228) and unused layer attributes (https://github.com/openvinotoolkit/nncf/pull/4280).
   - Removed the `anomaly_stfpm_quantize_with_accuracy_control` example (https://github.com/openvinotoolkit/nncf/pull/4199).
 - Requirements:
   - Updated `torch` to 2.14.0 (https://github.com/openvinotoolkit/nncf/pull/4230).
