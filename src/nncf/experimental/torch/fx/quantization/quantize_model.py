@@ -27,6 +27,7 @@ from nncf.experimental.torch.fx.quantization.backend_parameters import is_weight
 from nncf.experimental.torch.fx.transformations import DuplicateDQPassNoAnnotations
 from nncf.experimental.torch.fx.transformations import apply_quantization_transformations
 from nncf.experimental.torch.fx.transformations import compress_post_quantize_transformation
+from nncf.experimental.torch.fx.transformations import encode_uint8_qdq_as_int8
 from nncf.experimental.torch.fx.transformations import fq_weights_transformation
 from nncf.parameters import BackupMode
 from nncf.parameters import CompressionFormat
@@ -107,6 +108,9 @@ def quantize_impl(
     quantized_model = pm(quantized_model).graph_module
     pm = PassManager([PortNodeMetaForQDQ()])
     quantized_model = pm(quantized_model).graph_module
+
+    # TODO(anzr299): Remove after issue with incorrect dtype for qdq is fixed in openvino
+    quantized_model = encode_uint8_qdq_as_int8(quantized_model)
 
     quantized_model.meta.update(original_graph_meta)
     quantized_model = _disallow_eval_train(quantized_model)
