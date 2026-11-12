@@ -886,12 +886,10 @@ def remove_split_getitem_nodes(graph: NNCFGraph) -> None:
 
 
 def encode_uint8_qdq_as_int8(model: torch.fx.GraphModule) -> torch.fx.GraphModule:
-    qdq_ops = (
-        torch.ops.quantized_decomposed.quantize_per_tensor.default,
-        torch.ops.quantized_decomposed.dequantize_per_tensor.default,
-    )
     for node in model.graph.nodes:
-        if node.op != "call_function" or node.target not in qdq_ops or len(node.args) != 6:
+        if node.op != "call_function" or node.target not in QUANTIZE_NODE_TARGETS + DEQUANTIZE_NODE_TARGETS:
+            continue
+        if len(node.args) != 6:
             continue
         input_node, scale, zero_point, quant_min, quant_max, dtype = node.args
         if dtype == torch.uint8 and isinstance(zero_point, int):
