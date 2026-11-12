@@ -883,3 +883,16 @@ def remove_split_getitem_nodes(graph: NNCFGraph) -> None:
         for getitem_node in graph.get_next_nodes(split_node):
             if getitem_node.node_type == "__getitem__":
                 graph.remove_passthrough_node(getitem_node)
+
+
+def encode_uint8_qdq_as_int8(model: torch.fx.GraphModule) -> torch.fx.GraphModule:
+    for node in model.graph.nodes:
+        if node.op != "call_function" or node.target not in QUANTIZE_NODE_TARGETS + DEQUANTIZE_NODE_TARGETS:
+            continue
+        if len(node.args) != 6:
+            continue
+        input_node, scale, zero_point, quant_min, quant_max, dtype = node.args
+        if dtype == torch.uint8 and isinstance(zero_point, int):
+            node.args = (input_node, scale, zero_point - 128, quant_min - 128, quant_max - 128, torch.int8)
+    model.recompile()
+    return model
