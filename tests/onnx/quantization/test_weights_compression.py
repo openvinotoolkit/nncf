@@ -353,8 +353,12 @@ def test_matmulnbits_gemm(trans_b: int):
     if version.parse(onnxruntime.__version__) < version.parse("1.21.1"):
         rtol = 1e-3
 
-    compressed_model_opset21 = compress_weights(model_opset21, mode=CompressWeightsMode.INT4_SYM, group_size=64)
-    compressed_model_opset19 = compress_weights(model_opset19, mode=CompressWeightsMode.INT4_SYM, group_size=64)
+    compressed_model_opset21 = compress_weights(
+        model_opset21, mode=CompressWeightsMode.INT4_SYM, group_size=64, all_layers=True
+    )
+    compressed_model_opset19 = compress_weights(
+        model_opset19, mode=CompressWeightsMode.INT4_SYM, group_size=64, all_layers=True
+    )
 
     dummy_input = np.random.rand(1, 1280).astype(np.float32)
 
@@ -365,6 +369,31 @@ def test_matmulnbits_gemm(trans_b: int):
     output19 = sess19.run(None, {"input": dummy_input})[0]
 
     assert np.allclose(output21, output19, rtol=rtol, atol=1e-6)
+
+
+def test_blockwise_3d_matmul_dequantize_linear_axis():
+    np.random.seed(42)
+    k, n, group_size = 64, 32, 16
+
+    mb = ModelBuilder()
+    x = mb.add_input("input", (1, 4, 5, k))
+    x = mb.add_matmul(x, shape=(4, k, n))
+    mb.add_output(x, (1, 4, 5, n))
+    model = mb.build(opset_version=21)
+
+    compressed_model = compress_weights(
+        model, mode=CompressWeightsMode.INT4_SYM, group_size=group_size, all_layers=True
+    )
+
+    (dequantize_node,) = [node for node in compressed_model.graph.node if node.op_type == "DequantizeLinear"]
+    attrs = {attr.name: attr.i for attr in dequantize_node.attribute}
+    assert attrs["block_size"] == group_size
+    assert attrs["axis"] == 1
+
+    dummy_input = np.random.rand(1, 4, 5, k).astype(np.float32)
+    ref_output = InferenceSession(model.SerializeToString()).run(None, {"input": dummy_input})[0]
+    output = InferenceSession(compressed_model.SerializeToString()).run(None, {"input": dummy_input})[0]
+    assert np.abs(output - ref_output).max() < 0.2 * np.abs(ref_output).max()
 
 
 @pytest.mark.parametrize("mode", UNSUPPORTED_MODES)
