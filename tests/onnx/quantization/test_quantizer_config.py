@@ -80,7 +80,9 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
 
     @pytest.fixture
     def conv_sum_aggregation_nncf_graph(self) -> NNCFGraphToTestSumAggregation:
-        conv_layer_attrs = ONNXLayerAttributes(weight_attrs={1: {"shape": [4, 4, 4, 4]}}, bias_attrs={})
+        conv_layer_attrs = ONNXLayerAttributes(
+            weight_attrs={1: {"shape": [4, 4, 4, 4], "weight_input_shape": [4, 4, 4, 4]}}, bias_attrs={}
+        )
         return NNCFGraphToTestSumAggregation(
             ONNXConvolutionMetatype,
             ONNXAddLayerMetatype,
