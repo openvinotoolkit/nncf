@@ -280,11 +280,10 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             # NOTE: The `DequantizeLinear` operation supports the `block_size` attribute only starting from opset 21.
             # For opsets earlier than 21, we use the `MatMulNBits` operation from ONNX Runtime contrib operators.
             # See https://github.com/microsoft/onnxruntime/blob/main/docs/ContribOperators.md
+            if opset_version < 21 and len(weight.shape) == 3:
+                msg = "ONNX does not support 3D weights for opset version < 21. Please use a higher opset version."
+                raise nncf.ParameterNotSupportedError(msg)
             if opset_version < 21 and dequantize_block_size > 0:
-                if len(weight.shape) == 3:
-                    msg = """ONNX does not support 3D weights for opset version < 21.
-                             Please use a higher opset version or per-channel quantization"""
-                    raise nncf.ParameterNotSupportedError(msg)
                 compressed_weight, scale, zero_point = ONNXWeightCompressionAlgoBackend.preprocess_compressed_weight(
                     compressed_weight, weight.shape, reduction_axes, dequantize_block_size=None, apply_transpose=True
                 )
@@ -304,6 +303,20 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 compressed_weight, scale, zero_point = ONNXWeightCompressionAlgoBackend.preprocess_compressed_weight(
                     compressed_weight, weight.shape, reduction_axes, dequantize_block_size=dequantize_block_size
                 )
+                if (
+                    opset_version >= 21
+                    and dequantize_block_size == 0
+                    and len(reduction_axes) == 1
+                    and len(weight.shape) > 2
+                ):
+                    # The scale has one value per (batch, output channel) pair, but the per-axis DequantizeLinear
+                    # accepts only a 1D scale. The same quantization is expressed by the blockwise one (available
+                    # starting from opset 21) with a single block over the whole reduction axis.
+                    (dequantize_axis,) = reduction_axes
+                    dequantize_block_size = weight.shape[dequantize_axis]
+                    scale = np.expand_dims(scale, dequantize_axis)
+                    if zero_point is not None:
+                        zero_point = np.expand_dims(zero_point, dequantize_axis)
                 self._add_dequantize_linear_layer(
                     model,
                     compressed_weight,
