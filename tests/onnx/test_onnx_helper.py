@@ -21,6 +21,7 @@ from nncf.onnx.graph.model_metadata import MetadataKey
 from nncf.onnx.graph.model_metadata import set_metadata
 from nncf.onnx.graph.onnx_helper import get_array_from_tensor
 from nncf.onnx.graph.onnx_helper import pack_int4_to_uint8
+from nncf.onnx.graph.onnx_helper import pack_uint4_zero_point_to_uint8
 from tests.onnx.models import build_matmul_model
 
 
@@ -131,3 +132,23 @@ def test_pack_int4_to_uint8_raises_on_invalid_signed_dtype():
         pack_int4_to_uint8(weight, block_size=2, signed=True)
 
     assert "Expected weight dtype to be np.int8" in str(exc_info.value)
+
+
+def test_pack_uint4_zero_point_to_uint8_even_blocks():
+    zero_point = np.array([[1, 2, 3, 4], [5, 6, 7, 8]], dtype=np.uint8)  # shape (N=2, n_blocks=4)
+
+    packed = pack_uint4_zero_point_to_uint8(zero_point)
+    expected = np.array([[(2 << 4) | 1, (4 << 4) | 3], [(6 << 4) | 5, (8 << 4) | 7]], dtype=np.uint8)
+
+    assert packed.shape == (2, 2)
+    assert_array_equal(packed, expected)
+
+
+def test_pack_uint4_zero_point_to_uint8_odd_blocks():
+    zero_point = np.array([[1, 2, 3], [4, 5, 15]], dtype=np.uint8)  # shape (N=2, n_blocks=3)
+
+    packed = pack_uint4_zero_point_to_uint8(zero_point)
+    expected = np.array([[(2 << 4) | 1, 3], [(5 << 4) | 4, 15]], dtype=np.uint8)
+
+    assert packed.shape == (2, 2)
+    assert_array_equal(packed, expected)

@@ -378,6 +378,24 @@ def pack_int4_to_uint8(weight: np.ndarray[Any, Any], block_size: int, signed: bo
     return packed_weight
 
 
+def pack_uint4_zero_point_to_uint8(zero_point: np.ndarray[Any, Any]) -> np.ndarray[Any, Any]:
+    """
+    Returns `zero_point` packed for the `zero_points` input of the `com.microsoft.MatMulNBits` operation with 4 bits.
+    Two zero points of the neighbouring blocks of one column share a byte: the zero point of the even block is stored
+    in the lower 4 bits and the one of the odd block in the upper 4 bits.
+
+    See https://github.com/microsoft/onnxruntime/blob/main/docs/ContribOperators.md#commicrosoftmatmulnbits
+    for more details.
+
+    :param zero_point: A 2D array of shape (N, n_blocks_per_col) with uint4 values stored as uint8.
+    :return: A packed zero point of shape (N, CeilDiv(n_blocks_per_col, 2)) and uint8 type.
+    """
+    zero_point = zero_point.astype(np.uint8)
+    if zero_point.shape[1] % 2:
+        zero_point = np.pad(zero_point, ((0, 0), (0, 1)), mode="constant", constant_values=0)
+    return ((zero_point[:, 1::2] & 0x0F) << 4) | (zero_point[:, 0::2] & 0x0F)
+
+
 def get_node_attr_value(node: onnx.NodeProto, attr_name: str) -> Any | None:
     """
     Retrieves the value of a specified attribute from a node.
