@@ -885,3 +885,42 @@ def test_preprocess_compressed_weight(in_args, expected_output):
     if expected_zp:
         assert actual_zp.shape == expected_zp.shape
         assert np.allclose(actual_zp, expected_zp, rtol=1e-5, atol=1e-6)
+
+
+@pytest.mark.parametrize(
+    "mode",
+    [
+        CompressWeightsMode.INT8_ASYM,
+        CompressWeightsMode.INT8_SYM,
+        CompressWeightsMode.INT4_ASYM,
+        CompressWeightsMode.INT4_SYM,
+    ],
+)
+def test_per_channel_3d_matmul_inference(mode: CompressWeightsMode):
+    np.random.seed(42)
+    batch, k, n = 4, 64, 32
+
+    mb = ModelBuilder()
+    x = mb.add_input("input", (1, batch, 5, k))
+    x = mb.add_matmul(x, shape=(batch, k, n))
+    mb.add_output(x, (1, batch, 5, n))
+    model = mb.build(opset_version=21)
+
+    all_layers = True if mode in (CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT4_SYM) else None
+    compressed_model = compress_weights(model, mode=mode, group_size=-1, all_layers=all_layers)
+
+    dummy_input = np.random.rand(1, batch, 5, k).astype(np.float32)
+    ref_output = InferenceSession(model.SerializeToString()).run(None, {"input": dummy_input})[0]
+    output = InferenceSession(compressed_model.SerializeToString()).run(None, {"input": dummy_input})[0]
+    assert np.abs(output - ref_output).max() < 0.1 * np.abs(ref_output).max()
+
+
+def test_raise_error_3d_weights_opset_lower_than_21():
+    mb = ModelBuilder()
+    x = mb.add_input("input", (1, 4, 5, 64))
+    x = mb.add_matmul(x, shape=(4, 64, 32))
+    mb.add_output(x, (1, 4, 5, 32))
+    model = mb.build(opset_version=19)
+
+    with pytest.raises(nncf.ParameterNotSupportedError, match="3D weights"):
+        compress_weights(model)
