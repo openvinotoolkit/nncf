@@ -15,6 +15,7 @@ on:
         description: 'The pull request number'
         type: string
         default: ''
+  pull_request:
 
 env:
   UV_SYSTEM_PYTHON: 'true'
@@ -23,7 +24,7 @@ env:
 jobs:
   precommit:
     name: precommit-${{ matrix.scope }}
-    runs-on: macos-14
+    runs-on: macos-latest
     timeout-minutes: 40
     strategy:
       fail-fast: false
