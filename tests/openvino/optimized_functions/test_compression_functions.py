@@ -43,6 +43,8 @@ from nncf.tensor.functions.numpy_numeric import DTYPE_MAP as DTYPE_MAP_NP
 from nncf.tensor.functions.numpy_numeric import DTYPE_MAP_REV as DTYPE_MAP_REV_NP
 from nncf.tensor.functions.openvino_numeric import DTYPE_MAP as DTYPE_MAP_OV
 
+pytestmark = pytest.mark.skipif(is_arm_cpu(), reason="Disabled for ARM CPU.")
+
 
 class ComputationBackend(Enum):
     NumPy = "numpy"

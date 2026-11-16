@@ -13,6 +13,7 @@ import pytest
 
 from nncf import CompressWeightsMode
 from nncf.common.utils.caching import disable_results_caching
+from nncf.openvino.cpu_info import is_arm_cpu
 from nncf.openvino.optimized_functions.models import OV_MODEL_CACHE
 from nncf.openvino.optimized_functions.models import OVModelParameters
 from nncf.openvino.optimized_functions.models import _infer_ov_model
@@ -27,6 +28,8 @@ from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.functions.numpy_numeric import DTYPE_MAP as DTYPE_MAP_NP
+
+pytestmark = pytest.mark.skipif(is_arm_cpu(), reason="Disabled for ARM CPU.")
 
 
 class ModelGetter:
