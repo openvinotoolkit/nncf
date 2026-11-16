@@ -58,6 +58,11 @@ plots = [
 [project.urls]
 Homepage = "https://github.com/openvinotoolkit/nncf"
 
+[tool.uv]
+extra-index-url = ["https://storage.openvinotoolkit.org/simple/wheels/nightly"]
+prerelease = "allow"
+index-strategy = "unsafe-best-match"
+
 [tool.setuptools.dynamic]
 version = { attr = "custom_version.version" }
 
