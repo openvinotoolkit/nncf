@@ -15,6 +15,7 @@ on:
         description: 'The pull request number'
         type: string
         default: ''
+  pull_request:
 
 env:
   UV_SYSTEM_PYTHON: 'true'
