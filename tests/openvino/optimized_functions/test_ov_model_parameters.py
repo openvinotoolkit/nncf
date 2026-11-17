@@ -29,8 +29,6 @@ from nncf.tensor import TensorDataType
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.functions.numpy_numeric import DTYPE_MAP as DTYPE_MAP_NP
 
-pytestmark = pytest.mark.skipif(is_arm_cpu(), reason="Disabled for ARM CPU.")
-
 
 class ModelGetter:
     def __init__(self, get_model_fn, ov_model_params_kwargs, get_model_kwargs):
@@ -440,7 +438,15 @@ def test_share_inputs_outputs(mocker, share_inputs, share_outputs, return_ov_ten
 @pytest.mark.parametrize(
     "weight,convertable_division,ref_compressed_weight",
     [
-        ([[0.70361328125, 0.92919921875, 0.37109375, -0.98974609375]], True, [[225, 255, 181, 0]]),
+        pytest.param(
+            [[0.70361328125, 0.92919921875, 0.37109375, -0.98974609375]],
+            True,
+            [[225, 255, 181, 0]],
+            marks=pytest.mark.xfail(
+                is_arm_cpu(),
+                reason="Reciprocal multiplication can produce different quantization rounding on ARM.",
+            ),
+        ),
         ([[0.70361328125, 0.92919921875, 0.37109375, -0.98974609375]], False, [[226, 255, 181, 0]]),
     ],
 )
