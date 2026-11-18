@@ -257,9 +257,13 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             precomputed_compressed_weights = precomputed_compressed_weights or {}
 
             dequantize_block_size = max(compression_config.group_size, 0)  # 0 - is no block wise quantization
+            # The blocks are taken along the reduction axis of the weight, which is not always the first one
+            # (e.g. it is the second one for Gemm with transB=1).
             dequantize_axis = (
-                get_weight_quantization_axis(node, wc_params.weight_port_id) if dequantize_block_size <= 0 else 0
-            )  # axis = 0 when blockwise
+                get_weight_quantization_axis(node, wc_params.weight_port_id)
+                if dequantize_block_size <= 0
+                else wc_params.reduction_axes[0]
+            )
 
             reduction_axes = wc_params.reduction_axes
             if node.metatype == onnx_metatypes.ONNXGemmMetatype and opset_version < 21 and dequantize_block_size > 0:
