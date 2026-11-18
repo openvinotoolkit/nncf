@@ -114,6 +114,51 @@ def test_remove_variadic_splits_before_summed_matmuls(dtype: ov.Type) -> None:
     np.testing.assert_array_equal(actual[0].data, expected[0].data)
 
 
+@pytest.mark.parametrize("axis", [1, -2])
+@pytest.mark.parametrize("asymmetric", [False, True])
+@pytest.mark.parametrize("scale_shape", [(2, 6, 2, 1), (6, 2, 1), (2, 1, 2, 1)])
+def test_remove_variadic_splits_moe_grouped_weights(axis: int, asymmetric: bool, scale_shape: tuple[int, ...]) -> None:
+    activations = opset.parameter([2, -1, 8], ov.Type.f32)
+    values = (np.arange(96, dtype=np.int8).reshape(2, 6, 2, 4) % 16) - 8
+    weights = opset.constant(values, dtype=ov.Type.i4)
+    decompressed = opset.convert(weights, ov.Type.f16)
+    if asymmetric:
+        zero_point = opset.convert(
+            opset.constant(np.arange(12, dtype=np.int8).reshape(6, 2, 1) % 4, dtype=ov.Type.i4), ov.Type.f16
+        )
+        decompressed = opset.subtract(decompressed, zero_point)
+    scale = opset.constant(np.arange(1, np.prod(scale_shape) + 1, dtype=np.float16).reshape(scale_shape) / 8)
+    decompressed = opset.multiply(decompressed, scale)
+    decompressed = opset.convert(opset.reshape(decompressed, [2, 6, 8], False), ov.Type.f32)
+    channel_count = opset.gather(opset.shape_of(decompressed, "i32"), np.int64(axis), np.int32(0))
+    half_channels = opset.divide(channel_count, opset.constant(np.int32(2)))
+    remainder = opset.mod(channel_count, opset.constant(np.int32(2)))
+    first_length = opset.add(half_channels, opset.convert(opset.greater(remainder, np.int32(0)), ov.Type.i32))
+    lengths = opset.concat([opset.reshape(first_length, [1], False), opset.constant(np.array([-1], dtype=np.int32))], 0)
+    split = opset.variadic_split(decompressed, np.int64(axis), lengths)
+    gate = opset.matmul(activations, split.output(0), transpose_a=False, transpose_b=True)
+    up = opset.matmul(activations, split.output(1), transpose_a=False, transpose_b=True)
+    model = ov.Model([opset.multiply(opset.swish(gate), up)], [activations])
+    inputs = [ov.Tensor(np.arange(-8, 8, dtype=np.float32).reshape(2, 1, 8) / 16)]
+    expected = [ov.Tensor(ov.Type.f32, [2, 1, 3])]
+    assert model.evaluate(expected, inputs)
+
+    remove_variadic_splits_after_compressed_weights(model, NNCFGraph())
+
+    model.validate_nodes_and_infer_types()
+    assert all(node.get_type_name() != "VariadicSplit" for node in model.get_ops())
+    actual = [ov.Tensor(ov.Type.f32, [2, 1, 3])]
+    assert model.evaluate(actual, inputs)
+    np.testing.assert_array_equal(actual[0].data, expected[0].data)
+    compressed_weights = [
+        node
+        for node in model.get_ops()
+        if node.get_type_name() == "Constant" and node.get_element_type() == ov.Type.i4 and len(node.get_shape()) == 4
+    ]
+    assert len(compressed_weights) == 2
+    assert all(list(node.get_shape()) == [2, 3, 2, 4] for node in compressed_weights)
+
+
 @pytest.mark.parametrize("scale_shape", [(), (4,), (1, 4)])
 def test_remove_variadic_splits_with_broadcast_parameters(scale_shape: tuple[int, ...]) -> None:
     weights = opset.constant(np.arange(24, dtype=np.uint8).reshape(6, 4) % 4, dtype=ov.Type.u4)
@@ -137,7 +182,7 @@ def test_remove_variadic_splits_with_broadcast_parameters(scale_shape: tuple[int
 
 
 @pytest.mark.parametrize(
-    "case", ["activation", "uncompressed", "nonzero_axis", "unsupported_op", "reshape_axis", "dynamic_lengths"]
+    "case", ["activation", "uncompressed", "reshape_prefix", "unsupported_op", "reshape_axis", "dynamic_lengths"]
 )
 def test_remove_variadic_splits_leaves_unsupported_graphs(case: str) -> None:
     parameters = []
@@ -152,7 +197,9 @@ def test_remove_variadic_splits_leaves_unsupported_graphs(case: str) -> None:
         source = opset.transpose(source, [0, 1])
     elif case == "reshape_axis":
         source = opset.reshape(source, [3, 8], False)
-    axis = 1 if case == "nonzero_axis" else 0
+    elif case == "reshape_prefix":
+        source = opset.reshape(source, [3, 4, 2], False)
+    axis = 1 if case == "reshape_prefix" else 0
     lengths = opset.constant(np.array([1, -1], dtype=np.int64))
     if case == "dynamic_lengths":
         lengths = opset.parameter([2], ov.Type.i64)
