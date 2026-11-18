@@ -2,16 +2,19 @@
     "Gather_1": {
         "mode": "int4_asym",
         "group_size": 2,
-        "codebook_values": null
+        "codebook_values": null,
+        "narrow_range": false
     },
     "Gather_2": {
         "mode": "int8_sym",
         "group_size": -1,
-        "codebook_values": null
+        "codebook_values": null,
+        "narrow_range": false
     },
     "MatMul_1": {
         "mode": "int8_sym",
         "group_size": -1,
-        "codebook_values": null
+        "codebook_values": null,
+        "narrow_range": false
     }
 }
