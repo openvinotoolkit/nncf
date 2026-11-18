@@ -10,6 +10,7 @@
 # limitations under the License.
 from typing import Callable, Iterable
 
+import numpy as np
 import openvino as ov
 from openvino import opset13 as opset
 
@@ -552,6 +553,113 @@ class OVMixedPrecisionAlgoBackend(MixedPrecisionAlgoBackend, OVWeightCompression
         return collector
 
 
+def remove_variadic_splits_after_compressed_weights(
+    model: ov.Model,
+    graph: NNCFGraph,
+) -> ov.Model:
+    """
+    Move axis-zero variadic splits through constant weight decompression graphs.
+
+    Supports Convert, Subtract, Multiply and reshapes preserving the first dimension.
+    Unsupported graphs are left unchanged. Shared decompression branches are preserved.
+
+    :param model: The OpenVINO model.
+    :param graph: The NNCF graph corresponding to the model.
+    :return: The modified model.
+    """
+    compressed_types = {ov.Type.i4, ov.Type.u4, ov.Type.i8, ov.Type.u8, ov.Type.u2, ov.Type.u3}
+    cache: dict[tuple[ov.Node, int, int], ov.Node] = {}
+    for split in model.get_ordered_ops():
+        if split.get_type_name() != "VariadicSplit":
+            continue
+        axis = split.input_value(1).get_node()
+        source = split.input_value(0).get_node()
+        if axis.get_type_name() != "Constant" or source.get_output_partial_shape(0).is_dynamic:
+            continue
+        shape = source.get_output_shape(0)
+        if not shape or int(axis.data.item()) not in (0, -len(shape)):
+            continue
+        if any(output.get_partial_shape().is_dynamic for output in split.outputs()):
+            continue
+
+        found_compressed = False
+        cache.clear()
+
+        def slice_decompression(node: ov.Node, start: int, stop: int) -> ov.Node | None:
+            nonlocal found_compressed
+            key = (node, start, stop)
+            if key in cache:
+                return cache[key]
+            if node.get_output_size() != 1 or node.get_output_partial_shape(0).is_dynamic:
+                return None
+            node_shape = node.get_output_shape(0)
+            node_type = node.get_type_name()
+            name = f"{node.get_friendly_name()}/split_{start}_{stop}"
+            if node_type == "Constant":
+                found_compressed |= node.get_element_type() in compressed_types
+                if not node_shape or (start == 0 and stop == node_shape[0]):
+                    result = node
+                else:
+                    needs_unpacking = node.get_element_type() in compressed_types | {ov.Type.bf16}
+                    value = Tensor(node.get_data(dtype=np.float32) if needs_unpacking else node.data)
+                    result = create_ov_const_from_tensor(value[start:stop], node.get_element_type(), name)
+            elif node_type == "Convert":
+                value = slice_decompression(node.input_value(0).get_node(), start, stop)
+                if value is None:
+                    return None
+                result = opset.convert(value, node.get_element_type(), name=name)
+            elif node_type in ("Subtract", "Multiply"):
+                if node.get_attributes()["auto_broadcast"] != "numpy":
+                    return None
+                inputs = []
+                for source_input in node.input_values():
+                    if source_input.get_partial_shape().is_dynamic:
+                        return None
+                    input_shape = source_input.get_shape()
+                    broadcast = not input_shape or len(input_shape) < len(node_shape) or input_shape[0] == 1
+                    input_start, input_stop = (0, input_shape[0] if input_shape else 0) if broadcast else (start, stop)
+                    value = slice_decompression(source_input.get_node(), input_start, input_stop)
+                    if value is None:
+                        return None
+                    inputs.append(value)
+                operation = opset.subtract if node_type == "Subtract" else opset.multiply
+                result = operation(*inputs, name=name)
+            elif node_type == "Reshape":
+                source_input = node.input_value(0)
+                if source_input.get_partial_shape().is_dynamic:
+                    return None
+                input_shape = source_input.get_shape()
+                if not node_shape or not input_shape or node_shape[0] != input_shape[0]:
+                    return None
+                if node.input_value(1).get_node().get_type_name() != "Constant":
+                    return None
+                value = slice_decompression(source_input.get_node(), start, stop)
+                if value is None:
+                    return None
+                result = opset.reshape(value, [stop - start, *node_shape[1:]], False, name=name)
+            else:
+                return None
+            cache[key] = result
+            return result
+
+        replacements = []
+        start = 0
+        for output in split.outputs():
+            stop = start + output.get_shape()[0]
+            replacement = slice_decompression(source, start, stop)
+            if replacement is None:
+                break
+            replacements.append(replacement)
+            start = stop
+        if not found_compressed or len(replacements) != split.get_output_size():
+            continue
+        for output, replacement in zip(split.outputs(), replacements):
+            new_output = replacement.output(0)
+            new_output.set_names(new_output.get_names() | output.get_names())
+            output.replace(new_output)
+    return model
+
+
 def repack_weights(
     model: ov.Model,
     graph: NNCFGraph,
@@ -583,4 +691,7 @@ def repack_weights(
         f"\ntotal MB before: {bits_before / 8 / 1024 / 1024}; "
         f"\ntotal MB after: {bits_after / 8 / 1024 / 1024}"
     )
+
+    # TODO(aanufriev): remove after solving the problem with constant folding before variadic splits in runtime
+    remove_variadic_splits_after_compressed_weights(model, graph)
     return model
