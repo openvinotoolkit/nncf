@@ -26,6 +26,7 @@ import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.experimental.torch.fx.commands import FXApplyTransformationCommand
 from nncf.experimental.torch.fx.commands import FXModelExtractionCommand
 from nncf.experimental.torch.fx.constant_folding import constant_fold
 from nncf.experimental.torch.fx.model_transformer import FXModelTransformer
@@ -286,6 +287,32 @@ def test_constant_update_transformation(concat: bool):
     path_to_dot = TRANSFORMED_GRAPH_DIR_NAME / f"{'cat_' if concat else ''}constant_update.dot"
     nx_graph = transformed_nncf_graph.get_graph_for_structure_analysis(extended=True)
     compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
+
+
+def test_constant_update_transformation_keeps_leaf_modules() -> None:
+    class StatisticCollector(torch.nn.Module):
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            return x
+
+    model = MultiBranchesConnectedModelWithConcat()
+    captured_model = get_torch_fx_model(model, torch.ones(MultiBranchesConnectedModelWithConcat.INPUT_SIZE))
+    nncf_graph = GraphConverter.create_nncf_graph(captured_model)
+    old_const_node = get_node_args(get_graph_node_by_name(captured_model.graph, "add_"))[1]
+
+    # Statistic collectors are inserted as leaf modules, their outputs have no users.
+    layout = TransformationLayout()
+    target_point = PTTargetPoint(TargetType.OPERATOR_POST_HOOK, "conv2d")
+    leaf_insertion = leaf_module_insertion_transformation_builder(StatisticCollector(), [target_point], "collector")
+    layout.register(FXApplyTransformationCommand(leaf_insertion))
+    constant_update = constant_update_transformation_builder(
+        nncf_graph.get_node_by_name("add_"), value=torch.tensor((42.0,)), input_port_id=1
+    )
+    layout.register(FXApplyTransformationCommand(constant_update))
+    transformed_model = FXModelTransformer(captured_model).transform(layout)
+
+    nodes = list(transformed_model.graph.nodes)
+    assert [node.target for node in nodes if node.op == "call_module"] == ["collector"]
+    assert old_const_node.name not in {node.name for node in nodes}
 
 
 def test_constant_update_transformation_no_constant():
