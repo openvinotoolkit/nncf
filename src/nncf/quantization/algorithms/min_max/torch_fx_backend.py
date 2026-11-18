@@ -240,7 +240,9 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         )
 
         scale = scale.view(-1)
-        zero_point = zero_point.view(-1)
+        # Keep the zero point in int32, as FakeQuantize does. With an int8/uint8 zero point,
+        # dequantize_per_channel computes (input - zero_point) in that dtype and the result wraps around.
+        zero_point = zero_point.view(-1).to(torch.int32)
 
         fakequantizer = FakeQuantize(
             observer=observer,

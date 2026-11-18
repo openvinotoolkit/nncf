@@ -22,11 +22,15 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import TypedQuantizerConfig
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.experimental.torch.fx.quantization.backend_parameters import FXBackendParameters
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.tensor import Tensor
 from nncf.tensor.definitions import TensorDataType
+from tests.torch.fx.helpers import get_torch_fx_model
 
 INPUT_SHAPE = (2, 3, 4, 5)
 
@@ -100,9 +104,9 @@ def test_quantizer_params_sym(case_to_test: CaseQuantParams, dtype: IntDtype | N
 
     signed = signedness_to_force or dtype is TensorDataType.int8
     if signed:
-        assert torch.allclose(quantizer.zero_point, torch.tensor(0, dtype=torch.int8))
+        assert torch.allclose(quantizer.zero_point, torch.tensor(0, dtype=torch.int32))
     else:
-        assert torch.allclose(quantizer.zero_point, torch.tensor(127 if narrow_range else 128, dtype=torch.uint8))
+        assert torch.allclose(quantizer.zero_point, torch.tensor(127 if narrow_range else 128, dtype=torch.int32))
 
     scale = quantizer.scale.detach().numpy()
     assert np.allclose(scale, case_to_test.ref_scale)
@@ -318,7 +322,7 @@ def test_quantizer_params_sym_nr(case_to_test: CaseQuantParams, ref_signed: bool
 
     signed = signedness_to_force or ref_signed
 
-    assert torch.allclose(quantizer.zero_point, torch.tensor(0, dtype=torch.int8 if signed else torch.uint8))
+    assert torch.allclose(quantizer.zero_point, torch.tensor(0, dtype=torch.int32))
 
     scale = quantizer.scale.detach().numpy()
     assert np.allclose(scale, case_to_test.ref_scale)
@@ -402,12 +406,55 @@ def test_quantizer_params_asym(case_to_test: CaseQuantParams, ref_zp: int | list
     ref_zp = torch.tensor(ref_zp)
     if not signed:
         ref_zp += 127 if narrow_range else 128
-    assert torch.allclose(quantizer.zero_point, ref_zp.to(dtype=torch.int8 if signed else torch.uint8))
+    assert torch.allclose(quantizer.zero_point, ref_zp.to(dtype=torch.int32))
 
     scale = quantizer.scale.detach().numpy()
     assert np.allclose(scale, case_to_test.ref_scale)
 
     _check_q_min_q_max(quantizer, signed, narrow_range)
+
+
+@pytest.mark.parametrize("dtype", [TensorDataType.uint8, TensorDataType.int8])
+def test_per_channel_qdq_with_asymmetric_quantizer(dtype: IntDtype) -> None:
+    # The ranges are not centered at zero, so some codes are below the zero point
+    # and (code - zero_point) does not fit into the quantized dtype for others.
+    weight = torch.tensor([[-0.2, -0.1, 0.0, 0.3, 0.6], [-0.6, -0.3, 0.0, 0.1, 0.2]])
+    stat = MinMaxTensorStatistic(Tensor(weight.amin(dim=1)), Tensor(weight.amax(dim=1)))
+    qconfig = TypedQuantizerConfig(
+        num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=True, narrow_range=False, dest_dtype=dtype
+    )
+    fq_params = calculate_quantizer_parameters(stat, qconfig, QuantizerGroup.WEIGHTS, half_range=False)
+    quantizer = FXMinMaxAlgoBackend._create_quantizer(qconfig, fq_params, is_weight_quantizer=True)
+
+    torch_dtype = torch.int8 if dtype is TensorDataType.int8 else torch.uint8
+    qdq_args = (quantizer.scale, quantizer.zero_point, 0, quantizer.quant_min, quantizer.quant_max, torch_dtype)
+    codes = torch.ops.quantized_decomposed.quantize_per_channel.default(weight, *qdq_args)
+    dequantized = torch.ops.quantized_decomposed.dequantize_per_channel.default(codes, *qdq_args)
+
+    scale = quantizer.scale.reshape(-1, 1)
+    zero_point = quantizer.zero_point.reshape(-1, 1).to(torch.float32)
+    assert torch.allclose(dequantized, (codes.to(torch.float32) - zero_point) * scale)
+    assert torch.allclose(dequantized, weight, atol=scale.max().item())
+
+
+def test_quantize_asymmetric_per_channel_weights_without_compression() -> None:
+    torch.manual_seed(0)
+    model = torch.nn.Linear(4, 2, bias=False).eval()
+    with torch.no_grad():
+        model.weight.add_(0.3)
+    ex_input = torch.ones(1, 4)
+    fx_model = get_torch_fx_model(model, ex_input)
+
+    advanced_parameters = AdvancedQuantizationParameters(
+        weights_quantization_params=QuantizationParameters(mode=QuantizationMode.ASYMMETRIC, per_channel=True),
+        disable_bias_correction=True,
+        backend_params={FXBackendParameters.COMPRESS_WEIGHTS: False},
+    )
+    quantized_model = nncf.quantize(
+        fx_model, nncf.Dataset([ex_input]), subset_size=1, advanced_parameters=advanced_parameters
+    )
+
+    assert torch.allclose(quantized_model(ex_input), model(ex_input), atol=1e-2)
 
 
 def _get_quantizer(case_to_test: CaseQuantParams, qconfig: QuantizerConfig):
