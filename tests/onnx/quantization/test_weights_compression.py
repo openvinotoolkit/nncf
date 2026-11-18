@@ -374,6 +374,35 @@ def test_raise_error_with_not_int8(mode):
         compress_weights(dummy_model, mode=mode)
 
 
+@pytest.mark.parametrize("trans_b", [0, 1])
+@pytest.mark.parametrize(("k", "group_size"), [(64, 16), (64, 32), (48, 16)])
+def test_matmulnbits_asymmetric_inference(trans_b: int, k: int, group_size: int):
+    # The zero points of MatMulNBits are packed by two values per byte: 4, 2 and 3 (padded) blocks per column.
+    np.random.seed(42)
+    n = 32
+
+    w = np.random.rand(k, n).astype(np.float32) - 0.5
+    if trans_b:
+        w = w.T
+    b = np.random.rand(n).astype(np.float32)
+
+    mb = ModelBuilder()
+    x = mb.add_input("input", (1, k))
+    x = mb.add_gemm(x, shape=w.shape, weight_data=w, bias_data=b, trans_b=trans_b)
+    mb.add_output(x, (1, n))
+    model = mb.build(opset_version=19)
+
+    compressed_model = compress_weights(
+        model, mode=CompressWeightsMode.INT4_ASYM, group_size=group_size, all_layers=True
+    )
+    assert [node.op_type for node in compressed_model.graph.node] == ["MatMulNBits"]
+
+    dummy_input = np.random.rand(1, k).astype(np.float32)
+    ref_output = InferenceSession(model.SerializeToString()).run(None, {"input": dummy_input})[0]
+    output = InferenceSession(compressed_model.SerializeToString()).run(None, {"input": dummy_input})[0]
+    assert np.abs(output - ref_output).max() < 0.1 * np.abs(ref_output).max()
+
+
 class TestONNXTemplateWeightCompression(TemplateWeightCompression):
     @staticmethod
     def cast_to(x: np.ndarray, dtype: TensorDataType) -> np.ndarray:
