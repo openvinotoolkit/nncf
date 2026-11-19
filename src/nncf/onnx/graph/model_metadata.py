@@ -20,12 +20,14 @@ class MetadataKey(Enum):
 
 def set_metadata(model: onnx.ModelProto, key: MetadataKey, value: str) -> None:
     """
-    Sets a metadata property on an ONNX model.
+    Sets a metadata property on an ONNX model. Any existing values for the key are replaced.
 
     :param model: The ONNX model to which the metadata will be added.
     :param key: The metadata key.
     :param value: The string value to associate with the given metadata key.
     """
+    # The input model may already contain the key, and get_metadata() returns the first match.
+    remove_metadata(model, key)
     entry = model.metadata_props.add()
     entry.key = key.value
     entry.value = value
@@ -47,12 +49,11 @@ def get_metadata(model: onnx.ModelProto, key: MetadataKey) -> str | None:
 
 def remove_metadata(model: onnx.ModelProto, key: MetadataKey) -> None:
     """
-    Removes a metadata property from an ONNX model.
+    Removes all metadata properties with the given key from an ONNX model.
 
     :param model: The ONNX model from which the metadata will be removed.
     :param key: The metadata key to be removed.
     """
-    for prop in model.metadata_props:
-        if prop.key == key.value:
-            model.metadata_props.remove(prop)
-            break
+    for i in reversed(range(len(model.metadata_props))):
+        if model.metadata_props[i].key == key.value:
+            del model.metadata_props[i]
