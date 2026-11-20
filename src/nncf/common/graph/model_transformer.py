@@ -37,4 +37,4 @@ class ModelTransformer(Generic[TModel]):
             includes a list of transformations to be applied to the model.
         :return: The transformed model.
         """
-        raise NotImplementedError()
+        raise NotImplementedError

@@ -922,6 +922,27 @@ class DifferentChannelSizeMatmulModel(OVReferenceModel):
         return model
 
 
+class EmbeddingMatmulConvModel(OVReferenceModel):
+    """
+    Model with the weights of an embedding and three MatMul nodes, whose reduction channel sizes are 32, 32, 24 and 20,
+    and the weights of a convolution, which have several reduction axes.
+    """
+
+    def _create_ov_model(self):
+        input_ids = opset.parameter([1, 4], dtype=np.int64, name="Input_ids")
+        embedding_data = opset.constant(self._rng.random((8, 32)) - 0.5, dtype=np.float32, name="embedding_data")
+        last_node = opset.gather(embedding_data, input_ids, axis=0, name="Embedding")
+        for i, (channel_size, prev_channel_size) in enumerate([(24, 32), (20, 24), (8, 20)], start=1):
+            weights_data = self._rng.random((channel_size, prev_channel_size)) - 0.5
+            weights = opset.constant(weights_data, dtype=np.float32, name=f"weights_{i}")
+            last_node = opset.matmul(last_node, weights, transpose_a=False, transpose_b=True, name=f"MatMul_{i}")
+
+        image = opset.parameter([1, 3, 8, 8], name="Image")
+        conv_weights = opset.constant(self._rng.random((4, 3, 3, 3)) - 0.5, dtype=np.float32, name="conv_weights")
+        conv = opset.convolution(image, conv_weights, [1, 1], [0, 0], [0, 0], [1, 1], name="Conv")
+        return ov.Model([last_node, conv], [input_ids, image])
+
+
 class IdentityMatmul(OVReferenceModel):
     def _create_ov_model(self, weights_dtype: ov.Type | None = None, activation_dtype: ov.Type | None = None):
         """
@@ -1518,4 +1539,58 @@ class ParallelEdgesOutputPortIdModel(OVReferenceModel):
         result_node1 = opset.result(matmul1, name="Result1")
 
         model = ov.Model([result_node, result_node1], [input_node], name="ParallelEdgesOutputPortIdModel")
+        return model
+
+
+class ModelForRepack(OVReferenceModel):
+    HIDDEN_DIM = 16
+    INPUT_SHAPE = [2, 24, HIDDEN_DIM]  # [B, SeqLen, HiddenDim]
+
+    @staticmethod
+    def get_weights(weights_data, w_bits, name):
+        if w_bits not in [4, 8, 32]:
+            msg = f"Unsupported weight bits: {w_bits}. Supported values are 4, 8, and 32."
+            raise ValueError(msg)
+        if w_bits == 32:
+            return opset.constant(weights_data, dtype=np.float32, name=name)
+        qw = opset.constant(weights_data, dtype=ov.Type.i8 if w_bits == 8 else ov.Type.i4, name="qw_" + name)
+        qw = opset.convert(qw, destination_type=np.float32)
+
+        scale = opset.constant(
+            np.ones((weights_data.shape[-2], 1), dtype=np.float32), dtype=np.float32, name="scale_" + name
+        )
+
+        return qw * scale
+
+    def _create_ov_model(
+        self,
+        input_shape=None,
+    ):
+        self._input_shape = self.INPUT_SHAPE if input_shape is None else input_shape
+
+        input_1 = opset.parameter(self._input_shape, name="Input")
+
+        model_config = [
+            {"w_bits": 32, "data_range": [-128, 128]},
+            {"w_bits": 8, "data_range": [-8, 7]},
+            # 3 bit
+            {"w_bits": 4, "data_range": [-4, 3]},
+            {"w_bits": 4, "data_range": [-3, 3]},
+            {"w_bits": 4, "data_range": [-2, 3]},
+            # 2 bit
+            {"w_bits": 4, "data_range": [-2, 1]},
+            {"w_bits": 4, "data_range": [-1, 1]},
+            {"w_bits": 4, "data_range": [0, 1]},
+        ]
+
+        x = opset.relu(input_1)
+        for i, config in enumerate(model_config):
+            data = np.random.randint(
+                config["data_range"][0], config["data_range"][1] + 1, size=(self.HIDDEN_DIM, self.HIDDEN_DIM)
+            ).astype(np.int32)
+            weights = ModelForRepack.get_weights(data, w_bits=config["w_bits"], name=f"weights_{i + 1}")
+            x = opset.matmul(x, weights, transpose_a=False, transpose_b=True, name=f"MatMul_{i + 1}")
+
+        result = x
+        model = ov.Model([result], [input_1])
         return model

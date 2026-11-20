@@ -170,7 +170,7 @@ def smooth_quant_model(ov_model: ov.Model, q_params: dict, quantize=True):
     "linear_before_reset", [True, False], ids=["linear_before_reset_True", "linear_before_reset_False"]
 )
 def test_ignore_nodes_by_attribues(linear_before_reset):
-    model = GRUSequenceModel(**{"linear_before_reset": linear_before_reset}).ov_model
+    model = GRUSequenceModel(linear_before_reset=linear_before_reset).ov_model
     quantized_model = quantize_model(model, {})
     postfix = "T" if linear_before_reset else "F"
     path_ref_graph = get_actual_reference_for_current_openvino(

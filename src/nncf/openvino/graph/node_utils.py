@@ -475,7 +475,7 @@ def get_inplace_mean_per_ch(axis: int) -> InplaceInsertionFnType:
             transposed_shape = input_shape
 
         kept_dims = transposed_shape[:2]
-        kept_dims = [0 if dim < 0 else dim for dim in kept_dims]
+        kept_dims = [max(dim, 0) for dim in kept_dims]
         squeezed_dims = -1 if -1 in transposed_shape[2:] else np.prod(transposed_shape[2:])
         reshape_op = opset.reshape(
             reshape_input_node.output(output_port_id),

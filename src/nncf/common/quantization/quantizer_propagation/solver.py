@@ -384,7 +384,7 @@ class QuantizerPropagationSolver:
 
             self._visualizer = QuantizerPropagationVisualizer(DEBUG_LOG_DIR + "/quant_prop")
         self._propagation_strategy = (
-            propagation_strategy if propagation_strategy else QuantizerPropagationSolver.DEFAULT_PROPAGATION_STRATEGY
+            propagation_strategy or QuantizerPropagationSolver.DEFAULT_PROPAGATION_STRATEGY
         )  # TODO(N/A): determine from config
         self._operator_quantization_trait_map = self.get_operator_quantization_traits_map()
         self._operator_allowed_qconfigs_map = self._get_operator_qconfigs_map()
@@ -1221,8 +1221,7 @@ class QuantizerPropagationSolver:
             trait = op_node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
             affecting_prop_quantizers = op_node[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
             if affecting_prop_quantizers:
-                for aff_pq in affecting_prop_quantizers:
-                    dom_op_quantizers.add(aff_pq)
+                dom_op_quantizers.update(affecting_prop_quantizers)
             else:
                 if trait is not QuantizationTrait.CONCAT:
                     # The branch op is forced to be FP32 - should not proceed through the branch node.

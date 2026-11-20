@@ -106,7 +106,7 @@ class GraphConverter:
         elif node.op == "get_attr":
             node_type = "get_attr"
             node_metatype = om.PTConstNoopMetatype
-        elif node.op in ("call_function",):
+        elif node.op == "call_function":
             if hasattr(node.target, "overloadpacket"):
                 node_type = str(node.target.overloadpacket).split(".")[1]
             elif node.target.__name__ == "getitem":
@@ -144,7 +144,7 @@ class GraphConverter:
             node_type, node_metatype = GraphConverter.get_node_type_and_metatype(source_node, model)
             node_metatype = GraphConverter._map_fx_unique_metatypes(source_node, node_metatype)
 
-            is_shared_node = source_node.op in ("get_attr",) and (
+            is_shared_node = source_node.op == "get_attr" and (
                 const_targets_counter[source_node.target] > 1 or len(source_node.users) > 1
             )
 
@@ -194,7 +194,7 @@ class GraphConverter:
         """
         output_port_id = 0
         tensor_shape = None
-        if source_node.op in ("get_attr",):
+        if source_node.op == "get_attr":
             tensor_shape = tuple(get_tensor_constant_from_node(source_node, model).shape)
         elif "val" in source_node.meta:
             if source_nncf_node.metatype is om.PTBatchNormMetatype and isinstance(

@@ -94,7 +94,7 @@ def _set_new_node_meta(
         if isinstance(prev_node, torch.fx.Node):
             val = (
                 prev_node.meta["val"]
-                if prev_node.op not in ["get_attr"]
+                if prev_node.op != "get_attr"
                 else get_tensor_constant_from_node(prev_node, model).data
             )
             # TODO(anzr299): Support output port id here.
@@ -245,7 +245,7 @@ def constant_update(
         msg = f"Constant on input port {input_port_id} for {node} is expected, but node {old_const} is present."
         raise nncf.InternalError(msg)
 
-    node_name = updated_node_name if updated_node_name else old_const.name + "_updated_constant"
+    node_name = updated_node_name or old_const.name + "_updated_constant"
     # Update metadata of the new constant node.
     consumer_nodes = list(old_const.users)
     # This list of consumer nodes is topologically sorted

@@ -636,8 +636,7 @@ class TestBenchmarkResult:
                                         elem = round(elem, 2)
                                     text(elem)
 
-        with open(output_fp, "w", encoding="utf8") as f:
-            f.write(indent(doc.getvalue(), indent_text=True))
+        Path(output_fp).write_text(indent(doc.getvalue(), indent_text=True), encoding="utf8")
 
     @pytest.mark.e2e_ptq
     @pytest.mark.run(order=4)

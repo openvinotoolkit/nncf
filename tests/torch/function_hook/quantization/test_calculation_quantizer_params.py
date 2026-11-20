@@ -255,8 +255,8 @@ class SyntheticDataset(torch.utils.data.Dataset):
         if idx >= self._length:
             raise StopIteration
         test_input_sample = torch.zeros([3, self._img_size, self._img_size])
-        for i in range(0, self._img_size):
-            for j in range(0, self._img_size):
+        for i in range(self._img_size):
+            for j in range(self._img_size):
                 test_input_sample[0][i][j] = i * self._img_size - j
         test_input_sample[1] = test_input_sample[0] + 0.5
         test_input_sample[2] = test_input_sample[0] * 0.5

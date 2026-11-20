@@ -17,7 +17,6 @@ import pytest
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
-from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.quantization.passes import find_constant_subgraphs
 from nncf.quantization.passes import remove_noop_operation_nodes
@@ -45,7 +44,6 @@ def test_find_constant_subgraphs(node_between_const_and_op):
 
     class ConstantMetatype(OperatorMetatype):
         num_expected_input_edges = 0
-        pass
 
     class NodeWithWeightMetatype(OperatorMetatype):
         num_expected_input_edges = 2
@@ -53,7 +51,6 @@ def test_find_constant_subgraphs(node_between_const_and_op):
     nncf_graph = NNCFGraphToTestConstantFiltering(
         ConstantMetatype,
         NodeWithWeightMetatype,
-        MultipleInputLayerAttributes(1, 3),
         node_between_const_and_op,
     ).nncf_graph
 

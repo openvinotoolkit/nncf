@@ -341,7 +341,7 @@ class BiasCorrection(Algorithm):
 
         # We then need to find nodes for which statistics have already been collected,
         # to use them as inputs for the subgraph.
-        statistic_nodes = statistic_nodes if statistic_nodes else nncf_graph.get_next_nodes(node)
+        statistic_nodes = statistic_nodes or nncf_graph.get_next_nodes(node)
 
         for stat_node in statistic_nodes:
             stat_node_inputs = self._find_subgraph_input_ids(nncf_graph, stat_node, subgraph_output_ids)

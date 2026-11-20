@@ -68,7 +68,6 @@ class HWConfig(ABC):
 
         :return: A list of operator metatypes available for matching.
         """
-        pass
 
     def get_metatype_vs_quantizer_configs_map(
         self, for_weights: bool = False

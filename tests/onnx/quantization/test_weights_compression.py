@@ -42,6 +42,8 @@ from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.quantization import compress_weights
+from nncf.quantization.algorithms.weight_compression.onnx_backend import ONNXWeightCompressionAlgoBackend
+from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
 from nncf.scopes import Scope
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
@@ -847,3 +849,39 @@ def test_weight_compress_with_ignored_scope(param: ParamIgnoredScope, model_for_
 
     names = {i.name for i in compressed_model.graph.initializer if i.data_type == onnx.TensorProto.INT4}
     assert names == param.ref
+
+
+@pytest.mark.parametrize(
+    "in_args,expected_output",
+    [
+        (
+            (
+                CompressedWeight(
+                    np.zeros((8, 3, 2, 2), dtype=np.float32),
+                    np.zeros((8, 1, 1, 1), dtype=np.float32),
+                ),
+                (8, 3, 2, 2),
+                (1, 2, 3),
+                0,
+                False,
+            ),
+            (np.zeros((8, 3, 2, 2), dtype=np.float32), np.zeros((8,), dtype=np.float32), None),
+        ),
+    ],
+    ids=[
+        "Conv",
+    ],
+)
+def test_preprocess_compressed_weight(in_args, expected_output):
+    expected_cw, expected_s, expected_zp = expected_output
+    actual_cw, actual_s, actual_zp = ONNXWeightCompressionAlgoBackend.preprocess_compressed_weight(*in_args)
+
+    assert actual_cw.shape == expected_cw.shape
+    assert np.allclose(actual_cw, expected_cw, rtol=1e-5, atol=1e-6)
+
+    assert actual_s.shape == expected_s.shape
+    assert np.allclose(actual_s, expected_s, rtol=1e-5, atol=1e-6)
+
+    if expected_zp:
+        assert actual_zp.shape == expected_zp.shape
+        assert np.allclose(actual_zp, expected_zp, rtol=1e-5, atol=1e-6)

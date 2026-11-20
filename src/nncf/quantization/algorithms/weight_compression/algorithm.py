@@ -192,14 +192,6 @@ def validate_scoped_configs(
             )
             raise nncf.ParameterNotSupportedError(msg)
 
-        if config.mode in INT8_MODES and config.group_size != -1:
-            msg = (
-                "INT8 modes require per-channel quantization in 8 bit, so the group size of a scoped config "
-                f"with the {config.mode.value} mode must be -1, but "
-                f"group_size={config.group_size} is given."
-            )
-            raise nncf.ParameterNotSupportedError(msg)
-
         validate_fixed_group_size(config.mode, config.group_size, advanced_parameters)
 
 
@@ -226,10 +218,10 @@ def check_user_compression_configuration(
     """
     validate_scoped_configs(scoped_configs, advanced_parameters)
     if mode in INT8_MODES:
-        if (ratio and ratio != 1) or (group_size and group_size != -1):
+        if ratio and ratio != 1:
             msg = (
-                "INT8 modes require per-channel quantization of all layers in 8 bit. "
-                "Default values of `ratio` (1) and `group_size` (-1) cannot be overridden."
+                "INT8 modes require quantization of all layers in 8 bit. "
+                "Default value of `ratio` (1) cannot be overridden."
             )
             raise nncf.ParameterNotSupportedError(msg)
 
@@ -335,6 +327,15 @@ def check_user_compression_configuration(
         msg = "LoRA Correction algorithm is not compatible with FQ, FQ_LORA and FQ_LORA_NLS compression formats."
         raise nncf.ValidationError(msg)
 
+    selected_modes = [mode] + [config.compression_config.mode for config in scoped_configs or []]
+    for selected_mode in selected_modes:
+        if selected_mode in [CompressWeightsMode.INT2_SYM, CompressWeightsMode.INT3_SYM] and compression_format in [
+            CompressionFormat.FQ,
+            CompressionFormat.FQ_LORA_NLS,
+        ]:
+            msg = f"{selected_mode.value} mode is not compatible with {compression_format.value} compression format."
+            raise nncf.ValidationError(msg)
+
     if mode == CompressWeightsMode.CODEBOOK and (advanced_parameters is None or advanced_parameters.codebook is None):
         msg = "Codebook compression mode requires codebook parameters to be specified in advanced_parameters."
         raise nncf.ValidationError(msg)
@@ -430,6 +431,7 @@ class WeightCompression(Algorithm):
         self._ratio = ratio
         self._ignored_scope = ignored_scope
         self._backend_entity = None
+        self._backend = None
         self._algorithm_key = f"CW_{hash(self)}"
         self._statistics = {}
         self._all_layers = all_layers
@@ -554,6 +556,7 @@ class WeightCompression(Algorithm):
         else:
             msg = f"Cannot return backend-specific entity because {model_backend.value} is not supported!"
             raise nncf.UnsupportedBackendError(msg)
+        self._backend = model_backend
 
     def get_ignored_node_names(self, nncf_graph: NNCFGraph) -> set[str]:
         """
@@ -820,8 +823,14 @@ class WeightCompression(Algorithm):
         adjusted_weight_params = []
         for w_params in weight_params:
             group_size = group_sizes[w_params.weight_name]
+            # get_reduction_channel_size() raises for weights with several reduction axes (e.g. of convolutions),
+            # while per-channel quantization does not need the channel size
+            if group_size == -1:
+                valid_weight_params.append(w_params)
+                group_size_values[w_params.weight_name] = group_size
+                continue
             reduction_channel_size, _ = get_reduction_channel_size(w_params.weight_shape, w_params.reduction_axes)
-            if group_size == -1 or reduction_channel_size % group_size == 0:
+            if reduction_channel_size % group_size == 0:
                 valid_weight_params.append(w_params)
                 group_size_values[w_params.weight_name] = group_size
                 continue
@@ -850,6 +859,34 @@ class WeightCompression(Algorithm):
             )
 
         return valid_weight_params, group_size_values
+
+    def _handle_lora_rank_compatible_params_fallback(
+        self, weight_params: list[WeightCompressionParameters]
+    ) -> list[WeightCompressionParameters]:
+        """
+        Filters weight parameters to include only those compatible with LoRA rank.
+
+        :param weight_params: List of weight compression parameters.
+        :return: List of weight compression parameters compatible with LoRA rank.
+        """
+        if self._backend is not BackendType.TORCH or self._compression_format not in [
+            CompressionFormat.FQ_LORA,
+            CompressionFormat.FQ_LORA_NLS,
+        ]:
+            return weight_params
+        lora_rank = self._advanced_parameters.lora_adapter_rank
+
+        compatible_params = []
+        for w_params in weight_params:
+            shape = w_params.weight_shape
+            if any(dim < lora_rank for dim in shape[-2:]):
+                nncf_logger.info(
+                    f"Node {w_params.weight_name} with shape {shape} can't be quantized with the requested LoRA rank:"
+                    f" {lora_rank}. It will be skipped."
+                )
+                continue
+            compatible_params.append(w_params)
+        return compatible_params
 
     @staticmethod
     def _proportion_str(num_weights_list: list[int], total_num_weights: int, total_num_params: int) -> str:
@@ -1181,6 +1218,12 @@ class WeightCompression(Algorithm):
 
         # Handle group size fallback modes
         group_size_values = self._get_requested_group_sizes(ratio_defining_params, self._group_size)
+        if self._mode in INT8_MODES:
+            # Group-wise quantization needs a single reduction axis: the weights with several reduction axes
+            # (e.g. of convolutions) are quantized per-channel
+            for weight_param in ratio_defining_params:
+                if len(weight_param.reduction_axes) != 1:
+                    group_size_values[weight_param.weight_name] = -1
         if self._group_size_fallback_mode == GroupSizeFallbackMode.IGNORE:
             all_weight_params, ratio_defining_params, skipped_weight_params = self._handle_ignore_group_size_fallback(
                 all_weight_params, ratio_defining_params, skipped_weight_params, group_size_values
@@ -1189,6 +1232,8 @@ class WeightCompression(Algorithm):
             ratio_defining_params, group_size_values = self._handle_adjust_group_size_fallback(
                 ratio_defining_params, group_size_values
             )
+
+        ratio_defining_params = self._handle_lora_rank_compatible_params_fallback(ratio_defining_params)
 
         # Set each ratio defining parameter to primary config
         for weight_param in ratio_defining_params:
@@ -1328,6 +1373,10 @@ class WeightCompression(Algorithm):
         for w_params in all_weight_params:
             config = weight_name_to_config_mapping.get(w_params.weight_name)
             if config is not None:
+                if config.mode in INT8_MODES and len(w_params.reduction_axes) != 1:
+                    # Group-wise quantization needs a single reduction axis: the weights with several reduction axes
+                    # (e.g. of convolutions) are quantized per-channel
+                    config = dataclasses.replace(config, group_size=-1)
                 # A deep copy is required for some methods/modes like codebook
                 w_params.compression_config = copy.deepcopy(config)
                 scoped_weight_names.add(w_params.weight_name)

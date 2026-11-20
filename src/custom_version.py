@@ -56,7 +56,7 @@ NNCF_VERSION_FILE = "src/nncf/version.py"
 
 def get_custom_version() -> str:
     version_match = re.search(
-        r"^__version__ = ['\"]((\d+\.\d+\.\d+)([^'\"]*))['\"]", Path(NNCF_VERSION_FILE).read_text(), re.M
+        r"^__version__ = ['\"]((\d+\.\d+\.\d+)([^'\"]*))['\"]", Path(NNCF_VERSION_FILE).read_text(), re.MULTILINE
     )
     if not version_match:
         msg = "Unable to find version string."
@@ -104,7 +104,7 @@ def __getattr__(name: str) -> str:
         # Rewrite version.py to pass custom version to package
         if os.environ.get("_PYPROJECT_HOOKS_BUILD_BACKEND"):
             content = Path(NNCF_VERSION_FILE).read_text()
-            version_match = re.search(r"^__version__ = ['\"][^'\"]*['\"]", content, re.M)
+            version_match = re.search(r"^__version__ = ['\"][^'\"]*['\"]", content, re.MULTILINE)
             if version_match is None:
                 msg = "Unable to find version string."
                 raise RuntimeError(msg)

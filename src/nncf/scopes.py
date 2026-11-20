@@ -178,8 +178,7 @@ def get_matched_scope_info(scope: Scope, nncf_graphs: list[NNCFGraph]) -> tuple[
         if scope.names or scope.patterns:
             node_names = set(node.node_name for node in graph.nodes.values())
 
-            for matched_node_name in filter(lambda name: name in node_names, scope.names):
-                names.add(matched_node_name)
+            names.update(filter(lambda name: name in node_names, scope.names))
 
             for str_pattern in scope.patterns:
                 pattern = re.compile(str_pattern)

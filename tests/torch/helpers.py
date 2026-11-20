@@ -23,8 +23,6 @@ from torch.nn import functional as F
 from torch.utils.data import Dataset
 
 import nncf
-from nncf.torch.graph.transformations.commands import PTInsertionCommand
-from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.layer_utils import StatefulModuleInterface
 from tests.cross_fw.shared.command import Command as BaseCommand
 from tests.cross_fw.shared.comparator import BaseTensorListComparator
@@ -266,51 +264,6 @@ class DummyOpWithState(torch.nn.Module, StatefulModuleInterface):
     @classmethod
     def from_config(cls, state: str):
         return cls(state)
-
-
-def commands_are_equal(
-    command_left: PTInsertionCommand | PTSharedFnInsertionCommand,
-    command_right: PTInsertionCommand | PTSharedFnInsertionCommand,
-    check_priority: bool = True,
-    check_hooks_group_name: bool = True,
-    check_fn_ref=True,
-) -> bool:
-    """
-    Returns True if given commands are equal and False elsewhere.
-
-    :param command_left: The first command.
-    :param command_right: The second command.
-    :param check_priority: Whether to check insertion priority or not.
-    :param check_hooks_group_name: Whether to check hooks group name or not.
-    :param check_fn_ref: Whether to check fn by reference or not.
-    :returns: True if given commands are equal and False elsewhere.
-    """
-    if type(command_right) is not type(command_left):
-        return False
-
-    # Check reference to functions are equal.
-    if check_fn_ref and command_right.fn is not command_left.fn:
-        return False
-    if check_hooks_group_name and command_right.hooks_group_name != command_left.hooks_group_name:
-        return False
-    if check_priority and command_right.priority != command_left.priority:
-        return False
-
-    if isinstance(command_right, PTInsertionCommand):
-        if command_left.target_point != command_right.target_point:
-            return False
-    elif isinstance(command_right, PTSharedFnInsertionCommand):
-        if not all(a == b for a, b in zip(command_left.target_points, command_right.target_points)):
-            return False
-        if (
-            command_right.target_points != command_left.target_points
-            or command_right.op_name != command_left.op_name
-            or command_right.compression_module_type != command_left.compression_module_type
-        ):
-            return False
-    else:
-        raise RuntimeError()
-    return True
 
 
 class SharedConv(nn.Module):

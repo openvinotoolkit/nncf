@@ -3,6 +3,8 @@ permissions: read-all
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
   push:
     branches:
       - develop
@@ -19,7 +21,7 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
       - name: Install bandit
@@ -39,11 +41,11 @@ jobs:
         with:
           lfs: true
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           languages: python
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           category: "/language:python"
 
@@ -72,8 +74,10 @@ jobs:
     name: Trivy
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # Skip trivy for PRs to avoid blocking merge PRs by found vulnerabilities in requirements
-    if: ${{ github.event_name != 'pull_request' }}
+    # Skip on PRs and develop pushes to avoid blocking merges by vulnerabilities found in requirements
+    if: >-
+      ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && startsWith(github.ref_name, 'release_v')) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -83,12 +87,41 @@ jobs:
           scan-type: "fs"
           scan-ref: .
           scanners: "misconfig,license,vuln"
-          format: template
-          template: "@.github/scripts/trivy_html.tpl"
-          output: trivy_report.html
+          format: json
+          output: trivy_report.json
           cache: false
           hide-progress: true
           exit-code: 1
+      - name: Convert Report
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          trivy convert --format template --template "@.github/scripts/trivy_html.tpl" \
+            --output trivy_report.html trivy_report.json
+          trivy convert --format table --scanners misconfig,license,vuln \
+            --output trivy_report.txt trivy_report.json
+      - name: Print Scan Results
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          cat trivy_report.txt
+          ROWS=$(jq -r '
+            [.Results[]? | .Target as $target | .Vulnerabilities[]? | . + {Target: $target}]
+            | group_by([.Target, .PkgName, .InstalledVersion])[]
+            | "| \(.[0].Target) | \(.[0].PkgName) | \(.[0].InstalledVersion) "
+              + "| \([.[].FixedVersion // empty | select(. != "")] | unique | join(", ")) "
+              + "| \([.[] | "\(.VulnerabilityID) (\(.Severity))"] | unique | join(", ")) |"
+          ' trivy_report.json)
+          {
+            echo "## Trivy: packages to update"
+            if [[ -z "$ROWS" ]]; then
+              echo "No vulnerable packages found."
+            else
+              echo "| Target | Package | Installed | Fixed in | Vulnerabilities |"
+              echo "|---|---|---|---|---|"
+              echo "$ROWS"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Rename Report
         if: ${{ !cancelled() }}
         shell: bash

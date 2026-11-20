@@ -86,7 +86,7 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
         data_map = {n: x for n, x in model.model.named_parameters()}
 
         for ref_names, ref_value in reference_values.items():
-            if not all(name.startswith("Linear") or name.startswith("Conv") for name in ref_names):
+            if not all(name.startswith(("Linear", "Conv")) for name in ref_names):
                 # Pytorch SQ algorithm supports only linear and conv modules by far,
                 # so other multiplies are skipped
                 continue

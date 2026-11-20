@@ -1,16 +1,17 @@
 default_language_version:
   python: python3
+  node: 26.13.0
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.10
+    rev: v0.17.5
     hooks:
       - id: ruff-check
         args: [--fix, --show-fixes]
       - id: ruff-format
 
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.49.1
+    rev: v0.50.0
     hooks:
       - id: markdownlint
         args: [--config=.ci/markdownlint.yaml]

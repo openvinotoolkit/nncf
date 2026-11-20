@@ -104,7 +104,7 @@ class Patcher:
             if isinstance(obj, int):
                 obj = ctypes.cast(obj, ctypes.py_object).value
             else:
-                obj, fn_name = self.import_obj(".".join([obj, fn_name]))
+                obj, fn_name = self.import_obj(f"{obj}.{fn_name}")
             _unpatch(obj, fn_name, key, depth)
 
     def import_obj(self, obj_cls: str | Any) -> tuple[Any, str]:  # noqa: C901

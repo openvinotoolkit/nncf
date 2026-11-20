@@ -17,12 +17,15 @@ import torch
 from networkx.drawing.nx_pydot import to_pydot
 
 import nncf
+from nncf.common.utils.backend import BackendType
 from nncf.data.dataset import Dataset
 from nncf.errors import ValidationError
 from nncf.parameters import CompressionFormat
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import StripFormat
 from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
+from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
+from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.quantize_model import compress_weights
 from nncf.torch import get_config
 from nncf.torch import load_from_config
@@ -42,6 +45,50 @@ from tests.torch.utils import to_comparable_nx_graph
 REF_DIR = TEST_ROOT / "torch" / "data" / "function_hook" / "compress_weights" / "fq_lora"
 
 
+@pytest.mark.parametrize(
+    ("compression_format", "expected_names"),
+    [
+        (CompressionFormat.FQ_LORA, ["rank_4", "rank_8"]),
+        (CompressionFormat.FQ_LORA_NLS, ["rank_4", "rank_8"]),
+        (CompressionFormat.DQ, ["rank_2", "rank_3", "rank_4", "rank_8"]),
+    ],
+)
+def test_handle_lora_rank_compatible_params_fallback(
+    compression_format: CompressionFormat, expected_names: list[str]
+) -> None:
+    rank = 4
+    algorithm = WeightCompression(
+        mode=CompressWeightsMode.INT4_SYM,
+        ratio=1.0,
+        group_size=-1,
+        ignored_scope=None,
+        all_layers=False,
+        sensitivity_metric=nncf.SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
+        awq=False,
+        subset_size=1,
+        scale_estimation=False,
+        gptq=False,
+        lora_correction=False,
+        backup_mode=CompressWeightsMode.INT8_SYM,
+        compression_format=compression_format,
+        advanced_parameters=AdvancedCompressionParameters(lora_adapter_rank=rank),
+    )
+    algorithm._backend = BackendType.TORCH
+    weight_params = [
+        WeightCompressionParameters(name, None, 0, None, shape, (), None)
+        for name, shape in [
+            ("rank_2", (2, 8)),
+            ("rank_3", (3, 8)),
+            ("rank_4", (4, 8)),
+            ("rank_8", (8, 8)),
+        ]
+    ]
+
+    actual = algorithm._handle_lora_rank_compatible_params_fallback(weight_params)
+
+    assert [params.weight_name for params in actual] == expected_names
+
+
 @pytest.mark.cuda
 @pytest.mark.parametrize(
     ("mode", "backup_mode", "ref_num_trainable"),
@@ -50,8 +97,10 @@ REF_DIR = TEST_ROOT / "torch" / "data" / "function_hook" / "compress_weights" / 
         (nncf.CompressWeightsMode.INT4_ASYM, nncf.CompressWeightsMode.INT8_ASYM, 4),
         # LoRA A, LoRA B, scale for single linear layer
         (nncf.CompressWeightsMode.INT4_SYM, nncf.CompressWeightsMode.INT8_SYM, 3),
+        (nncf.CompressWeightsMode.INT3_SYM, nncf.CompressWeightsMode.INT8_SYM, 3),
+        (nncf.CompressWeightsMode.INT2_SYM, nncf.CompressWeightsMode.INT8_SYM, 3),
     ),
-    ids=["asym", "sym"],
+    ids=["asym", "sym", "sym_int3", "sym_int2"],
 )
 def test_fq_lora_tuning(mode, backup_mode, ref_num_trainable, _seed):
     """
@@ -111,8 +160,15 @@ def test_fq_lora_tuning(mode, backup_mode, ref_num_trainable, _seed):
 @pytest.mark.cuda
 @pytest.mark.parametrize(
     "compression_kwargs",
-    (dict(scale_estimation=True, awq=True), dict(scale_estimation=False, awq=False)),
-    ids=["se_awq", "data_free"],
+    (
+        dict(scale_estimation=True, awq=True, mode=nncf.CompressWeightsMode.INT4_ASYM),
+        dict(scale_estimation=False, awq=False, mode=nncf.CompressWeightsMode.INT4_ASYM),
+        dict(scale_estimation=True, awq=True, mode=nncf.CompressWeightsMode.INT3_SYM),
+        dict(scale_estimation=False, awq=False, mode=nncf.CompressWeightsMode.INT3_SYM),
+        dict(scale_estimation=True, awq=True, mode=nncf.CompressWeightsMode.INT2_SYM),
+        dict(scale_estimation=False, awq=False, mode=nncf.CompressWeightsMode.INT2_SYM),
+    ),
+    ids=["se_awq", "data_free", "se_awq_int3", "data_free_int3", "se_awq_int2", "data_free_int2"],
 )
 def test_fq_lora_export(compression_kwargs, _seed):
     """
@@ -126,7 +182,6 @@ def test_fq_lora_export(compression_kwargs, _seed):
     model = nncf.compress_weights(
         model,
         group_size=-1,
-        mode=nncf.CompressWeightsMode.INT4_ASYM,
         dataset=nncf.Dataset([example_input]),
         compression_format=nncf.CompressionFormat.FQ_LORA,
         advanced_parameters=AdvancedCompressionParameters(lora_adapter_rank=8),
@@ -138,7 +193,7 @@ def test_fq_lora_export(compression_kwargs, _seed):
         model = nncf.strip(model, do_copy=False, strip_format=StripFormat.DQ, example_input=example_input)
         stripped_output = model(example_input)
         model = ov.convert_model(model, example_input=example_input)
-        model = ov.compile_model(model)
+        model = ov.compile_model(model, "CPU")
         example_inputs_numpy = example_input.detach().cpu().numpy()
         stripped_ov_output = torch.tensor(model(example_inputs_numpy)[0], device=example_input.device)
 

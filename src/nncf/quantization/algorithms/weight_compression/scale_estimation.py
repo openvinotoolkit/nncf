@@ -411,4 +411,5 @@ def estimate_scales(weight: Tensor, target: Tensor, zero_mask: Tensor, importanc
     ideal_scale = fns.abs(weight) / (fns.abs(target) + zero_mask)
     weighted_scale = ideal_scale * importance
     near_to_ideal_scale = fns.sum(weighted_scale, axis=-1, keepdims=True)
+
     return near_to_ideal_scale

@@ -16,8 +16,6 @@ class ValidationError(Exception):
     for example, if the user supplied an invalid or inconsistent set of arguments.
     """
 
-    pass
-
 
 class InternalError(Exception):
     """
@@ -28,15 +26,11 @@ class InternalError(Exception):
 
     """
 
-    pass
-
 
 class UnsupportedDatasetError(Exception):
     """
     Raised when an unsupported dataset is encountered
     """
-
-    pass
 
 
 class InvalidPathError(Exception):
@@ -44,15 +38,11 @@ class InvalidPathError(Exception):
     Raised when an invalid path is provided
     """
 
-    pass
-
 
 class UnsupportedBackendError(Exception):
     """
     Raised when an unsupported backend is specified
     """
-
-    pass
 
 
 class InvalidQuantizerGroupError(Exception):
@@ -60,15 +50,11 @@ class InvalidQuantizerGroupError(Exception):
     Raised when an invalid quantizer group is encountered.
     """
 
-    pass
-
 
 class InstallationError(Exception):
     """
     Raised when an error occurs during installation.
     """
-
-    pass
 
 
 class UnsupportedModelError(Exception):
@@ -76,15 +62,11 @@ class UnsupportedModelError(Exception):
     Raised when an unsupported model is encountered.
     """
 
-    pass
-
 
 class InvalidGroupSizeError(Exception):
     """
     Raised in case of group-wise quantization, when number of channels are not divided by the given group size.
     """
-
-    pass
 
 
 class UnsupportedVersionError(Exception):
@@ -92,15 +74,11 @@ class UnsupportedVersionError(Exception):
     Raised when an unsupported version is encountered.
     """
 
-    pass
-
 
 class ModuleNotFoundError(Exception):
     """
     Raised when a required module is not found.
     """
-
-    pass
 
 
 class ParameterNotSupportedError(Exception):
@@ -112,15 +90,11 @@ class ParameterNotSupportedError(Exception):
 
     """
 
-    pass
-
 
 class InvalidCollectorTypeError(Exception):
     """
     Raised when an invalid collector type is encountered.
     """
-
-    pass
 
 
 class BufferFullError(Exception):
@@ -128,15 +102,11 @@ class BufferFullError(Exception):
     Raised when a buffer is full
     """
 
-    pass
-
 
 class UnknownDatasetError(Exception):
     """
     Raised when an unknown dataset is encountered.
     """
-
-    pass
 
 
 class StatisticsCacheError(Exception):

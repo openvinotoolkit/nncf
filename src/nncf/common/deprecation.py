@@ -89,5 +89,5 @@ def _generate_deprecation_message(
         f"and will be removed in {f'NNCF v{end_version}.' if end_version else 'a future NNCF version.'}"
     )
     if text:
-        return "\n".join([msg, text])
+        return f"{msg}\n{text}"
     return msg

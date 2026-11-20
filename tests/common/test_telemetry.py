@@ -198,7 +198,7 @@ class Raises:
 
     def __call__(self, arg1, arg2):
         self.call_count += 1
-        raise Exception()
+        raise Exception
 
 
 def test_skip_if_raised():

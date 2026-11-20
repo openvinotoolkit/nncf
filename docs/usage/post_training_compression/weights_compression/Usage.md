@@ -25,10 +25,11 @@ The Weights Compression algorithm is aimed at compressing the weights of the mod
 
 By default, the algorithm applies asymmetric 8-bit integer quantization (INT8_ASYM mode) to all weights. For symmetric quantization without zero point, the INT8_SYM mode is also available. Both modes typically preserve model accuracy while providing decent performance improvements.
 
-| Compression Mode | Element type | Scale type | Granularity              | Supported backends               | Description                |
-|------------------|--------------|------------|--------------------------|----------------------------------|----------------------------|
-| INT8_ASYM        | INT8         | FP16       | Per-channel              | OpenVINO, PyTorch, ONNX, TorchFX | [Asymmetric quantization](/docs/usage/Quantization.md#asymmetric-quantization) |
-| INT8_SYM         | INT8         | FP16       | Per-channel              | OpenVINO, PyTorch, ONNX, TorchFX | [Symmetric quantization](/docs/usage/Quantization.md#symmetric-quantization) |
+| Compression Mode    | Element type | Scale type | Granularity              | Supported backends               | Description                |
+|---------------------|--------------|------------|--------------------------|----------------------------------|----------------------------|
+| INT8_ASYM           | INT8         | FP16       | Per-channel              | OpenVINO, PyTorch, ONNX, TorchFX | [Asymmetric quantization](/docs/usage/Quantization.md#asymmetric-quantization) |
+| INT8_SYM            | INT8         | FP16       | Per-channel              | OpenVINO, PyTorch, ONNX, TorchFX | [Symmetric quantization](/docs/usage/Quantization.md#symmetric-quantization) |
+| INT8_ASYM, INT8_SYM | INT8         | FP16       | Group-wise               | OpenVINO                         | Only for weights with a single reduction axis, other per-channel |
 
 #### Mixed precision modes
 
@@ -84,6 +85,14 @@ from nncf import compress_weights, CompressWeightsMode
 compressed_model = compress_weights(model, mode=CompressWeightsMode.INT8_SYM)  # model is openvino.Model object
 ```
 
+- Compress weights symmetrically to 8-bit integer data type with one scale per group of 32 weights (OpenVINO backend).
+
+```python
+from nncf import compress_weights, CompressWeightsMode
+
+compressed_model = compress_weights(model, mode=CompressWeightsMode.INT8_SYM, group_size=32)
+```
+
 - Compress weights symmetrically to 4-bit integer data type with group size = 128, except embeddings, convolutions and last linear layers - they are compressed asymmetrically to 8-bit integer data type.
 
 ```python
@@ -120,7 +129,7 @@ compressed_model = compress_weights(
 #### Custom precision for specific layers
 
 - The `scoped_configs` parameter assigns a compression configuration (`mode`, `group_size`) to certain layers
-  explicitly. A typical use case is a Mixture-of-Experts model, where the experts are compressed to 4 bits, while the router layers are kept in 8 bits to preserve accuracy.
+  explicitly. A typical use case is a Mixture-of-Experts model, where the experts are compressed to 4 bits, while the router layers are kept in 8 bits to preserve accuracy. See [the scoped config](/docs/usage/ScopedConfig.md) documentation for more details.
 
 ```python
 import nncf

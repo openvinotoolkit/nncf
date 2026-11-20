@@ -87,7 +87,7 @@ class COCO128Dataset(torch.utils.data.Dataset):
         label_filepath = self.labels_path / f"{image_id:012d}.txt"
         if label_filepath.exists():
             with open(label_filepath, encoding="utf-8") as f:
-                for box_descr in f.readlines():
+                for box_descr in f:
                     category_id, rel_x, rel_y, rel_w, rel_h = tuple(map(float, box_descr.split(" ")))
                     box_x1, box_y1 = img_w * (rel_x - rel_w / 2), img_h * (rel_y - rel_h / 2)
                     box_x2, box_y2 = img_w * (rel_x + rel_w / 2), img_h * (rel_y + rel_h / 2)

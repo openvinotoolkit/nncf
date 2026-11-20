@@ -31,8 +31,7 @@ def test_set_quantization_traits_for_quant_prop_graph_nodes():
     for op_meta in tested_op_metatypes:
         if op_meta not in INPUT_NOOP_METATYPES and op_meta not in OUTPUT_NOOP_METATYPES:
             aliases = op_meta.get_all_aliases()
-            for alias in aliases:
-                tested_op_names.add(alias)
+            tested_op_names.update(aliases)
 
     # Edges should be irrelevant - using random graph
     mock_graph = get_randomly_connected_model_graph(tested_op_names)

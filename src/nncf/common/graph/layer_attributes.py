@@ -12,7 +12,6 @@
 from abc import ABC
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
 
 
 class Dtype(Enum):
@@ -28,28 +27,6 @@ class BaseLayerAttributes(ABC):  # noqa: B024
 
     def __eq__(self, __o: object) -> bool:
         return isinstance(__o, self.__class__) and self.__dict__ == __o.__dict__
-
-
-class MultipleInputLayerAttributes(BaseLayerAttributes):
-    def __init__(self, axis: int, num_inputs: int | None = None):
-        """
-
-        :param axis: the dimension over which the inputs are combined (e.g. concatenated).
-        :param num_inputs: Number of inputs.
-        """
-        self.axis = axis
-        self.num_inputs = num_inputs
-
-
-class MultipleOutputLayerAttributes(BaseLayerAttributes):
-    def __init__(self, chunks: int | list[Any], axis: int):
-        """
-
-        :param chunks: Number of chunks (outputs).
-        :param axis: The dimension along which to make multiple outputs (e.g. split the tensor).
-        """
-        self.chunks = chunks
-        self.axis = axis
 
 
 class WeightedLayerAttributes(BaseLayerAttributes):
@@ -150,82 +127,6 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
         self.transpose = transpose
         self.padding_values = padding_values
         self.output_padding_values = output_padding_values
-
-
-class GroupNormLayerAttributes(WeightedLayerAttributes):
-    def __init__(self, weight_requires_grad: bool, num_channels: int, num_groups: int):
-        """
-
-        :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,
-        False otherwise.
-        :param num_channels: number of channels expected in the layer's input.
-        :param num_groups: number of groups to separate the channels into.
-        """
-        super().__init__(weight_requires_grad)
-        self.num_channels = num_channels
-        self.num_groups = num_groups
-
-
-@dataclass
-class ReshapeLayerAttributes(BaseLayerAttributes):
-    """
-    :param input_shape: number of elements of each of the axes of a input tensor.
-    :param output_shape: number of elements of each of the axes of a output tensor.
-    """
-
-    input_shape: list[int]
-    output_shape: list[int]
-
-
-@dataclass
-class TransposeLayerAttributes(BaseLayerAttributes):
-    """
-    :param dim0: the first dimension to be transposed.
-    :param dim1: the second dimension to be transposed.
-    """
-
-    dim0: int
-    dim1: int
-
-
-@dataclass
-class PermuteLayerAttributes(BaseLayerAttributes):
-    """
-    :param permutation: the desired ordering of dimensions.
-    """
-
-    permutation: tuple[int, ...]
-
-
-@dataclass
-class GetItemLayerAttributes(BaseLayerAttributes):
-    """
-    :param key: usually int, tuple of int or slice.
-    """
-
-    key: Any
-
-
-@dataclass
-class PadLayerAttributes(BaseLayerAttributes):
-    """
-    :param mode: mode of the padding operation.
-    :param value: fill value of the padding operation.
-    """
-
-    mode: str = "constant"
-    value: float = 0
-
-
-@dataclass
-class ConvertDtypeLayerAttributes(BaseLayerAttributes):
-    """
-    :param src_dtype: node input data type.
-    :param dst_dtype: node output data type.
-    """
-
-    src_dtype: Any
-    dst_dtype: Any
 
 
 @dataclass
