@@ -23,5 +23,5 @@ jobs:
   pytest:
     uses: ./.github/workflows/call_precommit.yml
     with:
-      python_version: "3.12"
+      python_version: "3.15"
       gpu_enabled: true
