@@ -11,13 +11,15 @@
 
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Callable, Iterable, TypeVar
+from typing import Any, Callable, Iterable, TypeVar, Tuple, Union
 
 import openvino as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
 
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.factory import build_graph
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.quantization.algorithms.pipeline import collect_statistics
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
@@ -73,7 +75,8 @@ def native_quantize_if_op_impl(
     model_type: ModelType | None = None,
     ignored_scope: Scope | IgnoredScope | None = None,
     advanced_parameters: AdvancedQuantizationParameters | None = None,
-) -> ov.Model:
+    return_statistics: bool = False,
+) -> Union[ov.Model, Tuple[ov.Model, StatisticPointsContainer]]:
     """
     Implementation of the `quantize()` method for the OpenVINO backend via the OpenVINO Runtime API.
     """
@@ -111,6 +114,7 @@ def native_quantize_if_op_impl(
         model_type=model_type,
         ignored_scope=ignored_scope,
         advanced_parameters=advanced_parameters,
+        return_statistics=return_statistics,
     )
     for graph in graphs.values():
         if is_model_no_batchwise_support(graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS):
@@ -121,12 +125,15 @@ def native_quantize_if_op_impl(
         f"The model consists of {if_ops_number} If node(-s) with then and else bodies. \
             Main model and all If bodies will be quantized recursively."
     )
+    statistic_points = quantization_algorithm.get_statistic_points(model, graphs[main_model_graph_id])
+    statistic_points = collect_statistics(statistic_points, model, graphs[main_model_graph_id], calibration_dataset)
     quantized_model, _ = apply_algorithm_if_bodies(
-        quantization_algorithm, model, graphs, main_model_graph_id, calibration_dataset, subset_size, 1
+        quantization_algorithm, model, graphs, main_model_graph_id, calibration_dataset, subset_size, 1, statistic_points
     )
 
     if is_weight_compression_needed(advanced_parameters):
         compress_quantize_weights_transformation(quantized_model)
+
 
     dump_parameters(
         quantized_model,
@@ -140,6 +147,8 @@ def native_quantize_if_op_impl(
             "advanced_parameters": convert_to_dict_recursively(advanced_parameters),
         },
     )
+    if return_statistics:
+        return quantized_model, statistic_points
     return quantized_model
 
 
@@ -154,7 +163,8 @@ def native_quantize_impl(
     model_type: ModelType | None = None,
     ignored_scope: Scope | IgnoredScope | None = None,
     advanced_parameters: AdvancedQuantizationParameters | None = None,
-) -> ov.Model:
+    return_statistics: bool = False,
+) -> Union[ov.Model, Tuple[ov.Model, StatisticPointsContainer]]:
     """
     Implementation of the `quantize()` method for the OpenVINO backend via the OpenVINO Runtime API.
     """
@@ -167,13 +177,17 @@ def native_quantize_impl(
         model_type=model_type,
         ignored_scope=ignored_scope,
         advanced_parameters=advanced_parameters,
+        return_statistics=return_statistics,
     )
     graph = GraphConverter.create_nncf_graph(model)
     warning_model_no_batchwise_support(graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS)
-    quantized_model = quantization_algorithm.apply(model, graph, dataset=calibration_dataset)
+    statistic_points = quantization_algorithm.get_statistic_points(model, graph)
+    statistic_points = collect_statistics(statistic_points, model, graph, calibration_dataset)
+    quantized_model = quantization_algorithm.apply(model, graph, statistic_points, dataset=calibration_dataset)
 
     if is_weight_compression_needed(advanced_parameters):
         compress_quantize_weights_transformation(quantized_model)
+
 
     dump_parameters(
         quantized_model,
@@ -187,6 +201,8 @@ def native_quantize_impl(
             "advanced_parameters": convert_to_dict_recursively(advanced_parameters),
         },
     )
+    if return_statistics:
+        return quantized_model, statistic_points
     return quantized_model
 
 
@@ -221,7 +237,7 @@ def quantize_with_accuracy_control_impl(
         copied_parameters = deepcopy(advanced_quantization_parameters)
     copied_parameters.backend_params[BackendParameters.COMPRESS_WEIGHTS] = False
 
-    quantized_model = quantize_impl(
+    quantized_model, statistic_points = quantize_impl(
         model=model,
         calibration_dataset=calibration_dataset,
         preset=preset,
@@ -231,6 +247,7 @@ def quantize_with_accuracy_control_impl(
         model_type=model_type,
         ignored_scope=ignored_scope,
         advanced_parameters=copied_parameters,
+        return_statistics=True,
     )
 
     if advanced_accuracy_restorer_parameters.intermediate_model_dir:
@@ -253,7 +270,6 @@ def quantize_with_accuracy_control_impl(
 
     nncf_logger.info(f"Accuracy drop: {accuracy_drop} ({drop_type})")
 
-    # TODO(andrey-churkin): Collect statistics only once
     if advanced_accuracy_restorer_parameters.tune_hyperparams and not should_terminate:
         model = remove_friendly_name_duplicates(model)
         tuned_quantized_model = quantize_with_tune_hyperparams(
@@ -271,6 +287,7 @@ def quantize_with_accuracy_control_impl(
             model_type,
             ignored_scope,
             copied_parameters,
+            initial_statistic_points=statistic_points,
         )
         tuned_quantized_metric_results = evaluator.collect_metric_results(
             tuned_quantized_model, validation_dataset, model_name="tuned"
@@ -340,7 +357,8 @@ def quantize_impl(
     model_type: ModelType | None = None,
     ignored_scope: Scope | IgnoredScope | None = None,
     advanced_parameters: AdvancedQuantizationParameters | None = None,
-) -> ov.Model:
+    return_statistics: bool = False,
+) -> Union[ov.Model, Tuple[ov.Model, StatisticPointsContainer]]:
     """
     Implementation of the `quantize()` method for the OpenVINO backend.
     """
@@ -361,6 +379,7 @@ def quantize_impl(
         model_type=model_type,
         ignored_scope=ignored_scope,
         advanced_parameters=advanced_parameters,
+        return_statistics=return_statistics,
     )
 
 
