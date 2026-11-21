@@ -43,6 +43,8 @@ from nncf.experimental.torch.fx.transformations import node_removal_transformati
 from nncf.experimental.torch.fx.transformations import output_insertion_transformation_builder
 from nncf.experimental.torch.fx.transformations import qdq_insertion_transformation_builder
 from nncf.experimental.torch.fx.transformations import remove_split_getitem_nodes
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.utils import get_model_device
 from tests.cross_fw.shared.nx_graph import compare_nx_graph_with_reference
@@ -563,6 +565,103 @@ def test_compress_post_quantize_transformation(is_per_channel: bool):
     path_to_dot = TRANSFORMED_GRAPH_DIR_NAME / graph_name
     nx_graph = nncf.build_graph(model_with_incorrect_pattern).get_graph_for_structure_analysis(extended=True)
     compare_nx_graph_with_reference(nx_graph, path_to_dot.as_posix())
+
+
+class LinearWithWeightQDQ(torch.nn.Module):
+    """
+    Linear layer whose weight goes through a Quantize/Dequantize pair with the given parameters.
+    """
+
+    WEIGHT = torch.tensor([[-0.5, -0.1, 0.0, 0.3, 0.6], [-0.2, 0.1, 0.25, 0.4, 0.5]])
+    SCALES = torch.tensor([0.005, 0.004])
+
+    def __init__(self, per_channel: bool, quant_min: int, quant_max: int, dtype: torch.dtype, zero_point: int) -> None:
+        super().__init__()
+        self.weight = torch.nn.Parameter(self.WEIGHT.clone(), requires_grad=False)
+        self.per_channel = per_channel
+        self.qparams = (quant_min, quant_max, dtype)
+        if per_channel:
+            self.register_buffer("scale", self.SCALES.clone())
+            # NNCF builds per channel zero points with the same dtype as the quantized values.
+            self.register_buffer("zero_point", torch.tensor([zero_point, 0], dtype=dtype))
+        else:
+            self.scale = float(self.SCALES[0])
+            self.zero_point = zero_point
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if self.per_channel:
+            qdq_args = (self.scale, self.zero_point, 0, *self.qparams)
+            quantized = torch.ops.quantized_decomposed.quantize_per_channel.default(self.weight, *qdq_args)
+            weight = torch.ops.quantized_decomposed.dequantize_per_channel.default(quantized, *qdq_args)
+        else:
+            qdq_args = (self.scale, self.zero_point, *self.qparams)
+            quantized = torch.ops.quantized_decomposed.quantize_per_tensor.default(self.weight, *qdq_args)
+            weight = torch.ops.quantized_decomposed.dequantize_per_tensor.default(quantized, *qdq_args)
+        return torch.nn.functional.linear(x, weight)
+
+    def get_reference_codes_and_weight(self) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Computes the integer codes and the dequantized weight in floating point,
+        independently of the quantize/dequantize operators.
+
+        :return: Integer codes and the dequantized weight.
+        """
+        scale = torch.as_tensor(self.scale, dtype=torch.float32).reshape(-1, 1)
+        zero_point = torch.as_tensor(self.zero_point, dtype=torch.float32).reshape(-1, 1)
+        quant_min, quant_max, _ = self.qparams
+        codes = torch.clamp(torch.round(self.weight / scale) + zero_point, quant_min, quant_max)
+        return codes, (codes - zero_point) * scale
+
+
+@pytest.mark.parametrize(
+    ("quant_min", "quant_max", "dtype", "zero_point"),
+    [(-128, 127, torch.int8, 0), (0, 255, torch.uint8, 42)],
+    ids=["int8", "uint8"],
+)
+def test_compress_post_quantize_transformation_values(
+    is_per_channel: bool, quant_min: int, quant_max: int, dtype: torch.dtype, zero_point: int
+) -> None:
+    model = LinearWithWeightQDQ(is_per_channel, quant_min, quant_max, dtype, zero_point)
+    ex_input = torch.arange(10, dtype=torch.float32).reshape(2, 5) / 10
+    fx_model = get_torch_fx_model(model, ex_input)
+    ref_codes, ref_weight = model.get_reference_codes_and_weight()
+
+    compress_post_quantize_transformation(fx_model)
+    fx_model.recompile()
+
+    compressed_weights = [
+        get_tensor_constant_from_node(node, fx_model)
+        for node in fx_model.graph.nodes
+        if node.op == "get_attr" and node.target.startswith("compressed_weight_updated_constant")
+    ]
+    assert len(compressed_weights) == 1
+    compressed_weight = compressed_weights[0]
+    assert compressed_weight.dtype == dtype
+    assert torch.equal(compressed_weight.to(torch.float32), ref_codes)
+
+    ref_output = torch.nn.functional.linear(ex_input, ref_weight)
+    assert torch.allclose(fx_model(ex_input), ref_output, atol=1e-6)
+
+
+def test_quantize_asymmetric_weights_with_compression(is_per_channel: bool) -> None:
+    torch.manual_seed(0)
+    model = torch.nn.Linear(4, 2, bias=False).eval()
+    with torch.no_grad():
+        model.weight.add_(0.3)
+    ex_input = torch.ones(1, 4)
+    fx_model = get_torch_fx_model(model, ex_input)
+
+    advanced_parameters = AdvancedQuantizationParameters(
+        weights_quantization_params=QuantizationParameters(
+            mode=QuantizationMode.ASYMMETRIC, per_channel=is_per_channel
+        ),
+        disable_bias_correction=True,
+    )
+    quantized_model = nncf.quantize(
+        fx_model, nncf.Dataset([ex_input]), subset_size=1, advanced_parameters=advanced_parameters
+    )
+
+    assert torch.allclose(quantized_model(ex_input), model(ex_input), atol=1e-2)
 
 
 def test_constant_folding():

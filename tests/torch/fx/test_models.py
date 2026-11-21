@@ -289,13 +289,13 @@ def check_fq_values(quantized_model):
 
 def check_compressed_post_quantized(quantized_model):
     for node in quantized_model.graph.nodes:
-        if node.name[:3] != "mul":
+        if node.name[:3] != "sub":
             continue
         args = []
         args = _get_node_inputs(node, quantized_model)
         if not args:
             continue
-        assert args[0].dtype == torch.int8
+        assert args[0].dtype in (torch.int8, torch.uint8)
         result = node.target(*args)
         assert result.dtype == torch.float32
 
