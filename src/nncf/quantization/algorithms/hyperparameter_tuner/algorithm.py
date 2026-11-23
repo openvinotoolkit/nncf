@@ -225,6 +225,7 @@ class HyperparameterTuner:
         subset_size: int,
         initial_metric_results: MetricResults,
         quantized_metric_results: MetricResults,
+        initial_statistic_points: StatisticPointsContainer | None = None,
     ):
         """
         :param pipeline_fn: Function to create pipeline.
@@ -246,6 +247,7 @@ class HyperparameterTuner:
         self._subset_size = subset_size
         self._initial_metric_results = initial_metric_results
         self._quantized_metric_results = quantized_metric_results
+        self._initial_statistic_points = initial_statistic_points
 
         self._is_metric_mode = isinstance(self._initial_metric_results.values_for_each_item[0], float)
 
@@ -290,8 +292,11 @@ class HyperparameterTuner:
                 # TODO(andrey-churkin): Think about how it can be avoided.
                 params = apply_combination(self._init_params, best_settings)
                 pipeline = self._pipeline_fn(**params)
-                container = pipeline.get_statistic_points_for_step(step_index, step_model, step_graph)
-                step_statistics = collect_statistics(container, step_model, step_graph, self._calibration_dataset)
+                if step_index == 0 and self._initial_statistic_points is not None:
+                    step_statistics = self._initial_statistic_points
+                else:
+                    container = pipeline.get_statistic_points_for_step(step_index, step_model, step_graph)
+                    step_statistics = collect_statistics(container, step_model, step_graph, self._calibration_dataset)
                 step_model = pipeline.run_step(step_index, step_statistics, step_model, step_graph)
                 continue
 
@@ -359,13 +364,16 @@ class HyperparameterTuner:
             self._pipelines[combination_key] = self._pipeline_fn(**kwargs)
 
         # Collect statistics required to execute `step_index`-th pipeline step
-        containers = [
-            pipeline.get_statistic_points_for_step(step_index, step_model, step_graph)
-            for pipeline in self._pipelines.values()
-        ]
-        self._step_index_to_statistics[step_index] = collect_statistics(
-            containers, step_model, step_graph, self._calibration_dataset
-        )
+        if step_index == 0 and self._initial_statistic_points is not None:
+            self._step_index_to_statistics[step_index] = self._initial_statistic_points
+        else:
+            containers = [
+                pipeline.get_statistic_points_for_step(step_index, step_model, step_graph)
+                for pipeline in self._pipelines.values()
+            ]
+            self._step_index_to_statistics[step_index] = collect_statistics(
+                containers, step_model, step_graph, self._calibration_dataset
+            )
 
     def _calculate_combination_score(
         self,
