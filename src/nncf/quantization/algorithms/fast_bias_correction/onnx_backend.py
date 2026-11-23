@@ -55,8 +55,9 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         inplace: bool,
         num_samples: int | None = None,
         window_size: int | None = None,
+        input_rank: int | None = None,
     ) -> TensorCollector:
-        return get_mean_statistic_collector(num_samples, channel_axis, window_size)
+        return get_mean_statistic_collector(num_samples, channel_axis, window_size, input_rank=input_rank)
 
     @staticmethod
     def get_sub_input_output_names(subgraph: onnx.ModelProto) -> tuple[str, str]:
