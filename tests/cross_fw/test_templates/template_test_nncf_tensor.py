@@ -241,6 +241,8 @@ class TemplateTestNNCFTensorOperators:
         "val, axis, exception_type, exception_match",
         (
             ([[[[1], [2]], [[1], [2]]]], (0, 1), ValueError, "not equal to one"),
+            ([[[[1], [2]], [[1], [2]]]], 1, ValueError, "not equal to one"),
+            ([[[[1], [2]], [[1], [2]]]], -2, ValueError, "not equal to one"),
             ([[[[1], [2]], [[1], [2]]]], 42, IndexError, "out of"),
             ([[[[1], [2]], [[1], [2]]]], (0, 42), IndexError, "out of"),
         ),
