@@ -270,7 +270,9 @@ def median(
         device = a.device
         result = torch.tensor(np.median(a.detach().cpu().numpy(), axis=axis, keepdims=keepdims))
         return result.type(a.dtype).to(device)
-    return quantile(a, q=0.5, axis=axis, keepdims=keepdims)
+    result = quantile(a, q=0.5, axis=axis, keepdims=keepdims)
+    # Make Numpy behavior, quantile always returns float64 tensor
+    return result.type(a.dtype) if a.is_floating_point() else result
 
 
 @numeric.floor.register
