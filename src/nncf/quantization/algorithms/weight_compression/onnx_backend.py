@@ -46,6 +46,7 @@ from nncf.onnx.graph.onnx_helper import get_node_index
 from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.onnx.graph.onnx_helper import pack_4_bits
 from nncf.onnx.graph.onnx_helper import pack_int4_to_uint8
+from nncf.onnx.graph.onnx_helper import pack_uint4_zero_point_to_uint8
 from nncf.onnx.graph.transformations.command_creation import ONNXCommandCreator
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.quantization.ignored_patterns import create_rope
@@ -475,6 +476,8 @@ class ONNXWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         )
         new_initializers = [quantized_weights_initializer, scale_initializer]
         if zero_point is not None:
+            if weight_dtype == onnx.TensorProto.UINT4:
+                zero_point = pack_uint4_zero_point_to_uint8(zero_point)
             zero_point_initializer = onnx.helper.make_tensor(
                 zero_point_name, onnx.TensorProto.UINT8, zero_point.shape, zero_point.tobytes(), raw=True
             )
