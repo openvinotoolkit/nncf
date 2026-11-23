@@ -733,6 +733,25 @@ class OVScaledDotProductAttentionMetatype(OVOpMetatype):
 
 
 @OV_OPERATOR_METATYPES.register()
+class OVQSAPrepareMetatype(OVOpMetatype):
+    name = "QSAPrepareOp"
+    op_names = ["QSAPrepare"]
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVSparseAttentionIndexerMetatype(OVOpMetatype):
+    name = "SparseAttentionIndexerOp"
+    op_names = ["SparseAttentionIndexer"]
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVSparseAttentionMetatype(OVOpMetatype):
+    name = "SparseAttentionOp"
+    op_names = ["SparseAttention"]
+    target_input_ports = [0, 1]
+
+
+@OV_OPERATOR_METATYPES.register()
 class OVCosMetatype(OVOpMetatype):
     name = "CosOp"
     op_names = ["Cos"]
