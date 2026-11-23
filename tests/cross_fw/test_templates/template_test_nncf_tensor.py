@@ -335,6 +335,22 @@ class TemplateTestNNCFTensorOperators:
         assert fns.allclose(res, ref_tensor)
         assert res.device == nncf_tensor.device
 
+    @pytest.mark.parametrize("fn", (fns.max, fns.min))
+    @pytest.mark.parametrize(
+        "val, keepdims, ref_shape",
+        (
+            (1, True, ()),
+            ([1, 2], True, (1,)),
+            ([[1, 2], [3, 4]], True, (1, 1)),
+            ([[1, 2], [3, 4]], False, ()),
+        ),
+    )
+    def test_fn_max_min_keepdims_shape_axis_none(self, fn, val, keepdims, ref_shape):
+        nncf_tensor = Tensor(self.to_tensor(val))
+        res = fn(nncf_tensor, axis=None, keepdims=keepdims)
+        assert isinstance(res, Tensor)
+        assert res.shape == ref_shape
+
     @pytest.mark.parametrize(
         "val, axis, keepdims, ref",
         (
