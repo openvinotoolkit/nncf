@@ -13,6 +13,7 @@ import torch
 
 from nncf.tensor import Tensor
 from nncf.tensor import TensorDataType
+from nncf.tensor import functions as fns
 from nncf.tensor.definitions import TensorBackend
 from nncf.tensor.definitions import TensorDeviceType
 from tests.cross_fw.test_templates.template_test_nncf_tensor import TemplateTestNNCFTensorOperators
@@ -76,3 +77,20 @@ class TestCudaPTNNCFTensorOperators(TemplateTestNNCFTensorOperators):
     @staticmethod
     def device() -> TensorDeviceType:
         return TensorDeviceType.GPU
+
+
+@pytest.mark.parametrize(
+    "fn",
+    (
+        lambda x: fns.median(x, axis=0),
+        lambda x: fns.median(x, axis=(0,)),
+        lambda x: fns.quantile(x, 0.5, axis=0),
+        lambda x: fns.percentile(x, [50], axis=0),
+        lambda x: fns.masked_median(x, Tensor(torch.zeros(x.shape, dtype=torch.bool)), axis=(0,)),
+    ),
+)
+def test_numpy_fallback_bfloat16(fn):
+    data = torch.tensor([[1.0, 4.0], [2.0, 6.0], [3.0, 8.0]])
+    res = fn(Tensor(data.to(torch.bfloat16)))
+    ref = fn(Tensor(data))
+    assert fns.allclose(fns.astype(res, TensorDataType.float32), fns.astype(ref, TensorDataType.float32))
