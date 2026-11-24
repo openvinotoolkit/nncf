@@ -15,7 +15,6 @@ import pytest
 from openvino import opset13 as opset
 
 import nncf
-from nncf.common.graph import NNCFGraph
 from nncf.quantization.algorithms.weight_compression.openvino_backend import (
     remove_variadic_splits_after_compressed_weights,
 )
@@ -71,7 +70,7 @@ def test_remove_variadic_splits_after_compressed_weights(dtype: ov.Type, decompr
     expected = [ov.Tensor(output.get_element_type(), output.get_shape()) for output in model.outputs]
     assert model.evaluate(expected, [])
 
-    assert remove_variadic_splits_after_compressed_weights(model, NNCFGraph()) is model
+    assert remove_variadic_splits_after_compressed_weights(model) is model
 
     assert all(node.get_type_name() != "VariadicSplit" for node in model.get_ops())
     assert "middle" in model.output(1).get_names()
@@ -104,7 +103,7 @@ def test_remove_variadic_splits_before_summed_matmuls(dtype: ov.Type) -> None:
     expected = [ov.Tensor(ov.Type.f32, [2, 3])]
     assert model.evaluate(expected, inputs)
 
-    remove_variadic_splits_after_compressed_weights(model, NNCFGraph())
+    remove_variadic_splits_after_compressed_weights(model)
 
     model.validate_nodes_and_infer_types()
     assert all(node.get_type_name() != "VariadicSplit" for node in model.get_ops())
@@ -143,7 +142,7 @@ def test_remove_variadic_splits_moe_grouped_weights(axis: int, asymmetric: bool,
     expected = [ov.Tensor(ov.Type.f32, [2, 1, 3])]
     assert model.evaluate(expected, inputs)
 
-    remove_variadic_splits_after_compressed_weights(model, NNCFGraph())
+    remove_variadic_splits_after_compressed_weights(model)
 
     model.validate_nodes_and_infer_types()
     assert all(node.get_type_name() != "VariadicSplit" for node in model.get_ops())
@@ -171,7 +170,7 @@ def test_remove_variadic_splits_with_broadcast_parameters(scale_shape: tuple[int
     expected = [ov.Tensor(output.get_element_type(), output.get_shape()) for output in model.outputs]
     assert model.evaluate(expected, [])
 
-    remove_variadic_splits_after_compressed_weights(model, NNCFGraph())
+    remove_variadic_splits_after_compressed_weights(model)
 
     model.validate_nodes_and_infer_types()
     assert all(node.get_type_name() != "VariadicSplit" for node in model.get_ops())
@@ -208,6 +207,6 @@ def test_remove_variadic_splits_leaves_unsupported_graphs(case: str) -> None:
     model = ov.Model(split.outputs(), parameters)
     original_ops = set(model.get_ops())
 
-    assert remove_variadic_splits_after_compressed_weights(model, NNCFGraph()) is model
+    assert remove_variadic_splits_after_compressed_weights(model) is model
 
     assert set(model.get_ops()) == original_ops
