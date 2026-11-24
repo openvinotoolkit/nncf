@@ -85,11 +85,12 @@ class TestOVNNCFTensorOperators:
         assert res.shape == (1, 2)
         assert res.device == tensor.device
 
-    def test_fn_reshape(self):
+    @pytest.mark.parametrize("shape, ref_shape", (((1, 2), (1, 2)), ((-1, 1), (2, 1)), (-1, (2,)), (2, (2,))))
+    def test_fn_reshape(self, shape, ref_shape):
         tensor = Tensor(self.to_tensor([1, 1]))
-        res = fns.reshape(tensor, (1, 2))
+        res = fns.reshape(tensor, shape)
         assert tensor.shape == (2,)
-        assert res.shape == (1, 2)
+        assert res.shape == ref_shape
         assert res.device == tensor.device
 
     @pytest.mark.parametrize("from_backend", [TensorBackend.numpy, TensorBackend.ov])
