@@ -710,10 +710,8 @@ def _move_axes_flatten_cat(
     """
     tensor_shape = list(tensor_list[0].shape)
 
-    # Transpose dims to move aggregation axes forward
-    transpose_dims = list(range(len(tensor_shape)))
-    for idx, axis in enumerate(aggregation_axes):
-        transpose_dims[axis], transpose_dims[idx] = transpose_dims[idx], transpose_dims[axis]
+    # Transpose dims to move aggregation axes forward, keeping the order of the remaining dims
+    transpose_dims = list(aggregation_axes) + [dim for dim in range(len(tensor_shape)) if dim not in aggregation_axes]
 
     # Shape to flatten aggregation axes
     reshape_shape = [-1] + [tensor_shape[dim] for dim in transpose_dims][len(aggregation_axes) :]
