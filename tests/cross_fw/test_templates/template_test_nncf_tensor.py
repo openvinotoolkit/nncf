@@ -2106,6 +2106,14 @@ class TemplateTestNNCFTensorOperators:
         assert fns.allclose(res.data, ref_tensor)
         assert res.device == x.device
 
+    @pytest.mark.parametrize("axis", (0, (0,)))
+    def test_fn_masked_median_float16(self, axis):
+        x = Tensor(self.cast_to(self.to_tensor([[0.0, 1.0], [2.0, 0.0], [4.0, 3.0]]), TensorDataType.float16))
+        mask = Tensor(self.to_tensor([[True, False], [False, True], [False, False]]))
+        res = fns.masked_median(x, mask, axis)
+        assert res.dtype == TensorDataType.float16
+        assert fns.allclose(res, Tensor(self.cast_to(self.to_tensor([3.0, 2.0]), TensorDataType.float16)))
+
     @pytest.mark.parametrize(
         "x, axis, ref",
         (

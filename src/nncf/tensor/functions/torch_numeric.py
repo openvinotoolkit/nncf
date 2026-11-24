@@ -435,8 +435,11 @@ def _(x: torch.Tensor, mask: torch.Tensor | None, axis: T_AXIS, keepdims: bool =
         result = torch.tensor(np.ma.median(np_masked_x, axis=axis, keepdims=keepdims))
         return result.type(x.dtype).to(device)
     pt_masked_x = x.masked_fill(mask, torch.nan)
+    # torch.nanquantile supports only float32 and float64 tensors
+    if pt_masked_x.dtype not in (torch.float32, torch.float64):
+        pt_masked_x = pt_masked_x.to(torch.float32)
     ret = torch.nanquantile(pt_masked_x, q=0.5, dim=axis, keepdim=keepdims)
-    return torch.nan_to_num(ret)
+    return torch.nan_to_num(ret).type(x.dtype)
 
 
 @numeric.expand_dims.register
