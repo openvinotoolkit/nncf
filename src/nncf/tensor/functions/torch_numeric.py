@@ -268,7 +268,11 @@ def median(
     # See https://github.com/pytorch/pytorch/issues/61582
     if not isinstance(axis, int):
         device = a.device
-        result = torch.tensor(np.median(a.detach().cpu().numpy(), axis=axis, keepdims=keepdims))
+        a_cpu = a.detach().cpu()
+        if a_cpu.dtype == torch.bfloat16:
+            # NumPy does not support bfloat16
+            a_cpu = a_cpu.float()
+        result = torch.tensor(np.median(a_cpu.numpy(), axis=axis, keepdims=keepdims))
         return result.type(a.dtype).to(device)
     return quantile(a, q=0.5, axis=axis, keepdims=keepdims)
 
@@ -305,9 +309,9 @@ def quantile(
             axis,
             keepdims,
         )
-    return torch.tensor(
-        np.quantile(a.detach().cpu().numpy().astype(np.float64, copy=False), q=q, axis=axis, keepdims=keepdims)
-    ).to(device)
+    return torch.tensor(np.quantile(a.detach().cpu().to(torch.float64).numpy(), q=q, axis=axis, keepdims=keepdims)).to(
+        device
+    )
 
 
 @numeric.percentile.register
@@ -431,7 +435,11 @@ def _(x: torch.Tensor, mask: torch.Tensor | None, axis: T_AXIS, keepdims: bool =
     # See https://github.com/pytorch/pytorch/issues/61582
     if not isinstance(axis, int):
         device = x.device
-        np_masked_x = np.ma.array(x.detach().cpu().numpy(), mask=mask.detach().cpu().numpy())
+        x_cpu = x.detach().cpu()
+        if x_cpu.dtype == torch.bfloat16:
+            # NumPy does not support bfloat16
+            x_cpu = x_cpu.float()
+        np_masked_x = np.ma.array(x_cpu.numpy(), mask=mask.detach().cpu().numpy())
         result = torch.tensor(np.ma.median(np_masked_x, axis=axis, keepdims=keepdims))
         return result.type(x.dtype).to(device)
     pt_masked_x = x.masked_fill(mask, torch.nan)
