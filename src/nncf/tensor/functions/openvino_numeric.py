@@ -100,7 +100,8 @@ def _(a: ov.Tensor) -> int:
 
 @numeric.reshape.register
 def _(a: ov.Tensor, shape: int | tuple[int, ...]) -> ov.Tensor:
-    return ov.Tensor(a.data.reshape(shape), shape, a.get_element_type())
+    data = a.data.reshape(shape)
+    return ov.Tensor(data, data.shape, a.get_element_type())
 
 
 @numeric.as_numpy_tensor.register
