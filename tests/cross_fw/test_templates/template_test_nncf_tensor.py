@@ -877,6 +877,13 @@ class TemplateTestNNCFTensorOperators:
         assert fns.allclose(res.data, ref_tensor), f"{res}"
         assert res.device == tensor.device
 
+    @pytest.mark.parametrize("axis", (None, 0, -1, (0, 1)))
+    @pytest.mark.parametrize("dtype", (TensorDataType.float16, TensorDataType.float32))
+    def test_fn_median_keeps_float_dtype(self, axis, dtype):
+        tensor = Tensor(self.cast_to(self.to_tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]), dtype))
+        res = fns.median(tensor, axis=axis)
+        assert res.dtype == dtype
+
     @pytest.mark.parametrize(
         "val, weights, minlength, ref",
         (
