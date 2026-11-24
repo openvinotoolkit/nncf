@@ -577,6 +577,15 @@ class TemplateTestReducersAggregators:
         for k, v in ref_values.items():
             assert fns.allclose(ret_val[k], self.get_nncf_tensor(v))
 
+    @pytest.mark.parametrize("aggregation_axes", [(0, 3), (0, 4), (0, 1, 4), (0, 2, 4)])
+    def test_percentile_aggregator_non_leading_aggregation_axes(self, aggregation_axes):
+        samples = [np.random.default_rng(i).normal(size=(2, 3, 4, 5)).astype(np.float32) for i in range(3)]
+        aggregator = PercentileAggregator(percentiles_to_collect=[50], aggregation_axes=aggregation_axes)
+        for sample in samples:
+            aggregator.register_reduced_input(self.get_nncf_tensor(sample, Dtype.FLOAT))
+        ref = np.percentile(np.stack(samples), 50, axis=aggregation_axes, keepdims=True)[0]
+        assert fns.allclose(aggregator.aggregate()[50], self.get_nncf_tensor(ref, Dtype.FLOAT))
+
     def test_mad_percentile_aggregators_not_implemented_aggregation_axes(self, MAD_percentile_aggregator_cls):
         with pytest.raises(NotImplementedError):
             MAD_percentile_aggregator_cls(aggregation_axes=(1, 2, 3))
