@@ -671,14 +671,11 @@ def remove_variadic_splits_after_compressed_weights(model: ov.Model) -> ov.Model
         start = 0
         for output in split.outputs():
             stop = start + output.get_shape()[split_axis]
-            replacement = slice_decompression(
-                source, split_axis, start, stop, cache, compressed_types, compressed_nodes
+            replacements.append(
+                slice_decompression(source, split_axis, start, stop, cache, compressed_types, compressed_nodes)
             )
-            if replacement is None:
-                break
-            replacements.append(replacement)
             start = stop
-        if not compressed_nodes or len(replacements) != split.get_output_size():
+        if not compressed_nodes or None in replacements:
             continue
         for output, replacement in zip(split.outputs(), replacements):
             new_output = replacement.output(0)
