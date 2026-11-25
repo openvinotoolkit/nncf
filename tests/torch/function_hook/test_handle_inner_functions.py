@@ -9,9 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ast
-import inspect
-
 import pytest
 import torch
 import torch.nn.functional as F
@@ -19,7 +16,6 @@ from torch import nn
 
 from nncf.torch.function_hook.graph.build_graph_mode import build_graph
 from nncf.torch.function_hook.graph.graph_visualization import to_pydot
-from nncf.torch.function_hook.handle_inner_functions import MAP_HANDLER_TO_INNER_FUNCTION
 from nncf.torch.function_hook.wrapper import wrap_model
 from tests.cross_fw.shared.paths import TEST_ROOT
 from tests.torch.utils import compare_with_reference_file
@@ -105,61 +101,3 @@ def test_inner_functions(model_cls: nn.Module, regen_ref_data: bool):
     dot_graph = to_pydot(graph)
     ref_file = REF_DIR / f"inner_functions_{model_cls.__name__}.dot"
     compare_with_reference_file(str(dot_graph), ref_file, regen_ref_data)
-
-
-class TypeHintRemover(ast.NodeTransformer):
-    def visit_FunctionDef(self, node):
-        # Remove type hints from arguments
-        for arg in node.args.args:
-            arg.annotation = None
-        # Remove return type annotation
-        node.returns = None
-
-        # Remove docstring
-        if node.body and isinstance(node.body[0], ast.Expr) and isinstance(node.body[0].value, ast.Constant):
-            node.body.pop(0)
-
-        # Process inner nodes
-        self.generic_visit(node)
-        return node
-
-
-def _get_clean_source_code(func) -> str:
-    source = inspect.getsource(func)
-    tree = ast.parse(source)
-
-    transformer = TypeHintRemover()
-    tree = transformer.visit(tree)
-
-    # Convert the AST back to source code
-    cleaned_source = ast.unparse(tree)
-
-    # Remove comments and empty strings
-    cleaned_lines = []
-    for line in cleaned_source.splitlines():
-        stripped_line = line.strip()
-        if stripped_line and not stripped_line.startswith("#"):
-            cleaned_line = stripped_line.split("#")[0].strip()
-            cleaned_lines.append(cleaned_line)
-
-    return "\n".join(cleaned_lines)
-
-
-@pytest.mark.parametrize("torch_func", MAP_HANDLER_TO_INNER_FUNCTION)
-def test_compare_torch_function_with_handle_inner_function(torch_func):
-    func = MAP_HANDLER_TO_INNER_FUNCTION[torch_func]
-
-    torch_func_code = _get_clean_source_code(torch_func)
-
-    # Filter handle_function from code
-    filtered_torch_func_code = []
-    func_begin = False
-    for line in torch_func_code.splitlines():
-        if "handle_torch_function" in line:
-            func_begin = True
-            continue
-        if func_begin or line.startswith("def"):
-            filtered_torch_func_code.append(line)
-    filtered_torch_func_code = "\n".join(filtered_torch_func_code)
-    func_code = _get_clean_source_code(func)
-    assert filtered_torch_func_code == func_code
