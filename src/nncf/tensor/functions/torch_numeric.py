@@ -87,7 +87,7 @@ def _(a: torch.Tensor) -> torch.Tensor:
 def _(a: torch.Tensor, axis: T_AXIS = None, keepdims: bool = False) -> torch.Tensor:
     # Analog of numpy.max is torch.amax
     if axis is None:
-        return torch.amax(a)
+        return torch.amax(a, dim=tuple(range(a.dim())), keepdim=keepdims)
     return torch.amax(a, dim=axis, keepdim=keepdims)
 
 
@@ -95,7 +95,7 @@ def _(a: torch.Tensor, axis: T_AXIS = None, keepdims: bool = False) -> torch.Ten
 def _(a: torch.Tensor, axis: T_AXIS = None, keepdims: bool = False) -> torch.Tensor:
     # Analog of numpy.min is torch.amin
     if axis is None:
-        return torch.amin(a)
+        return torch.amin(a, dim=tuple(range(a.dim())), keepdim=keepdims)
     return torch.amin(a, dim=axis, keepdim=keepdims)
 
 
