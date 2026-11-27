@@ -390,7 +390,8 @@ def _(a: torch.Tensor, axis: int) -> torch.Tensor:
 @numeric.transpose.register
 def _(a: torch.Tensor, axes: T_SHAPE_ARRAY | None = None) -> torch.Tensor:
     if axes is None:
-        return a.t()
+        # Make Numpy behavior, torch.Tensor.t() supports only tensors with <= 2 dimensions
+        axes = tuple(reversed(range(a.dim())))
     return torch.permute(a, axes)
 
 

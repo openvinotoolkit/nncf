@@ -1761,6 +1761,10 @@ class TemplateTestNNCFTensorOperators:
                 [[1, 2, 3], [4, 5, 6]],
                 [[1, 4], [2, 5], [3, 6]],
             ),
+            (
+                [[[1, 2], [3, 4]], [[5, 6], [7, 8]]],
+                [[[1, 5], [3, 7]], [[2, 6], [4, 8]]],
+            ),
         ),
     )
     def test_fn_transpose(self, x, ref):
