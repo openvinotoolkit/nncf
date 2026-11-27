@@ -633,7 +633,7 @@ def compress_weights(
                 CompressWeightsMode.NVFP4,
             }
 
-            if not scale_estimation:
+            if not scale_estimation or any((awq, gptq, lora_correction)):
                 not_supported_modes |= {CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3}
 
             unsupported_selected_modes = selected_modes & not_supported_modes
