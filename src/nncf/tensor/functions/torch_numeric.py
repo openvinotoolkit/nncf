@@ -71,7 +71,8 @@ def _(a: torch.Tensor, *, weights: torch.Tensor | None, minlength: int = 0) -> t
 def _(a: torch.Tensor, axis: T_AXIS = None) -> torch.Tensor:
     if axis is None:
         return a.squeeze()
-    if isinstance(axis, tuple) and any(a.shape[i] != 1 for i in axis):
+    axes = (axis,) if isinstance(axis, int) else axis
+    if any(a.shape[i] != 1 for i in axes):
         # Make Numpy behavior, torch.squeeze skips axes that are not equal to one..
         msg = "Cannot select an axis to squeeze out which has size not equal to one"
         raise ValueError(msg)
