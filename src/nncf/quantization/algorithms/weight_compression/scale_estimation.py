@@ -403,6 +403,9 @@ class ScaleEstimation:
 
             result_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
 
+            if config.mode == CompressWeightsMode.MXFP8_E4M3 or config.mode == CompressWeightsMode.MXFP4:
+                result_scale = convert_to_mxfp_scale(result_scale)
+
         if config.group_size == -1:
             result_scale = fns.squeeze(result_scale, axis=-2)
         if zp is not None and config.group_size == -1:
