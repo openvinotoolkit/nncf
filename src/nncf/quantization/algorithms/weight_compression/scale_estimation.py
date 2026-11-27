@@ -18,11 +18,13 @@ from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistics import WCTensorStatistic
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.activation_stats import process_stats
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.parameters import CompressedWeight
+from nncf.quantization.algorithms.weight_compression.weight_lowering import convert_to_mxfp_scale
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_float_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import float_quantize_dequantize_weight
@@ -188,7 +190,8 @@ class ScaleEstimation:
         :param subset_size: The number of samples to use for scale estimation. Defaults to 32.
         :param initial_steps: The number of steps for initial scale rectification using activation statistics.
             Defaults to 5.
-        :param scale_steps: The number of steps for refining the scale using a grid search. Defaults to 10.
+        :param scale_steps: The number of steps for refining the scale using a grid search. Defaults to 10
+            for any case besides MXFP compression. For MXFP compression, the number of steps is hardcoded to 2.
         :param weight_penalty: Penalty coefficient applied to the difference between floating-point
             and quantized weights. A value of -1 disables the penalty. Defaults to -1.0.
         :return: A tensor containing the calculated quantization scales and zero points if applicable.
@@ -266,6 +269,7 @@ class ScaleEstimation:
         # Baseline values ensure correct behavior when initial_steps=0 and/or scale_steps=0.
         best_diffs = min_max_scale_diffs
         result_scale = scale
+        prev_result_scale = result_scale
 
         scale_sign = scale / fns.abs(scale)
         zero_scale = 0.001
@@ -277,10 +281,19 @@ class ScaleEstimation:
             near_to_ideal_scale = near_to_ideal_scale * scale_sign
 
             if not config.is_integer:
+                scale_to_apply = near_to_ideal_scale
+
+                if config.mode == CompressWeightsMode.MXFP8_E4M3 or config.mode == CompressWeightsMode.MXFP4:
+                    # For MXFP formats, we need to convert the near_to_ideal_scale to E8M0
+                    # representation before applying it to quantization.
+                    scale_to_apply = convert_to_mxfp_scale(near_to_ideal_scale)
+                    if fns.allclose(scale_to_apply, result_scale):
+                        break
+
                 q_weights_ = float_quantize_dequantize_weight(
                     weight,
                     config,
-                    precomputed_scale=near_to_ideal_scale,
+                    precomputed_scale=scale_to_apply,
                 )
             else:
                 q_weights_ = integer_quantize_dequantize_weight(
@@ -303,11 +316,19 @@ class ScaleEstimation:
 
             mask = fns.unsqueeze(mask, axis=-1)
 
+            prev_result_scale = result_scale
             result_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
+            if fns.allclose(prev_result_scale, result_scale):
+                break
 
             if i < initial_steps - 1:
                 if not config.is_integer:
-                    compressed_weight = do_float_quantization(weight, config, precomputed_scale=result_scale)
+                    scale_to_apply = result_scale
+
+                    if config.mode == CompressWeightsMode.MXFP8_E4M3 or config.mode == CompressWeightsMode.MXFP4:
+                        scale_to_apply = convert_to_mxfp_scale(result_scale)
+
+                    compressed_weight = do_float_quantization(weight, config, precomputed_scale=scale_to_apply)
                 else:
                     compressed_weight = do_integer_quantization(
                         weight,
@@ -320,11 +341,24 @@ class ScaleEstimation:
                 zero_mask = zero_scale * zero_mask.astype(weight.dtype)
 
         # iterative rectification of scale based on grid search
+        factor_step = 0.05
+        if config.mode == CompressWeightsMode.MXFP8_E4M3 or config.mode == CompressWeightsMode.MXFP4:
+            # As scale for MXFP format is a power of two, it is useful to only try the original scale
+            # and then its half.
+            scale_steps = 2
+            factor_step = 0.5
         for scale_step in range(scale_steps):
-            factor = 1.0 - 0.05 * scale_step
+            # Question: First step repeats the original calculated scale at line 237?
+            #           Should we skip the first step?
+            factor = 1.0 - factor_step * scale_step
             scaled_scale = factor * scale
 
             if not config.is_integer:
+                scale_to_apply = scaled_scale
+
+                if config.mode == CompressWeightsMode.MXFP8_E4M3 or config.mode == CompressWeightsMode.MXFP4:
+                    scale_to_apply = convert_to_mxfp_scale(scaled_scale)
+
                 compressed_weight = do_float_quantization(weight, config, precomputed_scale=scaled_scale)
             else:
                 compressed_weight = do_integer_quantization(
@@ -341,7 +375,12 @@ class ScaleEstimation:
             near_to_ideal_scale = near_to_ideal_scale * scale_sign
 
             if not config.is_integer:
-                q_weights_ = float_quantize_dequantize_weight(weight, config, precomputed_scale=near_to_ideal_scale)
+                scale_to_apply = near_to_ideal_scale
+
+                if config.mode == CompressWeightsMode.MXFP8_E4M3 or config.mode == CompressWeightsMode.MXFP4:
+                    scale_to_apply = convert_to_mxfp_scale(near_to_ideal_scale)
+
+                q_weights_ = float_quantize_dequantize_weight(weight, config, precomputed_scale=scale_to_apply)
             else:
                 q_weights_ = integer_quantize_dequantize_weight(
                     weight,
