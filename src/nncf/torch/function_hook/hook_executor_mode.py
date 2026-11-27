@@ -23,13 +23,13 @@ from types import TracebackType
 from typing import Any, Callable, Generator, cast
 
 import torch
+import torch.nn.functional as F
 from torch import Tensor
 from torch import nn
 from torch.overrides import TorchFunctionMode
 
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.patcher import PATCHER
-from nncf.torch.function_hook.handle_inner_functions import get_handle_inner_function
 from nncf.torch.function_hook.hook_storage import HookStorage
 
 IGNORED_FN_NAMES = [
@@ -42,6 +42,15 @@ IGNORED_FN_NAMES = [
     "_parse_to",
     "_has_compatible_shallow_copy_type",
 ]
+
+# Functions whose inner calls must be visible to FunctionHookMode.
+FUNCTIONS_WITH_INNER_CALLS: frozenset[Callable[..., Any]] = frozenset(
+    {
+        F.relu,
+        F.batch_norm,
+        F.multi_head_attention_forward,
+    }
+)
 
 
 @dataclass
@@ -214,10 +223,9 @@ class FunctionHookMode(TorchFunctionMode):
 
         # WA: to catch nested calls for some functions
         # https://github.com/pytorch/pytorch/issues/55093
-        fn_for_nested_call = get_handle_inner_function(func)
-        if fn_for_nested_call is not None:
+        if func in FUNCTIONS_WITH_INNER_CALLS:
             with self:
-                return fn_for_nested_call(*args, **kwargs)
+                return torch.overrides.redispatch_function(func, types, args, kwargs)  # type: ignore[no-untyped-call]
 
         if not self.enabled or fn_name in IGNORED_FN_NAMES:
             return func(*args, **kwargs)
