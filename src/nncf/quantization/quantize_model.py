@@ -644,20 +644,6 @@ def compress_weights(
                 )
                 raise nncf.ParameterNotSupportedError(msg)
 
-        if any(scale_estimation):
-            not_supported_modes = {
-                CompressWeightsMode.FP8_E4M3,
-                CompressWeightsMode.FP4,
-                CompressWeightsMode.NVFP4,
-            }
-            unsupported_selected_modes = selected_modes & not_supported_modes
-            if unsupported_selected_modes:
-                msg = (
-                    "AWQ, Scale Estimation, GPTQ or Lora Correction algorithm is defined,"
-                    f" but mode in {sorted(m.value for m in not_supported_modes)}."
-                )
-                raise nncf.ParameterNotSupportedError(msg)
-
         if gptq and lora_correction:
             msg = "Simultaneous use of Lora correction and GPTQ algorithms is not supported. Select one of them."
             raise nncf.ParameterNotSupportedError(msg)
