@@ -412,7 +412,10 @@ def _(
     masked_x = np.ma.array(x, mask=mask)
     result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims)
     if isinstance(result, np.ma.MaskedArray):
-        return result.data
+        result = result.data
+    # np.ma.mean returns float64 for float32 input
+    if np.issubdtype(x.dtype, np.floating):
+        result = result.astype(x.dtype, copy=False)
     return result
 
 

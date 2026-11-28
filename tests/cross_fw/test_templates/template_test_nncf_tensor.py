@@ -2072,6 +2072,14 @@ class TemplateTestNNCFTensorOperators:
         assert fns.allclose(res.data, ref_tensor)
         assert res.device == x.device
 
+    @pytest.mark.parametrize("axis", (None, 0, 1, (0, 1)))
+    @pytest.mark.parametrize("dtype", (TensorDataType.float16, TensorDataType.float32))
+    def test_fn_masked_mean_keeps_float_dtype(self, axis, dtype):
+        x = Tensor(self.cast_to(self.to_tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]), dtype))
+        mask = Tensor(self.to_tensor([[True, False, True], [True, True, True]]))
+        res = fns.masked_mean(x, mask, axis)
+        assert res.dtype == dtype
+
     @pytest.mark.parametrize(
         "x, mask, axis, keepdims, ref",
         (
