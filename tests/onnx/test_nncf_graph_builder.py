@@ -135,7 +135,7 @@ def test_unknown_shape(opset_version: int, ref_shape: tuple[int, ...]):
     y = mb.add_concat([y, mb.add_initializer(np.array([-1, 60], dtype=np.int64))], axis=0)
 
     x = mb.add_reshape(x, y)
-    x = mb.add_matmul(x, (60, 10))
+    x = mb.add_matmul(x, mb.add_initializer(np.random.rand(60, 10).astype(np.float32)))
 
     mb.add_output(x, ("batch", 1, 10))
 
@@ -174,7 +174,7 @@ def test_get_bias_attr():
     mb = ModelBuilder()
     x = mb.add_input("x", (4, 3))
     y = mb.add_input("y", (4, 2))
-    matmul = mb.add_matmul(x, (3, 2))
+    matmul = mb.add_matmul(x, mb.add_initializer(np.random.rand(3, 2).astype(np.float32)))
     add = mb.add_add(y, matmul)
     mb.add_output(add, (4, 2))
     model = mb.build(opset_version=21, ir_version=10)

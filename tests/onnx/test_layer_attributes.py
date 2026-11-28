@@ -10,105 +10,82 @@
 # limitations under the License.
 
 import numpy as np
-import onnx
 import pytest
 
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
-from tests.onnx.models import DEFAULT_OPSET_VERSION
-from tests.onnx.models import create_initializer_tensor
+from tests.onnx.common import ModelBuilder
 
 
-class ONNXNodeCreator:
-    def __init__(self):
-        self._initializers = []
-        self._node = None
+def _build_identity_model():
+    mb = ModelBuilder()
+    x = mb.add_input("X", (3, 3, 3))
+    x = mb.add_identity(x)
+    mb.add_output(x, (3, 3, 3))
+    model = mb.build(opset_version=19, ir_version=9)
 
-    @property
-    def initializers(self):
-        return self._initializers
-
-    @property
-    def node(self):
-        return self._node
+    return model
 
 
-class ONNXConvCreator(ONNXNodeCreator):
-    def __init__(self, node_name, input_name, output_name, input_shape):
-        super().__init__()
-        in_ch = input_shape[0]
-        conv1_in_channels, conv1_out_channels, conv1_kernel_shape = in_ch, in_ch, (1, 1)
-
-        conv1_W = np.ones(shape=(conv1_out_channels, conv1_in_channels, *conv1_kernel_shape))
-        conv1_B = np.ones(shape=conv1_out_channels)
-
-        conv1_W_initializer_tensor_name = "Conv1_W"
-        conv1_W_initializer_tensor = create_initializer_tensor(
-            name=conv1_W_initializer_tensor_name, tensor_array=conv1_W, data_type=onnx.TensorProto.FLOAT
-        )
-        conv1_B_initializer_tensor_name = "Conv1_B"
-        conv1_B_initializer_tensor = create_initializer_tensor(
-            name=conv1_B_initializer_tensor_name, tensor_array=conv1_B, data_type=onnx.TensorProto.FLOAT
-        )
-        self._initializers = [conv1_W_initializer_tensor, conv1_B_initializer_tensor]
-
-        self._node = onnx.helper.make_node(
-            name=node_name,
-            op_type="Conv",
-            inputs=[input_name, conv1_W_initializer_tensor_name, conv1_B_initializer_tensor_name],
-            outputs=[output_name],
-            kernel_shape=conv1_kernel_shape,
-        )
-
-
-class ONNXIdentityCreator(ONNXNodeCreator):
-    def __init__(self, node_name, input_name, output_name, input_shape):
-        super().__init__()
-        self._node = onnx.helper.make_node(
-            name=node_name, op_type="Identity", inputs=[input_name], outputs=[output_name]
-        )
-
-
-def get_one_layer_model(op_name: str, node_creator: ONNXNodeCreator, input_shape):
-    model_input_name = "X"
-    model_output_name = "Y"
-    X = onnx.helper.make_tensor_value_info(model_input_name, onnx.TensorProto.FLOAT, input_shape)
-
-    Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, input_shape)
-
-    node_desc = node_creator(op_name, model_input_name, model_output_name, input_shape)
-    graph_def = onnx.helper.make_graph(
-        nodes=[node_desc.node],
-        name="ConvNet",
-        inputs=[X],
-        outputs=[Y],
-        initializer=node_desc.initializers,
+def _build_conv_model():
+    mb = ModelBuilder()
+    x = mb.add_input("X", (1, 3, 3, 3))
+    x = mb.add_conv(
+        x,
+        mb.add_initializer(np.zeros((3, 3, 1, 1), dtype=np.float32)),
+        mb.add_initializer(np.zeros((3,), dtype=np.float32)),
+        (1, 1),
     )
+    mb.add_output(x, (1, 3, 3, 3))
+    model = mb.build(opset_version=19, ir_version=9)
 
-    op = onnx.OperatorSetIdProto()
-    op.version = DEFAULT_OPSET_VERSION
-    model = onnx.helper.make_model(graph_def, opset_imports=[op])
-    onnx.checker.check_model(model)
+    return model
+
+
+def _build_shared_weight_model():
+    mb = ModelBuilder()
+    x = mb.add_input("X", (3, 4))
+    w = mb.add_initializer(np.zeros((4, 3), dtype=np.float32))
+    x = mb.add_matmul(x, w)
+    x = mb.add_matmul(x, mb.add_transpose(w, [1, 0]))
+    mb.add_output(x, (3, 4))
+    model = mb.build(opset_version=19, ir_version=9)
+
     return model
 
 
 @pytest.mark.parametrize(
-    "node_creator, ref_layer_attrs",
+    "build_model,node_name,reference_attributes",
     [
-        (ONNXIdentityCreator, ONNXLayerAttributes()),
+        (_build_identity_model, "Identity_0", ONNXLayerAttributes()),
         (
-            ONNXConvCreator,
+            _build_conv_model,
+            "Conv_0",
             ONNXLayerAttributes(
-                weight_attrs={1: {"name": "Conv1_W", "shape": [3, 3, 1, 1], "dtype": 1}},
-                bias_attrs={"name": "Conv1_B"},
+                weight_attrs={
+                    1: {"name": "Initializer_0", "shape": [3, 3, 1, 1], "weight_input_shape": [3, 3, 1, 1], "dtype": 1}
+                },
+                bias_attrs={"name": "Initializer_1"},
+            ),
+        ),
+        (
+            _build_shared_weight_model,
+            "MatMul_0",
+            ONNXLayerAttributes(
+                weight_attrs={1: {"name": "Initializer_0", "shape": [4, 3], "weight_input_shape": [4, 3], "dtype": 1}}
+            ),
+        ),
+        (
+            _build_shared_weight_model,
+            "MatMul_2",
+            ONNXLayerAttributes(
+                weight_attrs={1: {"name": "Initializer_0", "shape": [4, 3], "weight_input_shape": [3, 4], "dtype": 1}}
             ),
         ),
     ],
 )
-def test_layer_attributes(node_creator, ref_layer_attrs):
-    input_shape = [3, 3, 3]
-    op_name = "test_node"
-    onnx_model = get_one_layer_model(op_name, node_creator, input_shape)
-    nncf_graph = GraphConverter.create_nncf_graph(onnx_model)
-    node = nncf_graph.get_node_by_name(op_name)
-    assert node.layer_attributes.__dict__ == ref_layer_attrs.__dict__
+def test_layer_attributes(build_model, node_name, reference_attributes):
+    model = build_model()
+    graph = GraphConverter.create_nncf_graph(model)
+    node = graph.get_node_by_name(node_name)
+    assert node.layer_attributes.__dict__ == reference_attributes.__dict__

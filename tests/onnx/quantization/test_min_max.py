@@ -42,7 +42,9 @@ class TestONNXMinMaxAlgorithm(TemplateTestMinMaxAlgorithm):
 
 class TestONNXGetTargetPointShape(TemplateTestGetTargetPointShape, TestONNXMinMaxAlgorithm):
     def get_nncf_graph(self, weight_port_id: int, weight_shape: tuple[int]) -> NNCFGraph:
-        conv_layer_attrs = ONNXLayerAttributes(weight_attrs={weight_port_id: {"shape": weight_shape}}, bias_attrs={})
+        conv_layer_attrs = ONNXLayerAttributes(
+            weight_attrs={weight_port_id: {"shape": weight_shape, "weight_input_shape": weight_shape}}, bias_attrs={}
+        )
         return NNCFGraphToTest(ONNXConvolutionMetatype, conv_layer_attrs).nncf_graph
 
 

@@ -66,29 +66,8 @@ class ModelBuilder:
         self._outputs.append(onnx.helper.make_tensor_value_info(name, onnx.TensorProto.FLOAT, shape))
         return name
 
-    def add_matmul(
-        self, input: str, shape: tuple[int], output: str | None = None, data: np.ndarray | None = None
-    ) -> str:
-        i = len(self._nodes)
-
-        w_name = f"W_{i}"
-        if data is None:
-            w_values = np.random.rand(*shape).astype(np.float32)
-        else:
-            w_values = data
-        w_initializer = onnx.helper.make_tensor(
-            name=w_name, data_type=onnx.TensorProto.FLOAT, dims=shape, vals=w_values.tobytes(), raw=True
-        )
-        self._initializers.append(w_initializer)
-
-        output = f"MatMul_{i}_output" if output is None else output
-        self._nodes.append(
-            onnx.helper.make_node(op_type="MatMul", inputs=[input, w_name], outputs=[output], name=f"MatMul_{i}")
-        )
-        return output
-
     def add_initializer(self, data: np.ndarray) -> str:
-        i = len(self._nodes)
+        i = len(self._initializers)
 
         name = f"Initializer_{i}"
         tensor_dtype = onnx.helper.np_dtype_to_tensor_dtype(data.dtype)
@@ -303,3 +282,58 @@ class ModelBuilder:
             onnx.helper.make_node("Split", [input], outputs, name=f"{i}_split", num_outputs=num_outputs, axis=axis)
         )
         return outputs
+
+    def add_identity(self, input: str) -> str:
+        i = len(self._nodes)
+
+        output = f"Identity_{i}_output"
+        self._nodes.append(
+            onnx.helper.make_node(op_type="Identity", inputs=[input], outputs=[output], name=f"Identity_{i}")
+        )
+        return output
+
+    def add_matmul(self, input_a: str, input_b: str, output: str | None = None) -> str:
+        i = len(self._nodes)
+
+        output = f"MatMul_{i}_output" if output is None else output
+        self._nodes.append(
+            onnx.helper.make_node(op_type="MatMul", inputs=[input_a, input_b], outputs=[output], name=f"MatMul_{i}")
+        )
+        return output
+
+    def add_conv(self, input_x: str, input_w: str, input_b: str, kernel_shape: tuple[int]) -> str:
+        i = len(self._nodes)
+
+        output = f"Conv_{i}_output"
+        self._nodes.append(
+            onnx.helper.make_node(
+                op_type="Conv",
+                inputs=[input_x, input_w, input_b],
+                outputs=[output],
+                name=f"Conv_{i}",
+                kernel_shape=kernel_shape,
+            )
+        )
+        return output
+
+    # Required for `TestONNXTemplateWeightCompression`
+    def add_matmul_v2(
+        self, input: str, shape: tuple[int], output: str | None = None, data: np.ndarray | None = None
+    ) -> str:
+        i = len(self._nodes)
+
+        w_name = f"W_{i}"
+        if data is None:
+            w_values = np.random.rand(*shape).astype(np.float32)
+        else:
+            w_values = data
+        w_initializer = onnx.helper.make_tensor(
+            name=w_name, data_type=onnx.TensorProto.FLOAT, dims=shape, vals=w_values.tobytes(), raw=True
+        )
+        self._initializers.append(w_initializer)
+
+        output = f"MatMul_{i}_output" if output is None else output
+        self._nodes.append(
+            onnx.helper.make_node(op_type="MatMul", inputs=[input, w_name], outputs=[output], name=f"MatMul_{i}")
+        )
+        return output
