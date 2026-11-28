@@ -81,6 +81,25 @@ def reshape_weight_for_grouped_quantization(
     return reshaped_weight, reduction_axes
 
 
+def convert_to_mxfp_scale(scale: Tensor) -> Tensor:
+    """
+
+    Converts floating-point scale into the scale of MX-compliant formats: MXFP8_E4M3, MXFP4.
+    MXFP types are using E8M0 type scale.
+    It can only contain values [2**(-127), 2**(-126), ..., 2**(126), 2**(127)].
+    Here, we quantize each element of the scale to the smallest possible value greater than or equal to
+    the element value to make it possible to convert the float scale value to a FP format without rounding.
+
+    :param scale: Scale tensor to be converted to E8M0 format.
+    :return: Scale tensor in E8M0 format.
+    """
+    scale = fns.log2(scale)
+    scale = fns.ceil(scale)
+    scale = fns.clip(scale, -127, 127)
+    scale = 2**scale
+    return scale
+
+
 def calculate_float_quantization_params(
     weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig, signed: bool = False
 ) -> Tensor:
@@ -116,14 +135,7 @@ def calculate_float_quantization_params(
     scale = fns.where(fns.abs(scale) < eps, eps, scale)
 
     if config.mode in [CompressWeightsMode.MXFP4, CompressWeightsMode.MXFP8_E4M3]:
-        # MXFP types are using E8M0 type scale.
-        # It can only contain values [2**(-127), 2**(-126), ..., 2**(126), 2**(127)].
-        # Here, we quantize each element of the scale to the smallest possible value greater than or equal to
-        # the element value to make it possible to convert the float scale value to a FP format without rounding.
-        scale = fns.log2(scale)
-        scale = fns.ceil(scale)
-        scale = fns.clip(scale, -127, 127)
-        scale = 2**scale
+        scale = convert_to_mxfp_scale(scale)
 
     return scale
 
